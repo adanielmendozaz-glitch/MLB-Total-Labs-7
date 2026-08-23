@@ -36,6 +36,11 @@ jobs:
           fi
           npx cap sync android
 
+      - name: Set Android version
+        run: |
+          sed -i "s/versionCode 1/versionCode $GITHUB_RUN_NUMBER/" android/app/build.gradle
+          sed -i 's/versionName "1.0"/versionName "1.1"/' android/app/build.gradle
+
       - name: Install permanent signing key
         env:
           MLB_KEYSTORE: ${{ secrets.MLB_DEBUG_KEYSTORE_BASE64 }}
