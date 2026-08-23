@@ -4,6 +4,8 @@ const MLBDB = {
   ready: false,
   censusStorageKey: 'mlb_v60_rank_census',
   censusSqlKey: 'rank_census_v1',
+  betsStorageKey: 'mlb_v5_bets',
+  betsSqlKey: 'bets_v1',
 
   showStatus(message, ok) {
     let badge = document.getElementById('mlb-sqlite-status');
@@ -77,6 +79,7 @@ const MLBDB = {
       this.ready = true;
 
       const censusMode = await this.initCensusPersistence();
+      const betsMode = await this.initBetsPersistence();
 
       if (censusMode === 'restored') {
         this.showStatus('SQLite OK · Censo restaurado', true);
@@ -174,6 +177,55 @@ const MLBDB = {
       this.censusSqlKey,
       JSON.stringify(data)
     );
+  },
+
+  async saveBetsSnapshot(rows) {
+    const safe = Array.isArray(rows) ? rows : [];
+    return this.setKV(this.betsSqlKey, JSON.stringify(safe));
+  },
+
+  async initBetsPersistence() {
+    let localRaw = null;
+
+    try {
+      localRaw = localStorage.getItem(this.betsStorageKey);
+    } catch {}
+
+    if (localRaw !== null) {
+      try {
+        const local = JSON.parse(localRaw);
+        if (Array.isArray(local)) {
+          await this.saveBetsSnapshot(local);
+          return 'backed-up';
+        }
+      } catch {}
+    }
+
+    try {
+      const nativeRaw = await this.getKV(this.betsSqlKey);
+
+      if (nativeRaw !== null) {
+        const native = JSON.parse(nativeRaw);
+
+        if (Array.isArray(native)) {
+          if (typeof window.saveBets === 'function') {
+            window.saveBets(native);
+          } else {
+            localStorage.setItem(
+              this.betsStorageKey,
+              JSON.stringify(native)
+            );
+          }
+
+          window.renderHistory?.();
+          return 'restored';
+        }
+      }
+    } catch (err) {
+      console.warn('No se pudieron restaurar Apuestas:', err);
+    }
+
+    return 'empty';
   },
 
   validCensus(data) {
