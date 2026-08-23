@@ -392,7 +392,7 @@ function currentRankingRows(){const rows=[];for(const [pk,a] of S.analyses){cons
 /* ---------- V6.0 · Censo permanente del Ranking ---------- */
 function censusDefault(){return{version:'V7.0',days:{},migrated:false}}
 function rankCensus(){try{const x=JSON.parse(STORE.getItem('mlb_v60_rank_census')||'null');if(!x||typeof x!=='object')return censusDefault();return{...censusDefault(),...x,days:x.days&&typeof x.days==='object'?x.days:{}}}catch{return censusDefault()}}
-function saveRankCensus(x){STORE.setItem('mlb_v60_rank_census',JSON.stringify(x&&typeof x==='object'?x:censusDefault()))}
+function saveRankCensus(x){const safe=x&&typeof x==='object'?x:censusDefault();STORE.setItem('mlb_v60_rank_census',JSON.stringify(safe));window.MLBDB?.saveCensusSnapshot?.(safe).catch(e=>console.warn('Censo SQLite',e))}
 function censusDay(date,data=rankCensus()){const d=data.days?.[date];return d?{...d,rows:(d.rows||[]).filter(r=>!r.market||r.market==='TOTAL')}:null}
 function censusAllRows(data=rankCensus()){return Object.values(data.days||{}).flatMap(d=>(d.rows||[]).filter(r=>!r.market||r.market==='TOTAL').map(r=>({...r,censusDate:d.date})))}
 function censusSignalClass(x){return x==='JUGABLE'?'play':x==='LEAN'?'lean':x==='LAB'?'lab':'pass'}
