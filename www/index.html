@@ -300,14 +300,15 @@ function labPickSummary(market){const all=labPickRows(market,null,'SPORTSBOOK',t
 function labErrorSummary(market){const rows=labPickRows(market,'FINAL','SPORTSBOOK',true).filter(r=>teamVersionNumber(r.modelVersion)>=604&&Number.isFinite(+r.actual)),errs=[];for(const r of rows){const pred=market==='TOTAL'?n(r.mean,NaN):NaN;if(Number.isFinite(pred))errs.push(pred-r.actual)}return{n:errs.length,mae:errs.length?errs.reduce((z,x)=>z+Math.abs(x),0)/errs.length:NaN,bias:errs.length?errs.reduce((z,x)=>z+x,0)/errs.length:NaN,rmse:errs.length?Math.sqrt(errs.reduce((z,x)=>z+x*x,0)/errs.length):NaN}}
 function lineupSubsetBrier(confirmed=true){const rows=labPickRows('TOTAL','FINAL','SPORTSBOOK',true).filter(r=>!!r.lineupConfirmed===confirmed&&teamVersionNumber(r.modelVersion)>=604);return{n:rows.length,brier:ensembleBrier(rows)}}
 
-/* ---------- V7.1 · BANK ---------- */
+/* ---------- V7.2 · BANK MOVEMENTS + CURVE ---------- */
 
 function bankDefault(){
   return{
-    version:1,
+    version:2,
     initial:0,
     unit:100,
     currency:'MXN',
+    movements:[],
     updated:null
   }
 }
@@ -318,27 +319,116 @@ function bankCfg(){
       STORE.getItem('mlb_v71_bank')||'null'
     );
 
-    if(!x||typeof x!=='object')return bankDefault();
+    if(!x||typeof x!=='object'){
+      return bankDefault();
+    }
+
+    const movements=Array.isArray(x.movements)
+      ?x.movements
+        .filter(m=>m&&typeof m==='object')
+        .map((m,i)=>({
+          id:String(
+            m.id||
+            `mv_${Date.now()}_${i}`
+          ),
+
+          type:
+            String(m.type||'DEPOSIT').toUpperCase()==='WITHDRAWAL'
+              ?'WITHDRAWAL'
+              :'DEPOSIT',
+
+          amount:Math.max(
+            0,
+            n(m.amount,0)
+          ),
+
+          date:String(
+            m.date||localDay()
+          ),
+
+          note:String(
+            m.note||''
+          ),
+
+          created:String(
+            m.created||
+            new Date().toISOString()
+          )
+        }))
+        .filter(m=>m.amount>0)
+      :[];
 
     return{
       ...bankDefault(),
       ...x,
-      initial:Math.max(0,n(x.initial,0)),
-      unit:Math.max(.01,n(x.unit,100)),
-      currency:['MXN','USD'].includes(x.currency)?x.currency:'MXN'
+
+      version:2,
+
+      initial:Math.max(
+        0,
+        n(x.initial,0)
+      ),
+
+      unit:Math.max(
+        .01,
+        n(x.unit,100)
+      ),
+
+      currency:
+        ['MXN','USD'].includes(x.currency)
+          ?x.currency
+          :'MXN',
+
+      movements
     };
-  }catch{
+
+  }catch(err){
+    console.warn(
+      'No se pudo leer Bank:',
+      err
+    );
+
     return bankDefault();
   }
 }
 
 function saveBankCfg(x){
+  const old=bankCfg();
+
   const safe={
     ...bankDefault(),
+    ...old,
     ...(x||{}),
-    initial:Math.max(0,n(x?.initial,0)),
-    unit:Math.max(.01,n(x?.unit,100)),
-    currency:['MXN','USD'].includes(x?.currency)?x.currency:'MXN',
+
+    version:2,
+
+    initial:Math.max(
+      0,
+      n(
+        x?.initial ??
+        old.initial,
+        0
+      )
+    ),
+
+    unit:Math.max(
+      .01,
+      n(
+        x?.unit ??
+        old.unit,
+        100
+      )
+    ),
+
+    currency:
+      ['MXN','USD'].includes(x?.currency)
+        ?x.currency
+        :old.currency,
+
+    movements:Array.isArray(x?.movements)
+      ?x.movements
+      :old.movements,
+
     updated:new Date().toISOString()
   };
 
@@ -347,347 +437,1533 @@ function saveBankCfg(x){
     JSON.stringify(safe)
   );
 
-  window.MLBDB?.saveBankSnapshot?.(safe)
-    .catch(e=>console.warn('Bank SQLite',e));
+  window.MLBDB
+    ?.saveBankSnapshot
+    ?.(safe)
+    .catch(
+      e=>console.warn(
+        'Bank SQLite',
+        e
+      )
+    );
 
   renderBank();
 }
 
-function bankMoney(v,currency=bankCfg().currency){
-  if(!Number.isFinite(+v))return '—';
+function bankMoney(
+  value,
+  currency=bankCfg().currency
+){
+  if(!Number.isFinite(Number(value))){
+    return '—';
+  }
 
   try{
-    return new Intl.NumberFormat('es-MX',{
-      style:'currency',
-      currency,
-      maximumFractionDigits:2
-    }).format(+v);
+    return new Intl.NumberFormat(
+      'es-MX',
+      {
+        style:'currency',
+        currency,
+        maximumFractionDigits:2
+      }
+    ).format(Number(value));
+
   }catch{
-    return fix(v,2);
+    return fix(value,2);
   }
 }
+
+function addBankMovement(
+  type,
+  amount,
+  date,
+  note=''
+){
+  const c=bankCfg();
+
+  const value=Math.max(
+    0,
+    n(amount,0)
+  );
+
+  if(value<=0){
+    alert(
+      'Captura un importe mayor a cero.'
+    );
+    return;
+  }
+
+  const movement={
+    id:
+      'mv_'+
+      Date.now()+
+      '_'+
+      Math.random()
+        .toString(36)
+        .slice(2,8),
+
+    type:
+      String(type).toUpperCase()==='WITHDRAWAL'
+        ?'WITHDRAWAL'
+        :'DEPOSIT',
+
+    amount:value,
+
+    date:String(
+      date||localDay()
+    ),
+
+    note:String(
+      note||''
+    ).trim(),
+
+    created:
+      new Date().toISOString()
+  };
+
+  saveBankCfg({
+    ...c,
+    movements:[
+      ...c.movements,
+      movement
+    ]
+  });
+
+  status(
+    movement.type==='DEPOSIT'
+      ?'Depósito registrado en el Bank.'
+      :'Retiro registrado en el Bank.',
+    'ok'
+  );
+}
+
+window.deleteBankMovement=id=>{
+  const c=bankCfg();
+
+  const row=c.movements.find(
+    x=>String(x.id)===String(id)
+  );
+
+  if(!row)return;
+
+  const label=
+    row.type==='DEPOSIT'
+      ?'depósito'
+      :'retiro';
+
+  if(
+    !confirm(
+      `¿Eliminar este ${label} de ${bankMoney(
+        row.amount,
+        c.currency
+      )}?`
+    )
+  ){
+    return;
+  }
+
+  saveBankCfg({
+    ...c,
+
+    movements:
+      c.movements.filter(
+        x=>String(x.id)!==String(id)
+      )
+  });
+
+  status(
+    'Movimiento eliminado.',
+    'ok'
+  );
+};
 
 function bankMetrics(){
   const c=bankCfg();
 
-  const all=bets()
-    .filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL');
+  const all=bets().filter(
+    x=>
+      String(
+        x.market||'TOTAL'
+      ).toUpperCase()==='TOTAL'
+  );
 
-  const settled=all
-    .filter(x=>
-      ['WIN','LOSS','PUSH'].includes(x.status) &&
+  const settled=all.filter(
+    x=>
+      ['WIN','LOSS','PUSH']
+        .includes(x.status) &&
+
       x.profit!==null &&
       x.profit!==undefined &&
-      Number.isFinite(+x.profit)
+
+      Number.isFinite(
+        Number(x.profit)
+      )
+  );
+
+  const pending=all.filter(
+    x=>x.status==='PENDING'
+  );
+
+  const profit=
+    settled.reduce(
+      (sum,row)=>
+        sum+n(row.profit,0),
+      0
     );
 
-  const pending=all.filter(x=>x.status==='PENDING');
+  const settledStake=
+    settled.reduce(
+      (sum,row)=>
+        sum+n(row.stake,0),
+      0
+    );
 
-  const profit=settled.reduce(
-    (z,x)=>z+n(x.profit,0),0
+  const committed=
+    pending.reduce(
+      (sum,row)=>
+        sum+n(row.stake,0),
+      0
+    );
+
+  const deposits=
+    c.movements
+      .filter(
+        x=>x.type==='DEPOSIT'
+      )
+      .reduce(
+        (sum,row)=>
+          sum+n(row.amount,0),
+        0
+      );
+
+  const withdrawals=
+    c.movements
+      .filter(
+        x=>x.type==='WITHDRAWAL'
+      )
+      .reduce(
+        (sum,row)=>
+          sum+n(row.amount,0),
+        0
+      );
+
+  const netCapital=
+    deposits-withdrawals;
+
+  /*
+   * El saldo incluye capital externo
+   * y ganancias/pérdidas reales.
+   */
+  const current=
+    c.initial+
+    netCapital+
+    profit;
+
+  /*
+   * Las pendientes NO son pérdidas.
+   * Sólo bloquean capital disponible.
+   */
+  const available=
+    current-committed;
+
+  const wins=
+    settled.filter(
+      x=>x.status==='WIN'
+    ).length;
+
+  const losses=
+    settled.filter(
+      x=>x.status==='LOSS'
+    ).length;
+
+  const pushes=
+    settled.filter(
+      x=>x.status==='PUSH'
+    ).length;
+
+  const roi=
+    settledStake>0
+      ?profit/settledStake
+      :NaN;
+
+  const profitUnits=
+    c.unit>0
+      ?profit/c.unit
+      :NaN;
+
+  const currentUnits=
+    c.unit>0
+      ?current/c.unit
+      :NaN;
+
+  /*
+   * Timeline completa:
+   * apuestas + depósitos + retiros
+   */
+  const events=[];
+
+  for(const m of c.movements){
+    events.push({
+      type:'CAPITAL',
+
+      subtype:m.type,
+
+      amount:
+        m.type==='DEPOSIT'
+          ?n(m.amount,0)
+          :-n(m.amount,0),
+
+      date:m.date,
+
+      time:
+        String(m.created||'') ||
+        `${m.date}T12:00:00`,
+
+      label:
+        m.type==='DEPOSIT'
+          ?'Depósito'
+          :'Retiro',
+
+      note:m.note||''
+    });
+  }
+
+  for(const r of settled){
+    events.push({
+      type:'BET',
+
+      amount:n(
+        r.profit,
+        0
+      ),
+
+      date:String(
+        r.date||''
+      ),
+
+      time:String(
+        r.settled ||
+        (
+          r.date
+            ?`${r.date}T20:00:00`
+            :r.created
+        ) ||
+        ''
+      ),
+
+      label:
+        `${r.side} ${fix(r.line,1)}`,
+
+      note:
+        `${r.away} @ ${r.home}`
+    });
+  }
+
+  events.sort(
+    (a,b)=>
+      String(a.time)
+        .localeCompare(
+          String(b.time)
+        )
   );
 
-  const settledStake=settled.reduce(
-    (z,x)=>z+n(x.stake,0),0
-  );
+  let balance=c.initial;
 
-  const committed=pending.reduce(
-    (z,x)=>z+n(x.stake,0),0
-  );
+  /*
+   * adjustedPeak sirve para Drawdown.
+   * Capital externo desplaza el peak
+   * sin fingir rendimiento.
+   */
+  let adjustedPeak=c.initial;
 
-  const current=c.initial+profit;
-  const available=current-committed;
+  /*
+   * actualPeak es el mayor saldo real
+   * que ha tenido la cuenta.
+   */
+  let actualPeak=c.initial;
 
-  const wins=settled.filter(x=>x.status==='WIN').length;
-  const losses=settled.filter(x=>x.status==='LOSS').length;
-  const pushes=settled.filter(x=>x.status==='PUSH').length;
-
-  const roi=settledStake>0
-    ? profit/settledStake
-    : NaN;
-
-  const profitUnits=c.unit>0
-    ? profit/c.unit
-    : NaN;
-
-  const currentUnits=c.unit>0
-    ? current/c.unit
-    : NaN;
-
-  const ordered=[...settled].sort((a,b)=>
-    String(a.settled||a.created||'')
-      .localeCompare(String(b.settled||b.created||''))
-  );
-
-  let equity=c.initial;
-  let peak=equity;
   let maxDD=0;
   let maxDDPct=NaN;
 
-  for(const r of ordered){
-    equity+=n(r.profit,0);
-
-    if(equity>peak)peak=equity;
-
-    const dd=peak-equity;
-
-    if(dd>maxDD){
-      maxDD=dd;
-      maxDDPct=peak>0?dd/peak:NaN;
+  const curve=[
+    {
+      time:'START',
+      date:'',
+      balance,
+      type:'START',
+      label:'Bank inicial'
     }
+  ];
+
+  for(const e of events){
+
+    if(e.type==='CAPITAL'){
+
+      balance+=e.amount;
+
+      /*
+       * Depósitos/retiros no generan
+       * ganancias ni drawdown.
+       */
+      adjustedPeak+=e.amount;
+
+      if(adjustedPeak<balance){
+        adjustedPeak=balance;
+      }
+
+    }else{
+
+      balance+=e.amount;
+
+      if(balance>adjustedPeak){
+        adjustedPeak=balance;
+      }
+
+      const dd=
+        Math.max(
+          0,
+          adjustedPeak-balance
+        );
+
+      if(dd>maxDD){
+        maxDD=dd;
+
+        maxDDPct=
+          adjustedPeak>0
+            ?dd/adjustedPeak
+            :NaN;
+      }
+    }
+
+    actualPeak=
+      Math.max(
+        actualPeak,
+        balance
+      );
+
+    curve.push({
+      time:e.time,
+      date:e.date,
+      balance,
+      type:e.type,
+      label:e.label
+    });
   }
 
-  const dailyMap=new Map();
+  /*
+   * Rendimiento por día:
+   * sólo apuestas.
+   */
+  const dailyMap=
+    new Map();
 
   for(const r of settled){
-    const date=String(r.date||'Sin fecha');
+
+    const date=
+      String(
+        r.date||
+        'Sin fecha'
+      );
 
     if(!dailyMap.has(date)){
-      dailyMap.set(date,{
+      dailyMap.set(
         date,
-        profit:0,
-        stake:0,
-        wins:0,
-        losses:0,
-        pushes:0
-      });
+        {
+          date,
+          profit:0,
+          stake:0,
+          wins:0,
+          losses:0,
+          pushes:0
+        }
+      );
     }
 
-    const d=dailyMap.get(date);
+    const d=
+      dailyMap.get(date);
 
-    d.profit+=n(r.profit,0);
-    d.stake+=n(r.stake,0);
+    d.profit+=
+      n(r.profit,0);
 
-    if(r.status==='WIN')d.wins++;
-    if(r.status==='LOSS')d.losses++;
-    if(r.status==='PUSH')d.pushes++;
+    d.stake+=
+      n(r.stake,0);
+
+    if(r.status==='WIN'){
+      d.wins++;
+    }
+
+    if(r.status==='LOSS'){
+      d.losses++;
+    }
+
+    if(r.status==='PUSH'){
+      d.pushes++;
+    }
   }
 
-  const days=[...dailyMap.values()]
-    .sort((a,b)=>b.date.localeCompare(a.date));
+  const days=
+    [...dailyMap.values()]
+      .sort(
+        (a,b)=>
+          b.date.localeCompare(
+            a.date
+          )
+      );
+
+  /*
+   * P&L últimos 7 días
+   */
+  const today=
+    localDay();
+
+  const now=
+    new Date(
+      today+'T12:00:00'
+    );
+
+  const last7=
+    settled.filter(r=>{
+
+      if(!r.date)return false;
+
+      const d=
+        new Date(
+          r.date+'T12:00:00'
+        );
+
+      const diff=
+        (now-d)/86400000;
+
+      return(
+        diff>=0 &&
+        diff<7
+      );
+    });
+
+  const pnl7=
+    last7.reduce(
+      (sum,row)=>
+        sum+n(row.profit,0),
+      0
+    );
+
+  /*
+   * P&L mes actual
+   */
+  const monthKey=
+    today.slice(0,7);
+
+  const thisMonth=
+    settled.filter(
+      r=>
+        String(
+          r.date||''
+        ).slice(0,7)===monthKey
+    );
+
+  const pnlMonth=
+    thisMonth.reduce(
+      (sum,row)=>
+        sum+n(row.profit,0),
+      0
+    );
 
   return{
     cfg:c,
+
     all,
     settled,
     pending,
+
     profit,
     settledStake,
     committed,
+
+    deposits,
+    withdrawals,
+    netCapital,
+
     current,
     available,
+
     wins,
     losses,
     pushes,
+
     roi,
     profitUnits,
     currentUnits,
-    peak,
+
+    actualPeak,
     maxDD,
     maxDDPct,
-    days
+
+    curve,
+    days,
+
+    pnl7,
+    pnlMonth
   };
 }
 
+function bankCurveSvg(points){
+
+  if(
+    !Array.isArray(points) ||
+    !points.length
+  ){
+    return '';
+  }
+
+  const data=
+    [...points];
+
+  /*
+   * SVG necesita al menos 2 puntos.
+   */
+  if(data.length===1){
+    data.push({
+      ...data[0]
+    });
+  }
+
+  const W=900;
+  const H=230;
+
+  const PX=34;
+  const PY=24;
+
+  const values=
+    data.map(
+      x=>n(x.balance,0)
+    );
+
+  let min=
+    Math.min(...values);
+
+  let max=
+    Math.max(...values);
+
+  if(max===min){
+
+    const pad=
+      Math.max(
+        1,
+        Math.abs(max)*.03
+      );
+
+    min-=pad;
+    max+=pad;
+  }
+
+  const range=
+    max-min;
+
+  const coords=
+    data.map(
+      (p,i)=>{
+
+        const x=
+          PX+
+          (
+            i/
+            (data.length-1)
+          )*
+          (W-PX*2);
+
+        const y=
+          PY+
+          (
+            (max-p.balance)/
+            range
+          )*
+          (H-PY*2);
+
+        return{
+          x,
+          y,
+          balance:p.balance
+        };
+      }
+    );
+
+  const line=
+    coords
+      .map(
+        p=>
+          `${p.x.toFixed(1)},${p.y.toFixed(1)}`
+      )
+      .join(' ');
+
+  const first=
+    coords[0];
+
+  const last=
+    coords[
+      coords.length-1
+    ];
+
+  return`
+    <div
+      style="
+        overflow:hidden;
+        border:1px solid #1d3955;
+        background:#071522;
+        border-radius:14px;
+        padding:8px
+      "
+    >
+      <svg
+        viewBox="0 0 ${W} ${H}"
+        width="100%"
+        role="img"
+        aria-label="Curva histórica del bankroll"
+      >
+
+        <line
+          x1="${PX}"
+          y1="${H-PY}"
+          x2="${W-PX}"
+          y2="${H-PY}"
+          stroke="#284661"
+          stroke-width="2"
+        />
+
+        <line
+          x1="${PX}"
+          y1="${PY}"
+          x2="${PX}"
+          y2="${H-PY}"
+          stroke="#284661"
+          stroke-width="2"
+        />
+
+        <polyline
+          points="${line}"
+          fill="none"
+          stroke="#60b5ff"
+          stroke-width="5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+
+        <circle
+          cx="${first.x}"
+          cy="${first.y}"
+          r="6"
+          fill="#91a8bf"
+        />
+
+        <circle
+          cx="${last.x}"
+          cy="${last.y}"
+          r="7"
+          fill="#43dda0"
+        />
+
+      </svg>
+    </div>
+  `;
+}
+
 function renderBank(){
-  const host=$('#bankContent');
+
+  const host=
+    $('#bankContent');
+
   if(!host)return;
 
-  const m=bankMetrics();
-  const c=m.cfg;
+  const m=
+    bankMetrics();
 
-  const riskPct=m.current>0
-    ? m.committed/m.current
-    : NaN;
+  const c=
+    m.cfg;
 
-  const dayRows=m.days.slice(0,20);
+  const exposure=
+    m.current>0
+      ?m.committed/m.current
+      :NaN;
+
+  const exposureLabel=
+    !Number.isFinite(exposure)
+      ?'—'
+      :exposure>=.10
+        ?'ALTA'
+        :exposure>=.05
+          ?'MEDIA'
+          :'CONTROLADA';
+
+  const dayRows=
+    m.days.slice(0,20);
+
+  const movements=
+    [...c.movements]
+      .sort(
+        (a,b)=>
+          String(b.created)
+            .localeCompare(
+              String(a.created)
+            )
+      )
+      .slice(0,25);
 
   host.innerHTML=`
+
     <div class="section">
-      <h3>Configuración del Bank</h3>
+
+      <h3>
+        Configuración del Bank
+      </h3>
 
       <div class="grid3">
+
         <div class="field">
-          <label>Bank inicial</label>
+          <label>
+            Bank inicial
+          </label>
+
           <input
             id="bankInitial"
             type="number"
             min="0"
             step="100"
             value="${c.initial||''}"
-            placeholder="Ej. 5000">
+            placeholder="Ej. 5000"
+          >
         </div>
 
         <div class="field">
-          <label>Valor de 1 unidad</label>
+          <label>
+            Valor de 1 unidad
+          </label>
+
           <input
             id="bankUnit"
             type="number"
             min="0.01"
             step="10"
-            value="${c.unit}">
+            value="${c.unit}"
+          >
         </div>
 
         <div class="field">
-          <label>Moneda</label>
+          <label>
+            Moneda
+          </label>
+
           <select id="bankCurrency">
-            <option value="MXN" ${c.currency==='MXN'?'selected':''}>MXN</option>
-            <option value="USD" ${c.currency==='USD'?'selected':''}>USD</option>
+
+            <option
+              value="MXN"
+              ${
+                c.currency==='MXN'
+                  ?'selected'
+                  :''
+              }
+            >
+              MXN
+            </option>
+
+            <option
+              value="USD"
+              ${
+                c.currency==='USD'
+                  ?'selected'
+                  :''
+              }
+            >
+              USD
+            </option>
+
           </select>
         </div>
+
       </div>
 
-      <div class="actions" style="margin-top:10px">
-        <button class="btn green" id="bankSave">
+      <div
+        class="actions"
+        style="margin-top:10px"
+      >
+        <button
+          class="btn green"
+          id="bankSave"
+        >
           Guardar configuración
         </button>
       </div>
 
-      ${c.initial<=0
-        ? '<div class="warn" style="margin-top:10px"><b>Configura tu Bank inicial.</b> Hasta entonces las métricas monetarias son sólo parciales.</div>'
-        : ''
-      }
     </div>
+
+
+    <div class="section">
+
+      <h3>
+        Movimiento de capital
+      </h3>
+
+      <div class="grid4">
+
+        <div class="field">
+          <label>
+            Tipo
+          </label>
+
+          <select id="bankMoveType">
+            <option value="DEPOSIT">
+              Depósito
+            </option>
+
+            <option value="WITHDRAWAL">
+              Retiro
+            </option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>
+            Importe
+          </label>
+
+          <input
+            id="bankMoveAmount"
+            type="number"
+            min="0.01"
+            step="100"
+            placeholder="Ej. 1000"
+          >
+        </div>
+
+        <div class="field">
+          <label>
+            Fecha
+          </label>
+
+          <input
+            id="bankMoveDate"
+            type="date"
+            value="${localDay()}"
+          >
+        </div>
+
+        <div class="field">
+          <label>
+            Nota
+          </label>
+
+          <input
+            id="bankMoveNote"
+            type="text"
+            placeholder="Opcional"
+          >
+        </div>
+
+      </div>
+
+      <div
+        class="actions"
+        style="margin-top:10px"
+      >
+        <button
+          class="btn green"
+          id="bankAddMove"
+        >
+          Registrar movimiento
+        </button>
+      </div>
+
+      <div class="note">
+        Depósitos y retiros cambian el saldo real,
+        pero nunca se cuentan como ganancias o
+        pérdidas de apuestas.
+      </div>
+
+    </div>
+
 
     <div class="cards">
-      <div class="card">
-        <small>Bank inicial</small>
-        <div class="big">${bankMoney(c.initial,c.currency)}</div>
-      </div>
 
       <div class="card">
-        <small>Saldo actual</small>
-        <div class="big">${bankMoney(m.current,c.currency)}</div>
-        <div class="smalltxt">
-          ${Number.isFinite(m.currentUnits)?fix(m.currentUnits,2)+' U':'—'}
+        <small>
+          Bank inicial
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            c.initial,
+            c.currency
+          )}
         </div>
       </div>
 
-      <div class="card">
-        <small>Disponible</small>
-        <div class="big">${bankMoney(m.available,c.currency)}</div>
-        <div class="smalltxt">descontando apuestas pendientes</div>
-      </div>
 
       <div class="card">
-        <small>Comprometido</small>
-        <div class="big">${bankMoney(m.committed,c.currency)}</div>
+        <small>
+          Saldo actual
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            m.current,
+            c.currency
+          )}
+        </div>
+
+        <div class="smalltxt">
+          ${
+            Number.isFinite(
+              m.currentUnits
+            )
+              ?fix(
+                  m.currentUnits,
+                  2
+                )+' U'
+              :'—'
+          }
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Disponible
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            m.available,
+            c.currency
+          )}
+        </div>
+
+        <div class="smalltxt">
+          después de apuestas pendientes
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Comprometido
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            m.committed,
+            c.currency
+          )}
+        </div>
+
         <div class="smalltxt">
           ${m.pending.length} pendientes ·
-          ${Number.isFinite(riskPct)?pct(riskPct):'—'} del saldo
+          ${
+            Number.isFinite(exposure)
+              ?pct(exposure)
+              :'—'
+          }
         </div>
       </div>
 
+
       <div class="card">
-        <small>P&L acumulado</small>
-        <div class="big">${m.profit>=0?'+':''}${bankMoney(m.profit,c.currency)}</div>
+        <small>
+          Exposición
+        </small>
+
+        <div class="big">
+          ${exposureLabel}
+        </div>
+
         <div class="smalltxt">
-          ${Number.isFinite(m.profitUnits)
-            ? (m.profitUnits>=0?'+':'')+fix(m.profitUnits,2)+' U'
-            : '—'}
+          ${
+            Number.isFinite(exposure)
+              ?pct(exposure)
+              :'—'
+          } del Bank
         </div>
       </div>
 
+
       <div class="card">
-        <small>ROI</small>
-        <div class="big">${Number.isFinite(m.roi)?pct(m.roi):'—'}</div>
+        <small>
+          P&L apuestas
+        </small>
+
+        <div class="big">
+          ${
+            m.profit>=0
+              ?'+'
+              :''
+          }${bankMoney(
+            m.profit,
+            c.currency
+          )}
+        </div>
+
         <div class="smalltxt">
-          Stake liquidado ${bankMoney(m.settledStake,c.currency)}
+          ${
+            Number.isFinite(
+              m.profitUnits
+            )
+              ?(
+                  m.profitUnits>=0
+                    ?'+'
+                    :''
+                )+
+                fix(
+                  m.profitUnits,
+                  2
+                )+
+                ' U'
+              :'—'
+          }
         </div>
       </div>
 
-      <div class="card">
-        <small>Récord</small>
-        <div class="big">${m.wins}-${m.losses}-${m.pushes}</div>
-        <div class="smalltxt">W-L-P</div>
-      </div>
 
       <div class="card">
-        <small>Peak Bank</small>
-        <div class="big">${bankMoney(m.peak,c.currency)}</div>
-      </div>
+        <small>
+          ROI
+        </small>
 
-      <div class="card">
-        <small>Drawdown máximo</small>
-        <div class="big">${bankMoney(m.maxDD,c.currency)}</div>
+        <div class="big">
+          ${
+            Number.isFinite(m.roi)
+              ?pct(m.roi)
+              :'—'
+          }
+        </div>
+
         <div class="smalltxt">
-          ${Number.isFinite(m.maxDDPct)?pct(m.maxDDPct):'—'}
+          Stake liquidado
+          ${bankMoney(
+            m.settledStake,
+            c.currency
+          )}
         </div>
       </div>
 
+
       <div class="card">
-        <small>1 Unidad</small>
-        <div class="big">${bankMoney(c.unit,c.currency)}</div>
+        <small>
+          Últimos 7 días
+        </small>
+
+        <div class="big">
+          ${
+            m.pnl7>=0
+              ?'+'
+              :''
+          }${bankMoney(
+            m.pnl7,
+            c.currency
+          )}
+        </div>
       </div>
+
+
+      <div class="card">
+        <small>
+          Mes actual
+        </small>
+
+        <div class="big">
+          ${
+            m.pnlMonth>=0
+              ?'+'
+              :''
+          }${bankMoney(
+            m.pnlMonth,
+            c.currency
+          )}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Récord
+        </small>
+
+        <div class="big">
+          ${m.wins}-${m.losses}-${m.pushes}
+        </div>
+
+        <div class="smalltxt">
+          W-L-P
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Peak Bank
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            m.actualPeak,
+            c.currency
+          )}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Drawdown máximo
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            m.maxDD,
+            c.currency
+          )}
+        </div>
+
+        <div class="smalltxt">
+          ${
+            Number.isFinite(
+              m.maxDDPct
+            )
+              ?pct(m.maxDDPct)
+              :'—'
+          }
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          Capital externo neto
+        </small>
+
+        <div class="big">
+          ${
+            m.netCapital>=0
+              ?'+'
+              :''
+          }${bankMoney(
+            m.netCapital,
+            c.currency
+          )}
+        </div>
+
+        <div class="smalltxt">
+          Depósitos
+          ${bankMoney(
+            m.deposits,
+            c.currency
+          )}
+          · Retiros
+          ${bankMoney(
+            m.withdrawals,
+            c.currency
+          )}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>
+          1 Unidad
+        </small>
+
+        <div class="big">
+          ${bankMoney(
+            c.unit,
+            c.currency
+          )}
+        </div>
+      </div>
+
     </div>
 
-    <div class="section" style="margin-top:12px">
-      <h3>Control diario</h3>
 
-      ${dayRows.length
-        ? `<div style="overflow:auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Récord</th>
-                  <th>Stake</th>
-                  <th>P&L</th>
-                  <th>ROI</th>
-                </tr>
-              </thead>
+    <div
+      class="section"
+      style="margin-top:12px"
+    >
 
-              <tbody>
-                ${dayRows.map(d=>{
-                  const roi=d.stake>0?d.profit/d.stake:NaN;
+      <h3>
+        Curva del bankroll
+      </h3>
 
-                  return `
-                    <tr>
-                      <td>${esc(d.date)}</td>
-                      <td>${d.wins}-${d.losses}-${d.pushes}</td>
-                      <td>${bankMoney(d.stake,c.currency)}</td>
-                      <td>${d.profit>=0?'+':''}${bankMoney(d.profit,c.currency)}</td>
-                      <td>${Number.isFinite(roi)?pct(roi):'—'}</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>`
-        : '<div class="empty">Todavía no hay apuestas liquidadas para construir la curva del Bank.</div>'
+      ${bankCurveSvg(
+        m.curve
+      )}
+
+      <div class="note">
+        La curva muestra el saldo real.
+        Depósitos y retiros cambian la cuenta,
+        pero se excluyen del cálculo de drawdown.
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Movimientos de capital
+      </h3>
+
+      ${
+        movements.length
+
+          ?`
+            <div style="overflow:auto">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Importe</th>
+                    <th>Nota</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  ${
+                    movements
+                      .map(
+                        x=>`
+                          <tr>
+
+                            <td>
+                              ${esc(x.date)}
+                            </td>
+
+                            <td>
+                              ${
+                                x.type==='DEPOSIT'
+                                  ?'DEPÓSITO'
+                                  :'RETIRO'
+                              }
+                            </td>
+
+                            <td>
+                              ${
+                                x.type==='DEPOSIT'
+                                  ?'+'
+                                  :'-'
+                              }${bankMoney(
+                                x.amount,
+                                c.currency
+                              )}
+                            </td>
+
+                            <td>
+                              ${
+                                esc(
+                                  x.note||
+                                  '—'
+                                )
+                              }
+                            </td>
+
+                            <td>
+                              <button
+                                class="btn small red"
+                                onclick="deleteBankMovement('${esc(x.id)}')"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+
+                          </tr>
+                        `
+                      )
+                      .join('')
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+          `
+
+          :`
+            <div class="empty">
+              No hay depósitos ni retiros registrados.
+            </div>
+          `
       }
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Rendimiento diario · sólo apuestas
+      </h3>
+
+      ${
+        dayRows.length
+
+          ?`
+            <div style="overflow:auto">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Récord</th>
+                    <th>Stake</th>
+                    <th>P&L</th>
+                    <th>ROI</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  ${
+                    dayRows.map(
+                      d=>{
+
+                        const dayRoi=
+                          d.stake>0
+                            ?d.profit/d.stake
+                            :NaN;
+
+                        return`
+                          <tr>
+
+                            <td>
+                              ${esc(d.date)}
+                            </td>
+
+                            <td>
+                              ${d.wins}-${d.losses}-${d.pushes}
+                            </td>
+
+                            <td>
+                              ${bankMoney(
+                                d.stake,
+                                c.currency
+                              )}
+
+                              <div class="smalltxt">
+                                ${
+                                  c.unit>0
+                                    ?fix(
+                                        d.stake/c.unit,
+                                        2
+                                      )+' U'
+                                    :'—'
+                                }
+                              </div>
+                            </td>
+
+                            <td>
+                              ${
+                                d.profit>=0
+                                  ?'+'
+                                  :''
+                              }${bankMoney(
+                                d.profit,
+                                c.currency
+                              )}
+                            </td>
+
+                            <td>
+                              ${
+                                Number.isFinite(
+                                  dayRoi
+                                )
+                                  ?pct(dayRoi)
+                                  :'—'
+                              }
+                            </td>
+
+                          </tr>
+                        `;
+                      }
+                    ).join('')
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+          `
+
+          :`
+            <div class="empty">
+              Todavía no hay apuestas liquidadas.
+            </div>
+          `
+      }
+
     </div>
   `;
 
-  const save=$('#bankSave');
+
+  const save=
+    $('#bankSave');
 
   if(save){
     save.onclick=()=>{
-      const initial=Math.max(
-        0,
-        n($('#bankInitial').value,0)
-      );
-
-      const unit=Math.max(
-        .01,
-        n($('#bankUnit').value,100)
-      );
-
-      const currency=$('#bankCurrency').value;
 
       saveBankCfg({
         ...c,
-        initial,
-        unit,
-        currency
+
+        initial:
+          Math.max(
+            0,
+            n(
+              $('#bankInitial').value,
+              0
+            )
+          ),
+
+        unit:
+          Math.max(
+            .01,
+            n(
+              $('#bankUnit').value,
+              100
+            )
+          ),
+
+        currency:
+          $('#bankCurrency').value
       });
 
-      status('Configuración del Bank guardada.','ok');
+      status(
+        'Configuración del Bank guardada.',
+        'ok'
+      );
+    };
+  }
+
+
+  const addMove=
+    $('#bankAddMove');
+
+  if(addMove){
+    addMove.onclick=()=>{
+
+      addBankMovement(
+        $('#bankMoveType').value,
+        $('#bankMoveAmount').value,
+        $('#bankMoveDate').value,
+        $('#bankMoveNote').value
+      );
     };
   }
 }
 
 window.renderBank=renderBank;
+
+
 
 function hasRealNumber(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))}
 function betClv(row){if(!hasRealNumber(row.closingLine))return NaN;return row.side==='OVER'?n(row.closingLine)-n(row.line):n(row.line)-n(row.closingLine)}
