@@ -549,5 +549,7 @@ $('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true
 async function boot(){renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 </script>
+<script src="./database.js"></script>
+<script>window.addEventListener("DOMContentLoaded",()=>{window.MLBDB?.init();});</script>
 </body>
 </html>
