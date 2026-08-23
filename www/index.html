@@ -2291,7 +2291,14 @@ function bindBetSelector(evals,best){const sel=$('#betPick');if(!sel)return;cons
 async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);$('#results').innerHTML=resultHtml(g,built,ev,best,N);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
 function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
-function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,closingLine:hasRealNumber(r.closingLine)?Number(r.closingLine):null,closingOdds:hasRealNumber(r.closingOdds)?Number(r.closingOdds):null,closingAmerican:hasRealNumber(r.closingAmerican)?Number(r.closingAmerican):null,clv:hasRealNumber(r.clv)?Number(r.clv):NaN}}
+function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,
+bankAtBet:hasRealNumber(r.bankAtBet)?Number(r.bankAtBet):null,
+unitsAtBet:hasRealNumber(r.unitsAtBet)?Number(r.unitsAtBet):null,
+riskIndividual:hasRealNumber(r.riskIndividual)?Number(r.riskIndividual):null,
+riskExposureBefore:hasRealNumber(r.riskExposureBefore)?Number(r.riskExposureBefore):null,
+riskExposureAfter:hasRealNumber(r.riskExposureAfter)?Number(r.riskExposureAfter):null,
+riskLevel:String(r.riskLevel||''),
+closingLine:hasRealNumber(r.closingLine)?Number(r.closingLine):null,closingOdds:hasRealNumber(r.closingOdds)?Number(r.closingOdds):null,closingAmerican:hasRealNumber(r.closingAmerican)?Number(r.closingAmerican):null,clv:hasRealNumber(r.clv)?Number(r.clv):NaN}}
 function betSignature(r){return[String(r.id||''),r.gamePk,r.date,r.away,r.home,r.market,r.side,r.line,r.created].join('|')}
 function mergeBetRows(rows,source='import'){const out=bets(),seen=new Set(out.map(betSignature));let added=0;for(let i=0;i<(rows||[]).length;i++){const r=normalizeBetRow(rows[i],i,source),sig=betSignature(r);if(seen.has(sig))continue;seen.add(sig);out.push(r);added++}if(added)saveBets(out);return added}
 function migrateLegacyHistory(announce=false){const keys=['mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history'];let added=0,found=0;for(const k of keys){try{const raw=STORE.getItem(k);if(!raw)continue;const rows=JSON.parse(raw);if(!Array.isArray(rows)||!rows.length)continue;found+=rows.length;added+=mergeBetRows(rows,'V4')}catch{}}STORE.setItem('mlb_v5_history_migrated',new Date().toISOString());renderHistory();if(announce)status(found?`${added} apuestas nuevas migradas desde V4 (${found} registros encontrados).`:'No encontré historial V4 en este navegador. Puedes exportarlo desde la versión anterior e importarlo aquí.','ok');return added}
@@ -2317,7 +2324,758 @@ function averageBetBrier(rows){const v=rows.map(betBrier).filter(Number.isFinite
 function brierReading(v){if(!Number.isFinite(v))return'Sin muestra';if(v<.18)return'Muy sólido';if(v<.22)return'Bueno';if(v<.25)return'Mejor que 50/50';return'Requiere ajuste'}
 async function settleBets(){const a=bets();let done=0;for(const r of a.filter(x=>x.status==='PENDING'&&String(x.market||'TOTAL').toUpperCase()==='TOTAL')){try{const sc=await finalScore(r.gamePk);if(!sc)continue;const total=scoreForMarket(sc,'TOTAL',r.includeExtras!==false),val=total===r.line?'PUSH':((r.side==='OVER'?total>r.line:total<r.line)?'WIN':'LOSS');r.status=val;r.awayScore=sc.away;r.homeScore=sc.home;r.actual=total;const st=n(r.stake,1);r.profit=val==='WIN'?st*(r.odds-1):val==='LOSS'?-st:0;r.brier=betBrier(r);r.settled=new Date().toISOString();done++}catch{}}saveBets(a);renderHistory();status(`${done} apuestas Full Game liquidadas; Brier actualizado.`,'ok')}
 async function settleLab(){const a=dedupeLabRows(lab());let done=0,pushes=0,cache=new Map;for(const r of a.filter(x=>x.status==='PENDING'&&x.market==='TOTAL')){try{let sc=cache.get(r.gamePk);if(sc===undefined){sc=await finalScore(r.gamePk);cache.set(r.gamePk,sc)}if(!sc)continue;const total=scoreForMarket(sc,'TOTAL',r.includeExtras!==false);if(total===r.line){r.status='PUSH';delete r.y;pushes++}else{r.y=r.side==='OVER'?(total>r.line?1:0):(total<r.line?1:0);r.status='FINAL'}r.actual=total;r.settled=new Date().toISOString();done++}catch{}}saveLab(dedupeLabRows(a));renderLab();renderTeams();status(`${done} pronósticos Full Game liquidados · ${pushes} pushes excluidos del Brier.`,'ok')}
-function renderHistory(){const a=bets().filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL'),e=$('#historyContent'),legacy=a.filter(x=>x.legacy).length;if(!a.length){e.innerHTML=`<div class="empty">Aún no hay apuestas registradas.<br><span class="smalltxt">Pulsa “Migrar historial V4” o importa el JSON exportado por una versión anterior.</span></div>`;return}const settled=a.filter(x=>x.status!=='PENDING'),scored=a.filter(x=>x.status==='WIN'||x.status==='LOSS'),profit=settled.reduce((z,x)=>z+n(x.profit),0),stake=settled.reduce((z,x)=>z+n(x.stake),0),wins=settled.filter(x=>x.status==='WIN').length,loss=settled.filter(x=>x.status==='LOSS').length,bs=averageBetBrier(scored),clvs=a.map(betClv).filter(Number.isFinite),avgClv=clvs.length?clvs.reduce((z,x)=>z+x,0)/clvs.length:NaN;e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Persistencia:</b> ${esc(STORAGE_MODE)}. ${legacy?`${legacy} registros provienen de V4; cuando no existía stake se muestran como 1 unidad.`:'Historial V5 activo.'}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Récord</small><div class="big">${wins}-${loss}</div></div><div class="card"><small>Utilidad</small><div class="big">${fix(profit,2)}</div></div><div class="card"><small>ROI</small><div class="big">${stake?pct(profit/stake):'—'}</div></div><div class="card"><small>Brier apuestas</small><div class="big">${fix(bs,3)}</div><div class="smalltxt">${brierReading(bs)} · ${scored.length} picks</div></div><div class="card"><small>CLV línea promedio</small><div class="big ${avgClv>0?'clv-positive':avgClv<0?'clv-negative':'clv-flat'}">${Number.isFinite(avgClv)?`${avgClv>0?'+':''}${fix(avgClv,2)}`:'—'}</div><div class="smalltxt">${clvs.length} cierres capturados</div></div><div class="card"><small>Pendientes</small><div class="big">${a.filter(x=>x.status==='PENDING').length}</div></div></div><div class="note" style="margin-bottom:12px">CLV positivo: tomaste mejor línea que el cierre. Ejemplo: Over 8.5 que cerró 9.0 o Under 9.5 que cerró 9.0.</div><div class="section" style="overflow:auto"><table><thead><tr><th>Juego</th><th>Pick</th><th>Momio</th><th>Stake</th><th>Prob.</th><th>Brier</th><th>Cierre / CLV</th><th>Estado</th><th>Utilidad</th><th>Acción</th></tr></thead><tbody>${[...a].reverse().map(x=>{const bx=betBrier(x),clv=betClv(x);return`<tr><td>${esc(x.away)} @ ${esc(x.home)}<div class="smalltxt">${esc(x.date)} · ${esc(x.label)}${x.legacy?' · migrada V4':''}</div></td><td>${esc(x.side)} ${fix(x.line,1)}${x.manualPass?'<div class="smalltxt">decisión manual / PASS</div>':''}</td><td>${fix(x.odds,2)}<div class="smalltxt">${x.american>0?'+':''}${x.american??''}</div></td><td>${fix(x.stake,2)}${x.legacyStake?'<div class="smalltxt">1u asumida</div>':''}</td><td>${pct(x.p)}</td><td>${fix(bx,3)}</td><td>${hasRealNumber(x.closingLine)?`${fix(x.closingLine,1)} <div class="${clv>0?'clv-positive':clv<0?'clv-negative':'clv-flat'}">${clv>0?'+':''}${fix(clv,2)}</div>`:'—'}</td><td>${esc(x.status)}</td><td>${x.profit===null||x.profit===undefined?'—':fix(x.profit,2)}</td><td><button class="btn small" onclick="setClosing('${esc(String(x.id))}')">Cierre</button> <button class="btn small red" onclick="deleteBet('${esc(String(x.id))}')">Eliminar</button></td></tr>`}).join('')}</tbody></table></div>`}
+
+/* ---------- V7.4 · RISK HISTORY ---------- */
+
+function storedRiskKey(row){
+
+  const raw=
+    String(
+      row?.riskLevel||
+      ''
+    ).toUpperCase();
+
+  if(
+    raw==='CONTROLLED' ||
+    raw==='CONTROLADA'
+  ){
+    return 'CONTROLLED';
+  }
+
+  if(
+    raw==='MODERATE' ||
+    raw==='MODERADA'
+  ){
+    return 'MODERATE';
+  }
+
+  if(
+    raw==='HIGH' ||
+    raw==='ALTA'
+  ){
+    return 'HIGH';
+  }
+
+  if(
+    raw==='EXCESSIVE' ||
+    raw==='EXCESIVA'
+  ){
+    return 'EXCESSIVE';
+  }
+
+  /*
+   * Si por alguna razón no quedó riskLevel,
+   * podemos reconstruirlo desde exposición.
+   */
+  if(
+    hasRealNumber(
+      row?.riskExposureAfter
+    )
+  ){
+    const x=
+      Number(
+        row.riskExposureAfter
+      );
+
+    if(x<=.05)return 'CONTROLLED';
+    if(x<=.08)return 'MODERATE';
+    if(x<=.12)return 'HIGH';
+
+    return 'EXCESSIVE';
+  }
+
+  return '';
+}
+
+function storedRiskLabel(row){
+
+  const key=
+    storedRiskKey(row);
+
+  return({
+    CONTROLLED:'CONTROLADA',
+    MODERATE:'MODERADA',
+    HIGH:'ALTA',
+    EXCESSIVE:'EXCESIVA'
+  })[key]||'—';
+}
+
+function storedRiskClass(row){
+
+  const key=
+    storedRiskKey(row);
+
+  if(key==='CONTROLLED'){
+    return 'bp-good';
+  }
+
+  if(key==='MODERATE'){
+    return 'bp-mid';
+  }
+
+  if(
+    key==='HIGH' ||
+    key==='EXCESSIVE'
+  ){
+    return 'bp-bad';
+  }
+
+  return '';
+}
+
+function betProfitUnits(row){
+
+  if(
+    !hasRealNumber(row?.profit) ||
+    !hasRealNumber(row?.stake) ||
+    !hasRealNumber(row?.unitsAtBet)
+  ){
+    return NaN;
+  }
+
+  const stake=
+    Number(row.stake);
+
+  if(stake<=0){
+    return NaN;
+  }
+
+  return(
+    Number(row.profit) /
+    stake *
+    Number(row.unitsAtBet)
+  );
+}
+
+function riskZoneStats(rows,key){
+
+  const all=
+    rows.filter(
+      r=>storedRiskKey(r)===key
+    );
+
+  const settled=
+    all.filter(
+      r=>
+        r.status==='WIN' ||
+        r.status==='LOSS' ||
+        r.status==='PUSH'
+    );
+
+  const wins=
+    settled.filter(
+      r=>r.status==='WIN'
+    ).length;
+
+  const losses=
+    settled.filter(
+      r=>r.status==='LOSS'
+    ).length;
+
+  const pushes=
+    settled.filter(
+      r=>r.status==='PUSH'
+    ).length;
+
+  const decisions=
+    wins+losses;
+
+  const hit=
+    decisions>0
+      ?wins/decisions
+      :NaN;
+
+  const units=
+    settled
+      .map(betProfitUnits)
+      .filter(Number.isFinite)
+      .reduce(
+        (sum,x)=>sum+x,
+        0
+      );
+
+  const hasUnits=
+    settled.some(
+      r=>Number.isFinite(
+        betProfitUnits(r)
+      )
+    );
+
+  return{
+    all:all.length,
+    settled:settled.length,
+    wins,
+    losses,
+    pushes,
+    hit,
+    units:hasUnits
+      ?units
+      :NaN
+  };
+}
+
+function riskHistorySummaryHtml(rows){
+
+  const zones=[
+    {
+      key:'CONTROLLED',
+      label:'CONTROLADA',
+      range:'0–5%'
+    },
+    {
+      key:'MODERATE',
+      label:'MODERADA',
+      range:'5–8%'
+    },
+    {
+      key:'HIGH',
+      label:'ALTA',
+      range:'8–12%'
+    },
+    {
+      key:'EXCESSIVE',
+      label:'EXCESIVA',
+      range:'>12%'
+    }
+  ];
+
+  const riskRows=
+    rows.filter(
+      r=>storedRiskKey(r)
+    );
+
+  const settledRisk=
+    riskRows.filter(
+      r=>
+        r.status==='WIN' ||
+        r.status==='LOSS' ||
+        r.status==='PUSH'
+    );
+
+  return`
+    <div
+      class="section"
+      style="margin-bottom:12px"
+    >
+
+      <h3>
+        Rendimiento por exposición
+      </h3>
+
+      <div class="cards">
+
+        ${zones.map(z=>{
+
+          const x=
+            riskZoneStats(
+              rows,
+              z.key
+            );
+
+          const cls=
+            z.key==='CONTROLLED'
+              ?'bp-good'
+              :z.key==='MODERATE'
+                ?'bp-mid'
+                :'bp-bad';
+
+          return`
+            <div class="card">
+
+              <small>
+                ${z.label} · ${z.range}
+              </small>
+
+              <div class="big ${cls}">
+                ${x.settled
+                  ?`${x.wins}-${x.losses}-${x.pushes}`
+                  :'—'}
+              </div>
+
+              <div class="smalltxt">
+
+                Acierto:
+                ${Number.isFinite(x.hit)
+                  ?pct(x.hit)
+                  :'—'}
+
+                <br>
+
+                P&L:
+                ${Number.isFinite(x.units)
+                  ?`${x.units>=0?'+':''}${fix(x.units,2)} U`
+                  :'—'}
+
+                <br>
+
+                ${x.all} apuestas registradas
+
+              </div>
+
+            </div>
+          `;
+        }).join('')}
+
+      </div>
+
+      <div class="note">
+
+        Estadística basada en la exposición existente
+        <b>cuando se tomó cada apuesta</b>,
+        no en el Bank actual.
+
+        ${settledRisk.length
+          ?` Muestra liquidada: ${settledRisk.length}.`
+          :' Todavía no hay apuestas con Risk Manager liquidadas.'}
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function renderHistory(){
+
+  const a=
+    bets().filter(
+      x=>
+        String(
+          x.market||'TOTAL'
+        ).toUpperCase()==='TOTAL'
+    );
+
+  const e=
+    $('#historyContent');
+
+  const legacy=
+    a.filter(
+      x=>x.legacy
+    ).length;
+
+  if(!a.length){
+
+    e.innerHTML=`
+      <div class="empty">
+        Aún no hay apuestas registradas.
+        <br>
+        <span class="smalltxt">
+          Pulsa “Migrar historial V4”
+          o importa el JSON exportado
+          por una versión anterior.
+        </span>
+      </div>
+    `;
+
+    return;
+  }
+
+  const settled=
+    a.filter(
+      x=>x.status!=='PENDING'
+    );
+
+  const scored=
+    a.filter(
+      x=>
+        x.status==='WIN' ||
+        x.status==='LOSS'
+    );
+
+  const profit=
+    settled.reduce(
+      (z,x)=>
+        z+n(x.profit),
+      0
+    );
+
+  const stake=
+    settled.reduce(
+      (z,x)=>
+        z+n(x.stake),
+      0
+    );
+
+  const wins=
+    settled.filter(
+      x=>x.status==='WIN'
+    ).length;
+
+  const loss=
+    settled.filter(
+      x=>x.status==='LOSS'
+    ).length;
+
+  const bs=
+    averageBetBrier(scored);
+
+  const clvs=
+    a.map(betClv)
+      .filter(Number.isFinite);
+
+  const avgClv=
+    clvs.length
+      ?clvs.reduce(
+          (z,x)=>z+x,
+          0
+        )/clvs.length
+      :NaN;
+
+  const riskCount=
+    a.filter(
+      x=>storedRiskKey(x)
+    ).length;
+
+  e.innerHTML=`
+
+    <div
+      class="okbox"
+      style="margin-bottom:12px"
+    >
+
+      <b>Persistencia:</b>
+      ${esc(STORAGE_MODE)}.
+
+      ${legacy
+        ?`${legacy} registros provienen de V4; cuando no existía stake se muestran como 1 unidad.`
+        :'Historial V5 activo.'}
+
+    </div>
+
+
+    <div
+      class="cards"
+      style="margin-bottom:12px"
+    >
+
+      <div class="card">
+        <small>Récord</small>
+        <div class="big">
+          ${wins}-${loss}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>Utilidad</small>
+        <div class="big">
+          ${fix(profit,2)}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>ROI</small>
+        <div class="big">
+          ${stake
+            ?pct(profit/stake)
+            :'—'}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>Brier apuestas</small>
+
+        <div class="big">
+          ${fix(bs,3)}
+        </div>
+
+        <div class="smalltxt">
+          ${brierReading(bs)}
+          · ${scored.length} picks
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>CLV línea promedio</small>
+
+        <div
+          class="big
+          ${avgClv>0
+            ?'clv-positive'
+            :avgClv<0
+              ?'clv-negative'
+              :'clv-flat'}"
+        >
+          ${Number.isFinite(avgClv)
+            ?`${avgClv>0?'+':''}${fix(avgClv,2)}`
+            :'—'}
+        </div>
+
+        <div class="smalltxt">
+          ${clvs.length}
+          cierres capturados
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>Pendientes</small>
+
+        <div class="big">
+          ${a.filter(
+            x=>x.status==='PENDING'
+          ).length}
+        </div>
+      </div>
+
+
+      <div class="card">
+        <small>Con Risk Snapshot</small>
+
+        <div class="big">
+          ${riskCount}
+        </div>
+
+        <div class="smalltxt">
+          de ${a.length} apuestas
+        </div>
+      </div>
+
+    </div>
+
+
+    ${riskHistorySummaryHtml(a)}
+
+
+    <div
+      class="note"
+      style="margin-bottom:12px"
+    >
+      CLV positivo:
+      tomaste mejor línea que el cierre.
+      Ejemplo: Over 8.5 que cerró 9.0
+      o Under 9.5 que cerró 9.0.
+    </div>
+
+
+    <div
+      class="section"
+      style="overflow:auto"
+    >
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Juego</th>
+            <th>Pick</th>
+            <th>Momio</th>
+            <th>Stake</th>
+            <th>U</th>
+            <th>Riesgo</th>
+            <th>Exp.</th>
+            <th>Nivel</th>
+            <th>Prob.</th>
+            <th>Brier</th>
+            <th>Cierre / CLV</th>
+            <th>Estado</th>
+            <th>Utilidad</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          ${[...a]
+            .reverse()
+            .map(x=>{
+
+              const bx=
+                betBrier(x);
+
+              const clv=
+                betClv(x);
+
+              const units=
+                hasRealNumber(
+                  x.unitsAtBet
+                )
+                  ?Number(x.unitsAtBet)
+                  :NaN;
+
+              const individual=
+                hasRealNumber(
+                  x.riskIndividual
+                )
+                  ?Number(
+                      x.riskIndividual
+                    )
+                  :NaN;
+
+              const exposure=
+                hasRealNumber(
+                  x.riskExposureAfter
+                )
+                  ?Number(
+                      x.riskExposureAfter
+                    )
+                  :NaN;
+
+              const riskLabel=
+                storedRiskLabel(x);
+
+              const riskCls=
+                storedRiskClass(x);
+
+              return`
+                <tr>
+
+                  <td>
+                    ${esc(x.away)}
+                    @
+                    ${esc(x.home)}
+
+                    <div class="smalltxt">
+                      ${esc(x.date)}
+                      · ${esc(x.label)}
+                      ${x.legacy
+                        ?' · migrada V4'
+                        :''}
+                    </div>
+                  </td>
+
+
+                  <td>
+                    ${esc(x.side)}
+                    ${fix(x.line,1)}
+
+                    ${x.manualPass
+                      ?'<div class="smalltxt">decisión manual / PASS</div>'
+                      :''}
+                  </td>
+
+
+                  <td>
+                    ${fix(x.odds,2)}
+
+                    <div class="smalltxt">
+                      ${x.american>0?'+':''}
+                      ${x.american??''}
+                    </div>
+                  </td>
+
+
+                  <td>
+                    ${fix(x.stake,2)}
+
+                    ${x.legacyStake
+                      ?'<div class="smalltxt">1u asumida</div>'
+                      :''}
+                  </td>
+
+
+                  <td>
+                    ${Number.isFinite(units)
+                      ?fix(units,2)
+                      :'—'}
+                  </td>
+
+
+                  <td>
+                    ${Number.isFinite(individual)
+                      ?pct(individual)
+                      :'—'}
+                  </td>
+
+
+                  <td>
+                    ${Number.isFinite(exposure)
+                      ?pct(exposure)
+                      :'—'}
+                  </td>
+
+
+                  <td>
+                    <b class="${riskCls}">
+                      ${riskLabel}
+                    </b>
+                  </td>
+
+
+                  <td>
+                    ${pct(x.p)}
+                  </td>
+
+
+                  <td>
+                    ${fix(bx,3)}
+                  </td>
+
+
+                  <td>
+                    ${hasRealNumber(
+                      x.closingLine
+                    )
+                      ?`
+                        ${fix(
+                          x.closingLine,
+                          1
+                        )}
+
+                        <div
+                          class="
+                          ${clv>0
+                            ?'clv-positive'
+                            :clv<0
+                              ?'clv-negative'
+                              :'clv-flat'}"
+                        >
+                          ${clv>0?'+':''}
+                          ${fix(clv,2)}
+                        </div>
+                      `
+                      :'—'}
+                  </td>
+
+
+                  <td>
+                    ${esc(x.status)}
+                  </td>
+
+
+                  <td>
+                    ${x.profit===null ||
+                      x.profit===undefined
+                        ?'—'
+                        :fix(
+                            x.profit,
+                            2
+                          )}
+                  </td>
+
+
+                  <td>
+                    <button
+                      class="btn small"
+                      onclick="setClosing('${esc(String(x.id))}')"
+                    >
+                      Cierre
+                    </button>
+
+                    <button
+                      class="btn small red"
+                      onclick="deleteBet('${esc(String(x.id))}')"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+
+                </tr>
+              `;
+            })
+            .join('')}
+
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+}
+
 function brier(rows,k){if(!rows.length)return NaN;return rows.reduce((a,r)=>a+Math.pow(n(r.modelProbs?.[k],.5)-r.y,2),0)/rows.length}
 function ensembleBrier(rows){if(!rows.length)return NaN;return rows.reduce((a,r)=>a+Math.pow(clamp(n(r.ensembleP,.5),.001,.999)-r.y,2),0)/rows.length}
 function brierSkill(rows){if(rows.length<5)return NaN;const avg=rows.reduce((a,r)=>a+r.y,0)/rows.length,base=rows.reduce((a,r)=>a+Math.pow(avg-r.y,2),0)/rows.length,bs=ensembleBrier(rows);return base>0?1-bs/base:NaN}
