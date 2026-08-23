@@ -71,7 +71,7 @@ jobs:
 
           APK_SHA=$("$APKSIGNER" verify --print-certs \
             android/app/build/outputs/apk/debug/app-debug.apk \
-            | awk -F': ' '/certificate SHA-256 digest/{print tolower($2); exit}')
+            | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr 'A-F' 'a-f')
 
           EXPECTED="06c224aeb153d3d983cd59426da3513820651a2f2687fb40fbb703d5cfc05afe"
 
