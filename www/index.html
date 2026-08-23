@@ -84,12 +84,15 @@
 <header class="hero"><div><h1>⚾ MLB Totals Lab V7.0</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.0</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
-<div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
+<div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
 <section id="daily" class="panel"><div id="games" class="games"></div></section>
 <section id="ranking" class="panel hidden"><div id="rankContent"></div></section>
 <section id="census" class="panel hidden"><div id="censusContent"></div></section>
 <section id="teams" class="panel hidden"><div class="histbar" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button class="btn green" id="settleTeams">Liquidar LAB + actualizar</button><button class="btn" id="exportTeams">Exportar equipos CSV</button><button class="btn ghost" id="refreshTeams">Recalcular vista</button></div><div id="teamContent"></div></section>
 <section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar apuestas</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Respaldar JSON</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="historyContent"></div></section>
+<section id="bank" class="panel hidden">
+  <div id="bankContent"></div>
+</section>
 <section id="lab" class="panel hidden"><div class="histbar"><button class="btn green" id="settleLab">Liquidar laboratorio</button><button class="btn" id="exportLab">Exportar laboratorio</button><button class="btn red" id="clearLab">Borrar calibración</button></div><div id="labContent"></div></section>
 <section id="settings" class="panel hidden">
 <div class="section"><h3>Filtro de selección</h3><div class="grid4"><div class="field"><label>Prior del mercado</label><input id="cfgPrior" type="number" min="0" max="0.45" step="0.01" value="0.12"></div><div class="field"><label>Edge mínimo</label><input id="cfgEdge" type="number" min="0" max="0.20" step="0.005" value="0.035"></div><div class="field"><label>Prob. mínima</label><input id="cfgProb" type="number" min="0.50" max="0.80" step="0.005" value="0.56"></div><div class="field"><label>Máx. desacuerdo</label><input id="cfgDis" type="number" min="0.03" max="0.30" step="0.01" value="0.14"></div></div></div>
@@ -126,7 +129,7 @@ const STORE={
  removeItem(k){try{window.localStorage.removeItem(k)}catch{}MEMSTORE.delete(k);IDBSTORE.remove(k).catch(()=>{})},
  clearPrefix(prefix){try{const ls=window.localStorage;for(let i=ls.length-1;i>=0;i--){const k=ls.key(i);if(k&&k.startsWith(prefix))ls.removeItem(k)}}catch{}for(const k of [...MEMSTORE.keys()])if(k.startsWith(prefix))MEMSTORE.delete(k);IDBSTORE.keys().then(keys=>keys.filter(k=>String(k).startsWith(prefix)).forEach(k=>IDBSTORE.remove(k))).catch(()=>{})}
 };
-const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache'];
+const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache','mlb_v71_bank'];
 async function initPersistentStore(){const localOK=localStorageAvailable(),db=await IDBSTORE.open().catch(()=>null);STORAGE_MODE=localOK?(db?'localStorage + IndexedDB':'localStorage'):(db?'IndexedDB':'memoria temporal');for(const k of PERSIST_KEYS){let local=null;if(localOK)try{local=window.localStorage.getItem(k)}catch{}if(local!==null){MEMSTORE.set(k,local);if(db)await IDBSTORE.set(k,local).catch(()=>{});continue}const saved=db?await IDBSTORE.get(k).catch(()=>null):null;if(saved!==null){MEMSTORE.set(k,String(saved));if(localOK)try{window.localStorage.setItem(k,String(saved))}catch{}}}}
 const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)];
 const n=(x,d=0)=>Number.isFinite(+x)?+x:d,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),fix=(x,k=2)=>Number.isFinite(+x)?(+x).toFixed(k):'—',pct=x=>Number.isFinite(x)?`${(x*100).toFixed(1)}%`:'—',esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -296,6 +299,396 @@ function labPickBrierRow(r){return r.status==='FINAL'&&Number.isFinite(+r.y)?Mat
 function labPickSummary(market){const all=labPickRows(market,null,'SPORTSBOOK',true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=all.filter(r=>r.status==='FINAL'),wins=fin.reduce((z,r)=>z+(r.y===1?1:0),0),losses=fin.reduce((z,r)=>z+(r.y===0?1:0),0),bs=fin.length?fin.reduce((z,r)=>z+labPickBrierRow(r),0)/fin.length:NaN;return{market,n:fin.length,pending:all.filter(r=>r.status==='PENDING').length,wins,losses,hit:fin.length?wins/fin.length:NaN,brier:bs}}
 function labErrorSummary(market){const rows=labPickRows(market,'FINAL','SPORTSBOOK',true).filter(r=>teamVersionNumber(r.modelVersion)>=604&&Number.isFinite(+r.actual)),errs=[];for(const r of rows){const pred=market==='TOTAL'?n(r.mean,NaN):NaN;if(Number.isFinite(pred))errs.push(pred-r.actual)}return{n:errs.length,mae:errs.length?errs.reduce((z,x)=>z+Math.abs(x),0)/errs.length:NaN,bias:errs.length?errs.reduce((z,x)=>z+x,0)/errs.length:NaN,rmse:errs.length?Math.sqrt(errs.reduce((z,x)=>z+x*x,0)/errs.length):NaN}}
 function lineupSubsetBrier(confirmed=true){const rows=labPickRows('TOTAL','FINAL','SPORTSBOOK',true).filter(r=>!!r.lineupConfirmed===confirmed&&teamVersionNumber(r.modelVersion)>=604);return{n:rows.length,brier:ensembleBrier(rows)}}
+
+/* ---------- V7.1 · BANK ---------- */
+
+function bankDefault(){
+  return{
+    version:1,
+    initial:0,
+    unit:100,
+    currency:'MXN',
+    updated:null
+  }
+}
+
+function bankCfg(){
+  try{
+    const x=JSON.parse(
+      STORE.getItem('mlb_v71_bank')||'null'
+    );
+
+    if(!x||typeof x!=='object')return bankDefault();
+
+    return{
+      ...bankDefault(),
+      ...x,
+      initial:Math.max(0,n(x.initial,0)),
+      unit:Math.max(.01,n(x.unit,100)),
+      currency:['MXN','USD'].includes(x.currency)?x.currency:'MXN'
+    };
+  }catch{
+    return bankDefault();
+  }
+}
+
+function saveBankCfg(x){
+  const safe={
+    ...bankDefault(),
+    ...(x||{}),
+    initial:Math.max(0,n(x?.initial,0)),
+    unit:Math.max(.01,n(x?.unit,100)),
+    currency:['MXN','USD'].includes(x?.currency)?x.currency:'MXN',
+    updated:new Date().toISOString()
+  };
+
+  STORE.setItem(
+    'mlb_v71_bank',
+    JSON.stringify(safe)
+  );
+
+  window.MLBDB?.saveBankSnapshot?.(safe)
+    .catch(e=>console.warn('Bank SQLite',e));
+
+  renderBank();
+}
+
+function bankMoney(v,currency=bankCfg().currency){
+  if(!Number.isFinite(+v))return '—';
+
+  try{
+    return new Intl.NumberFormat('es-MX',{
+      style:'currency',
+      currency,
+      maximumFractionDigits:2
+    }).format(+v);
+  }catch{
+    return fix(v,2);
+  }
+}
+
+function bankMetrics(){
+  const c=bankCfg();
+
+  const all=bets()
+    .filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL');
+
+  const settled=all
+    .filter(x=>
+      ['WIN','LOSS','PUSH'].includes(x.status) &&
+      x.profit!==null &&
+      x.profit!==undefined &&
+      Number.isFinite(+x.profit)
+    );
+
+  const pending=all.filter(x=>x.status==='PENDING');
+
+  const profit=settled.reduce(
+    (z,x)=>z+n(x.profit,0),0
+  );
+
+  const settledStake=settled.reduce(
+    (z,x)=>z+n(x.stake,0),0
+  );
+
+  const committed=pending.reduce(
+    (z,x)=>z+n(x.stake,0),0
+  );
+
+  const current=c.initial+profit;
+  const available=current-committed;
+
+  const wins=settled.filter(x=>x.status==='WIN').length;
+  const losses=settled.filter(x=>x.status==='LOSS').length;
+  const pushes=settled.filter(x=>x.status==='PUSH').length;
+
+  const roi=settledStake>0
+    ? profit/settledStake
+    : NaN;
+
+  const profitUnits=c.unit>0
+    ? profit/c.unit
+    : NaN;
+
+  const currentUnits=c.unit>0
+    ? current/c.unit
+    : NaN;
+
+  const ordered=[...settled].sort((a,b)=>
+    String(a.settled||a.created||'')
+      .localeCompare(String(b.settled||b.created||''))
+  );
+
+  let equity=c.initial;
+  let peak=equity;
+  let maxDD=0;
+  let maxDDPct=NaN;
+
+  for(const r of ordered){
+    equity+=n(r.profit,0);
+
+    if(equity>peak)peak=equity;
+
+    const dd=peak-equity;
+
+    if(dd>maxDD){
+      maxDD=dd;
+      maxDDPct=peak>0?dd/peak:NaN;
+    }
+  }
+
+  const dailyMap=new Map();
+
+  for(const r of settled){
+    const date=String(r.date||'Sin fecha');
+
+    if(!dailyMap.has(date)){
+      dailyMap.set(date,{
+        date,
+        profit:0,
+        stake:0,
+        wins:0,
+        losses:0,
+        pushes:0
+      });
+    }
+
+    const d=dailyMap.get(date);
+
+    d.profit+=n(r.profit,0);
+    d.stake+=n(r.stake,0);
+
+    if(r.status==='WIN')d.wins++;
+    if(r.status==='LOSS')d.losses++;
+    if(r.status==='PUSH')d.pushes++;
+  }
+
+  const days=[...dailyMap.values()]
+    .sort((a,b)=>b.date.localeCompare(a.date));
+
+  return{
+    cfg:c,
+    all,
+    settled,
+    pending,
+    profit,
+    settledStake,
+    committed,
+    current,
+    available,
+    wins,
+    losses,
+    pushes,
+    roi,
+    profitUnits,
+    currentUnits,
+    peak,
+    maxDD,
+    maxDDPct,
+    days
+  };
+}
+
+function renderBank(){
+  const host=$('#bankContent');
+  if(!host)return;
+
+  const m=bankMetrics();
+  const c=m.cfg;
+
+  const riskPct=m.current>0
+    ? m.committed/m.current
+    : NaN;
+
+  const dayRows=m.days.slice(0,20);
+
+  host.innerHTML=`
+    <div class="section">
+      <h3>Configuración del Bank</h3>
+
+      <div class="grid3">
+        <div class="field">
+          <label>Bank inicial</label>
+          <input
+            id="bankInitial"
+            type="number"
+            min="0"
+            step="100"
+            value="${c.initial||''}"
+            placeholder="Ej. 5000">
+        </div>
+
+        <div class="field">
+          <label>Valor de 1 unidad</label>
+          <input
+            id="bankUnit"
+            type="number"
+            min="0.01"
+            step="10"
+            value="${c.unit}">
+        </div>
+
+        <div class="field">
+          <label>Moneda</label>
+          <select id="bankCurrency">
+            <option value="MXN" ${c.currency==='MXN'?'selected':''}>MXN</option>
+            <option value="USD" ${c.currency==='USD'?'selected':''}>USD</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:10px">
+        <button class="btn green" id="bankSave">
+          Guardar configuración
+        </button>
+      </div>
+
+      ${c.initial<=0
+        ? '<div class="warn" style="margin-top:10px"><b>Configura tu Bank inicial.</b> Hasta entonces las métricas monetarias son sólo parciales.</div>'
+        : ''
+      }
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <small>Bank inicial</small>
+        <div class="big">${bankMoney(c.initial,c.currency)}</div>
+      </div>
+
+      <div class="card">
+        <small>Saldo actual</small>
+        <div class="big">${bankMoney(m.current,c.currency)}</div>
+        <div class="smalltxt">
+          ${Number.isFinite(m.currentUnits)?fix(m.currentUnits,2)+' U':'—'}
+        </div>
+      </div>
+
+      <div class="card">
+        <small>Disponible</small>
+        <div class="big">${bankMoney(m.available,c.currency)}</div>
+        <div class="smalltxt">descontando apuestas pendientes</div>
+      </div>
+
+      <div class="card">
+        <small>Comprometido</small>
+        <div class="big">${bankMoney(m.committed,c.currency)}</div>
+        <div class="smalltxt">
+          ${m.pending.length} pendientes ·
+          ${Number.isFinite(riskPct)?pct(riskPct):'—'} del saldo
+        </div>
+      </div>
+
+      <div class="card">
+        <small>P&L acumulado</small>
+        <div class="big">${m.profit>=0?'+':''}${bankMoney(m.profit,c.currency)}</div>
+        <div class="smalltxt">
+          ${Number.isFinite(m.profitUnits)
+            ? (m.profitUnits>=0?'+':'')+fix(m.profitUnits,2)+' U'
+            : '—'}
+        </div>
+      </div>
+
+      <div class="card">
+        <small>ROI</small>
+        <div class="big">${Number.isFinite(m.roi)?pct(m.roi):'—'}</div>
+        <div class="smalltxt">
+          Stake liquidado ${bankMoney(m.settledStake,c.currency)}
+        </div>
+      </div>
+
+      <div class="card">
+        <small>Récord</small>
+        <div class="big">${m.wins}-${m.losses}-${m.pushes}</div>
+        <div class="smalltxt">W-L-P</div>
+      </div>
+
+      <div class="card">
+        <small>Peak Bank</small>
+        <div class="big">${bankMoney(m.peak,c.currency)}</div>
+      </div>
+
+      <div class="card">
+        <small>Drawdown máximo</small>
+        <div class="big">${bankMoney(m.maxDD,c.currency)}</div>
+        <div class="smalltxt">
+          ${Number.isFinite(m.maxDDPct)?pct(m.maxDDPct):'—'}
+        </div>
+      </div>
+
+      <div class="card">
+        <small>1 Unidad</small>
+        <div class="big">${bankMoney(c.unit,c.currency)}</div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:12px">
+      <h3>Control diario</h3>
+
+      ${dayRows.length
+        ? `<div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Récord</th>
+                  <th>Stake</th>
+                  <th>P&L</th>
+                  <th>ROI</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${dayRows.map(d=>{
+                  const roi=d.stake>0?d.profit/d.stake:NaN;
+
+                  return `
+                    <tr>
+                      <td>${esc(d.date)}</td>
+                      <td>${d.wins}-${d.losses}-${d.pushes}</td>
+                      <td>${bankMoney(d.stake,c.currency)}</td>
+                      <td>${d.profit>=0?'+':''}${bankMoney(d.profit,c.currency)}</td>
+                      <td>${Number.isFinite(roi)?pct(roi):'—'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`
+        : '<div class="empty">Todavía no hay apuestas liquidadas para construir la curva del Bank.</div>'
+      }
+    </div>
+  `;
+
+  const save=$('#bankSave');
+
+  if(save){
+    save.onclick=()=>{
+      const initial=Math.max(
+        0,
+        n($('#bankInitial').value,0)
+      );
+
+      const unit=Math.max(
+        .01,
+        n($('#bankUnit').value,100)
+      );
+
+      const currency=$('#bankCurrency').value;
+
+      saveBankCfg({
+        ...c,
+        initial,
+        unit,
+        currency
+      });
+
+      status('Configuración del Bank guardada.','ok');
+    };
+  }
+}
+
+window.renderBank=renderBank;
+
 function betClv(row){if(!Number.isFinite(+row.closingLine))return NaN;return row.side==='OVER'?n(row.closingLine)-n(row.line):n(row.line)-n(row.closingLine)}
 function setClosing(id){const a=bets(),r=a.find(x=>String(x.id)===String(id));if(!r)return;const line=prompt('Línea de cierre del mercado',Number.isFinite(+r.closingLine)?r.closingLine:r.line),odds=prompt('Momio de cierre (opcional, americano o decimal)',r.closingOdds??'');if(line===null)return;const ln=lineNum(line);if(!Number.isFinite(ln)){alert('Línea de cierre inválida.');return}r.closingLine=ln;const po=parseOdds(odds);r.closingOdds=po.valid?po.decimal:null;r.closingAmerican=po.valid?po.american:null;r.clv=betClv(r);saveBets(a);renderHistory()}window.setClosing=setClosing;
 
@@ -323,12 +716,12 @@ async function openGame(pk){const g=S.games.find(x=>x.gamePk===pk);if(!g)return;
 function renderModelBars(side){return Object.entries(side.models).map(([k,p])=>`<div class="modelbar"><span>${({struct:'PA Markov/RE24',nb:'NegBin',pln:'Poisson-Lognormal',com:'COM-Poisson'})[k]}</span><div class="progress"><span style="width:${clamp(p*100,0,100)}%"></span></div><b>${pct(p)}</b></div>`).join('')}
 function marketTable(evals,N=0){return`<div class="section"><h3>Mercados analizados · probabilidad condicionada a decisión</h3><div style="overflow:auto"><table class="market-table-mobile"><thead><tr><th>Mercado</th><th>Línea</th><th>Over</th><th>Under</th><th>Push</th><th>Desacuerdo O/U</th></tr></thead><tbody>${evals.map((x,i)=>`<tr><td>${esc(x.label)}<span class="market-source"><span class="sourcechip ${sourceClass(x.source)}">${sourceLabel(x.source)}</span></span></td><td>${x.line}</td><td><b>${pct(x.over.p)}</b><div class="smalltxt">Gana ${pct(x.over.win)} · cuota ${x.over.fair}</div>${Number.isFinite(x.over.edge)?`<div class="smalltxt">edge ${pct(x.over.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|OVER">Elegir Over</button></div></td><td><b>${pct(x.under.p)}</b><div class="smalltxt">Gana ${pct(x.under.win)} · cuota ${x.under.fair}</div>${Number.isFinite(x.under.edge)?`<div class="smalltxt">edge ${pct(x.under.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|UNDER">Elegir Under</button></div></td><td>${pct(x.push)}</td><td>${pct(x.over.dis)} / ${pct(x.under.dis)}</td></tr>`).join('')}</tbody></table></div><div class="note">En líneas enteras, la probabilidad principal excluye el push. “Gana” conserva la probabilidad absoluta de cobro.</div></div>`}
 function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),modelVersion:MODEL_VERSION,isLabPick:upper===labSide,status:'PENDING',created:stamp,updated:stamp,seed:built.seed,includeExtras:built.ctx?.gameRules?.extras!==false},key=labForecastKey(fresh),idx=rows.findIndex(r=>labForecastKey(r)===key);if(idx>=0){if(rows[idx].status==='PENDING'){rows[idx]={...rows[idx],...fresh,id:rows[idx].id||fresh.id,created:rows[idx].created||stamp};updated++}}else{rows.push(fresh);saved++}}}rows=dedupeLabRows(rows);saveLab(rows.slice(-5000));return{saved,updated,skippedModel,skipped:false}}
-function resultHtml(g,built,evals,best,N){const p=best.pick,e=best.ev,side=e[p.side.toLowerCase()],mean=built.mean,all=built.models.struct.total,q10=quantile(all,.10),q90=quantile(all,.90),q25=quantile(all,.25),q75=quantile(all,.75),w=e.weights,totalLab=labPickSummary('TOTAL'),bestIndex=0,bestValue=`0|${p.side}`,sig=signalLabel(p,e.source),mc=mcMargin(p.p,N),delta=Number.isFinite(+e.line)?mean.total-(+e.line):NaN,options=['OVER','UNDER'].map(s=>{const z=e[s.toLowerCase()],edge=Number.isFinite(z.edge)?` · edge ${pct(z.edge)}`:'';return`<option value="0|${s}" ${`0|${s}`===bestValue?'selected':''}>${s} ${e.line} · ${pct(z.p)}${edge}</option>`}).join('');return`<div class="pick ${p.pass?'pass':''}"><div><div class="meta">LECTURA FULL GAME · <span class="sourcechip ${sourceClass(e.source)}">${sourceLabel(e.source)}</span></div><h3>${p.side} ${e.line} <span class="signalchip ${sig.cls}">${sig.txt}</span></h3><div class="note">Decisión ${pct(p.p)} · gana ${pct(side.win)} · push ${pct(e.push)} · ${Number.isFinite(p.edge)?`edge ${pct(p.edge)} · `:''}cuota justa ${p.fair}</div><div class="mc">Margen Monte Carlo aproximado: ±${pct(mc)} · semilla ${built.seed}</div></div><div class="prob">${pct(p.p)}</div></div><div class="cards"><div class="card"><small>Total medio híbrido</small><div class="big">${fix(mean.total,2)}</div><div class="desc">Visitante ${fix(mean.away,2)} · Local ${fix(mean.home,2)}</div></div><div class="card"><small>Modelo vs línea</small><div class="big">${Number.isFinite(delta)?`${delta>0?'+':''}${fix(delta,2)}`:'—'}</div><div class="desc">Media ${fix(mean.total,2)} vs mercado ${fix(e.line,1)}</div></div><div class="card"><small>Auditoría de sesgo</small><div class="big">${fix(built.structuralMean?.total,2)} / ${fix(built.baseMean?.total,2)}</div><div class="desc">Markov calibrado / referencia analítica · Δ ${fix(built.biasAudit?.totalGap,2)}</div></div><div class="card"><small>Rango central 50%</small><div class="big">${q25}–${q75}</div><div class="desc">Markov/RE24 estructural</div></div><div class="card"><small>Rango central 80%</small><div class="big">${q10}–${q90}</div><div class="desc">Riesgo de cola visible</div></div><div class="card"><small>Brier LAB Full Game</small><div class="big">${fix(totalLab.brier,3)}</div><div class="desc">${totalLab.wins}-${totalLab.losses} · ${totalLab.n} oficiales</div></div></div>${marketTable(evals,N)}<details class="section tech"><summary>Acuerdo, correcciones y reglas reales</summary><div style="padding:12px"><h3>Acuerdo de modelos · ${p.side} ${e.line}</h3>${renderModelBars(side)}<div class="smalltxt">Pesos: PA/Markov ${pct(w.struct)} · NegBin ${pct(w.nb)} · PLN ${pct(w.pln)} · COM ${pct(w.com)} ${w.active?`· aprendidos con ${w.n} Full Game oficiales`:'· pesos base 30/25/25/20'}.</div><div class="grid4" style="margin-top:10px"><div class="card"><small>Parque + clima</small><div class="big">${fix(built.ctx.env.total,3)}×</div></div><div class="card"><small>Bullpen visitante</small><div class="big ${bullpenClass(built.ctx.awayTeam.bullpen)}">${fix(built.ctx.awayTeam.bullpen?.factor,3)}×</div></div><div class="card"><small>Bullpen local</small><div class="big ${bullpenClass(built.ctx.homeTeam.bullpen)}">${fix(built.ctx.homeTeam.bullpen?.factor,3)}×</div></div><div class="card"><small>Reglas simuladas</small><div class="big">9ª + extras</div><div class="smalltxt">Baja 9ª omitida ${pct(built.ruleStats?.bottom9SkipRate)} · extras ${pct(built.ruleStats?.extrasRate)}</div></div><div class="card"><small>Hook abridores</small><div class="big">${fix(built.ruleStats?.awayStarterIP,1)} / ${fix(built.ruleStats?.homeStarterIP,1)} IP</div><div class="smalltxt">Salida temprana ${pct(built.ruleStats?.earlyHookRate)}</div></div><div class="card"><small>Lineups</small><div class="big">${built.ctx.away.lineup?.confirmed&&built.ctx.home.lineup?.confirmed?'Confirmados':'Con proxy'}</div><div class="smalltxt">Splits ${n(built.ctx.away.lineup?.platoonReady)+n(built.ctx.home.lineup?.platoonReady)}/18 · Statcast ${n(built.ctx.away.lineup?.statcastReady)+n(built.ctx.home.lineup?.statcastReady)}/18</div></div></div></div></details><div class="section" id="betRegister"><h3>Registrar apuesta Full Game</h3><div class="grid4"><div class="field"><label>Lado</label><select id="betPick">${options}</select></div><div class="field"><label>Selección</label><input id="betSide" readonly></div><div class="field"><label>Momio</label><input id="betOdds" inputmode="decimal" placeholder="-110 o 1.91"></div><div class="field"><label>Stake</label><input id="betStake" type="number" min="0" step="10" value="100"></div></div><div class="cards" style="margin-top:10px"><div class="card"><small>Probabilidad decisión</small><div class="big" id="betProb">—</div></div><div class="card"><small>Edge</small><div class="big" id="betEdge">—</div></div><div class="card"><small>Cuota justa</small><div class="big" id="betFair">—</div></div><div class="card"><small>Filtro</small><div class="big" id="betFilter">—</div></div></div><div class="actions" style="margin-top:10px"><button class="btn green" id="saveBet">Guardar apuesta Full Game</button></div><div class="note" id="betSaveStatus">Sólo se registra Over/Under de juego completo.</div></div><div class="warn"><b>Disciplina:</b> un solo mercado reduce ruido, pero no elimina la varianza del béisbol.</div>`}
+function resultHtml(g,built,evals,best,N){const p=best.pick,e=best.ev,side=e[p.side.toLowerCase()],mean=built.mean,all=built.models.struct.total,q10=quantile(all,.10),q90=quantile(all,.90),q25=quantile(all,.25),q75=quantile(all,.75),w=e.weights,totalLab=labPickSummary('TOTAL'),bestIndex=0,bestValue=`0|${p.side}`,sig=signalLabel(p,e.source),mc=mcMargin(p.p,N),delta=Number.isFinite(+e.line)?mean.total-(+e.line):NaN,options=['OVER','UNDER'].map(s=>{const z=e[s.toLowerCase()],edge=Number.isFinite(z.edge)?` · edge ${pct(z.edge)}`:'';return`<option value="0|${s}" ${`0|${s}`===bestValue?'selected':''}>${s} ${e.line} · ${pct(z.p)}${edge}</option>`}).join('');return`<div class="pick ${p.pass?'pass':''}"><div><div class="meta">LECTURA FULL GAME · <span class="sourcechip ${sourceClass(e.source)}">${sourceLabel(e.source)}</span></div><h3>${p.side} ${e.line} <span class="signalchip ${sig.cls}">${sig.txt}</span></h3><div class="note">Decisión ${pct(p.p)} · gana ${pct(side.win)} · push ${pct(e.push)} · ${Number.isFinite(p.edge)?`edge ${pct(p.edge)} · `:''}cuota justa ${p.fair}</div><div class="mc">Margen Monte Carlo aproximado: ±${pct(mc)} · semilla ${built.seed}</div></div><div class="prob">${pct(p.p)}</div></div><div class="cards"><div class="card"><small>Total medio híbrido</small><div class="big">${fix(mean.total,2)}</div><div class="desc">Visitante ${fix(mean.away,2)} · Local ${fix(mean.home,2)}</div></div><div class="card"><small>Modelo vs línea</small><div class="big">${Number.isFinite(delta)?`${delta>0?'+':''}${fix(delta,2)}`:'—'}</div><div class="desc">Media ${fix(mean.total,2)} vs mercado ${fix(e.line,1)}</div></div><div class="card"><small>Auditoría de sesgo</small><div class="big">${fix(built.structuralMean?.total,2)} / ${fix(built.baseMean?.total,2)}</div><div class="desc">Markov calibrado / referencia analítica · Δ ${fix(built.biasAudit?.totalGap,2)}</div></div><div class="card"><small>Rango central 50%</small><div class="big">${q25}–${q75}</div><div class="desc">Markov/RE24 estructural</div></div><div class="card"><small>Rango central 80%</small><div class="big">${q10}–${q90}</div><div class="desc">Riesgo de cola visible</div></div><div class="card"><small>Brier LAB Full Game</small><div class="big">${fix(totalLab.brier,3)}</div><div class="desc">${totalLab.wins}-${totalLab.losses} · ${totalLab.n} oficiales</div></div></div>${marketTable(evals,N)}<details class="section tech"><summary>Acuerdo, correcciones y reglas reales</summary><div style="padding:12px"><h3>Acuerdo de modelos · ${p.side} ${e.line}</h3>${renderModelBars(side)}<div class="smalltxt">Pesos: PA/Markov ${pct(w.struct)} · NegBin ${pct(w.nb)} · PLN ${pct(w.pln)} · COM ${pct(w.com)} ${w.active?`· aprendidos con ${w.n} Full Game oficiales`:'· pesos base 30/25/25/20'}.</div><div class="grid4" style="margin-top:10px"><div class="card"><small>Parque + clima</small><div class="big">${fix(built.ctx.env.total,3)}×</div></div><div class="card"><small>Bullpen visitante</small><div class="big ${bullpenClass(built.ctx.awayTeam.bullpen)}">${fix(built.ctx.awayTeam.bullpen?.factor,3)}×</div></div><div class="card"><small>Bullpen local</small><div class="big ${bullpenClass(built.ctx.homeTeam.bullpen)}">${fix(built.ctx.homeTeam.bullpen?.factor,3)}×</div></div><div class="card"><small>Reglas simuladas</small><div class="big">9ª + extras</div><div class="smalltxt">Baja 9ª omitida ${pct(built.ruleStats?.bottom9SkipRate)} · extras ${pct(built.ruleStats?.extrasRate)}</div></div><div class="card"><small>Hook abridores</small><div class="big">${fix(built.ruleStats?.awayStarterIP,1)} / ${fix(built.ruleStats?.homeStarterIP,1)} IP</div><div class="smalltxt">Salida temprana ${pct(built.ruleStats?.earlyHookRate)}</div></div><div class="card"><small>Lineups</small><div class="big">${built.ctx.away.lineup?.confirmed&&built.ctx.home.lineup?.confirmed?'Confirmados':'Con proxy'}</div><div class="smalltxt">Splits ${n(built.ctx.away.lineup?.platoonReady)+n(built.ctx.home.lineup?.platoonReady)}/18 · Statcast ${n(built.ctx.away.lineup?.statcastReady)+n(built.ctx.home.lineup?.statcastReady)}/18</div></div></div></div></details><div class="section" id="betRegister"><h3>Registrar apuesta Full Game</h3><div class="grid4"><div class="field"><label>Lado</label><select id="betPick">${options}</select></div><div class="field"><label>Selección</label><input id="betSide" readonly></div><div class="field"><label>Momio</label><input id="betOdds" inputmode="decimal" placeholder="-110 o 1.91"></div><div class="field"><label>Stake</label><input id="betStake" type="number" min="0" step="10" value="${fix(bankCfg().unit,0)}"></div></div><div class="cards" style="margin-top:10px"><div class="card"><small>Probabilidad decisión</small><div class="big" id="betProb">—</div></div><div class="card"><small>Edge</small><div class="big" id="betEdge">—</div></div><div class="card"><small>Cuota justa</small><div class="big" id="betFair">—</div></div><div class="card"><small>Filtro</small><div class="big" id="betFilter">—</div></div></div><div class="actions" style="margin-top:10px"><button class="btn green" id="saveBet">Guardar apuesta Full Game</button></div><div class="note" id="betSaveStatus">Sólo se registra Over/Under de juego completo.</div></div><div class="warn"><b>Disciplina:</b> un solo mercado reduce ruido, pero no elimina la varianza del béisbol.</div>`}
 function selectedBetChoice(evals){const raw=$('#betPick')?.value||'0|OVER',[i,side]=raw.split('|'),ev=evals[n(i,0)]||evals[0];return{ev,side:String(side||'OVER').toUpperCase(),assessment:assessSide(ev,side||'OVER')}}
 function bindBetSelector(evals,best){const sel=$('#betPick');if(!sel)return;const refresh=()=>{const {ev,side,assessment:a}=selectedBetChoice(evals),odd=side==='OVER'?ev.overOdds:ev.underOdds,sig=signalLabel(a,ev.source);$('#betSide').value=`${side} ${ev.line} · ${ev.label}`;$('#betProb').textContent=pct(a.p);$('#betEdge').textContent=Number.isFinite(a.edge)?pct(a.edge):'—';$('#betFair').textContent=a.fair;$('#betFilter').textContent=sig.txt;$('#betFilter').className=`big signalchip ${sig.cls}`;$('#betOdds').value=odd??'';const note=$('#betSaveStatus');if(note)note.textContent=`${sourceLabel(ev.source)} · gana ${pct(ev[side.toLowerCase()].win)} · push ${pct(ev.push)}${a.pass?` · ${a.why}`:' · cumple filtros'}`;sel.dataset.market=ev.market};sel.onchange=refresh;$$('[data-pick-choice]').forEach(b=>b.onclick=()=>{sel.value=b.dataset.pickChoice;refresh();$('#betRegister')?.scrollIntoView({behavior:'smooth',block:'center'})});refresh()}
 
 async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);$('#results').innerHTML=resultHtml(g,built,ev,best,N);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
-function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e))}
+function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
 function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,closingLine:Number.isFinite(+r.closingLine)?+r.closingLine:null,closingOdds:Number.isFinite(+r.closingOdds)?+r.closingOdds:null,closingAmerican:Number.isFinite(+r.closingAmerican)?+r.closingAmerican:null,clv:Number.isFinite(+r.clv)?+r.clv:NaN}}
 function betSignature(r){return[String(r.id||''),r.gamePk,r.date,r.away,r.home,r.market,r.side,r.line,r.created].join('|')}
@@ -541,11 +934,11 @@ function startLive(){clearInterval(S.liveTimer);if(S.liveOn)S.liveTimer=setInter
 async function scanDay(mode='preview'){const isLab=mode==='lab',N=isLab?Math.max(3000,n($('#sims').value,8000)):2000,btn=isLab?$('#scanLab'):$('#scanDay');if(btn)btn.disabled=true;status(`<span class="loader"></span> ${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} · ${N.toLocaleString()} simulaciones…`);let done=0,labSaved=0,modelSkipped=0;for(const g of S.games){try{const d=await hydrateGame(g),ctx=autoContext(g,d),pre=meanProjection(ctx),def=defaultLines(g,pre),built=await buildModels(ctx,N,()=>{},JSON.stringify(def));built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',def.line,def.oo,def.uo,'TOTAL',def.lineSource),key:'total',label:'Total juego completo'}],best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs:def});if(isLab){const r=addLabForecast(g,ev,built,{realOnly:true});labSaved+=r.saved+r.updated;modelSkipped+=r.skippedModel||0}done++;status(`${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} ${done}/${S.games.length}…`)}catch(e){console.warn('scan',g.gamePk,e)}}renderGames();renderRanking();persistRankingDraft();renderLab();renderCensus();renderTeams();if(btn)btn.disabled=false;status(isLab?`Escaneo LAB terminado: ${done} juegos · ${labSaved} Totales reales actualizados · ${modelSkipped} juegos sin línea real excluidos.`:`Vista rápida terminada: ${done} juegos Full Game. No modificó aprendizaje ni Brier.`,'ok')}
 function download(name,text,type='text/plain'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function exportCsv(){const a=bets().filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL'),head=['date','away','home','label','side','line','odds','stake','p','edge','status','profit'],rows=a.map(x=>head.map(k=>JSON.stringify(x[k]??'')).join(','));download('mlb_v70_apuestas_full_game.csv',[head.join(','),...rows].join('\n'),'text/csv')}
-function exportJson(){download('mlb_v70_respaldo_full_game.json',JSON.stringify({bets:bets(),lab:lab(),cfg:cfg(),markets:markets(),rankCensus:rankCensus(),rankDrafts:rankDraftStore()},null,2),'application/json')}
+function exportJson(){download('mlb_v70_respaldo_full_game.json',JSON.stringify({bets:bets(),lab:lab(),cfg:cfg(),markets:markets(),rankCensus:rankCensus(),rankDrafts:rankDraftStore(),bank:bankCfg()},null,2),'application/json')}
 function exportLab(){download('mlb_v70_calibracion_full_game.json',JSON.stringify(lab(),null,2),'application/json')}
-function importJson(file){const r=new FileReader;r.onload=()=>{try{const x=JSON.parse(r.result);let added=0;if(Array.isArray(x))added=mergeBetRows(x,'V4 JSON');else{if(Array.isArray(x.bets))added=mergeBetRows(x.bets,'v5');if(Array.isArray(x.lab))saveLab(dedupeLabRows(x.lab));if(x.cfg)STORE.setItem('mlb_v5_cfg',JSON.stringify(x.cfg));if(x.markets)STORE.setItem('mlb_v5_markets',JSON.stringify(x.markets));if(x.rankCensus&&typeof x.rankCensus==='object')saveRankCensus(x.rankCensus);else if(x.rankTracker&&typeof x.rankTracker==='object'){saveLegacyRankArchive(x.rankTracker);const c=rankCensus();c.migrated=false;saveRankCensus(c);migrateRankingToCensus()}if(x.rankDrafts&&typeof x.rankDrafts==='object')STORE.setItem('mlb_v59_rank_drafts',JSON.stringify(x.rankDrafts))}loadCfg();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();status(`Respaldo importado${added?`: ${added} apuestas agregadas`:''}.`,'ok')}catch(e){alert(`JSON inválido: ${e.message}`)}};r.readAsText(file)}
-$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='lab')renderLab();if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
-$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=settleBets;$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=settleLab;$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=settleLab;$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#resetAll').onclick=()=>{if(confirm('¿Restablecer ajustes, mercados, apuestas y calibración?')){STORE.clearPrefix('mlb_v5_');STORE.removeItem('mlb_v60_rank_census');STORE.removeItem('mlb_v61_public_odds_cache');location.reload()}};
+function importJson(file){const r=new FileReader;r.onload=()=>{try{const x=JSON.parse(r.result);let added=0;if(Array.isArray(x))added=mergeBetRows(x,'V4 JSON');else{if(Array.isArray(x.bets))added=mergeBetRows(x.bets,'v5');if(Array.isArray(x.lab))saveLab(dedupeLabRows(x.lab));if(x.cfg)STORE.setItem('mlb_v5_cfg',JSON.stringify(x.cfg));if(x.bank&&typeof x.bank==='object')saveBankCfg(x.bank);if(x.markets)STORE.setItem('mlb_v5_markets',JSON.stringify(x.markets));if(x.rankCensus&&typeof x.rankCensus==='object')saveRankCensus(x.rankCensus);else if(x.rankTracker&&typeof x.rankTracker==='object'){saveLegacyRankArchive(x.rankTracker);const c=rankCensus();c.migrated=false;saveRankCensus(c);migrateRankingToCensus()}if(x.rankDrafts&&typeof x.rankDrafts==='object')STORE.setItem('mlb_v59_rank_drafts',JSON.stringify(x.rankDrafts))}loadCfg();renderHistory();renderBank();renderLab();renderTeams();renderCensus();renderRanking();status(`Respaldo importado${added?`: ${added} apuestas agregadas`:''}.`,'ok')}catch(e){alert(`JSON inválido: ${e.message}`)}};r.readAsText(file)}
+$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab')renderLab();if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
+$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=settleBets;$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=settleLab;$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=settleLab;$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#resetAll').onclick=()=>{if(confirm('¿Restablecer ajustes, mercados, apuestas y calibración?')){STORE.clearPrefix('mlb_v5_');STORE.removeItem('mlb_v60_rank_census');STORE.removeItem('mlb_v71_bank');STORE.removeItem('mlb_v61_public_odds_cache');location.reload()}};
 async function boot(){renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 </script>

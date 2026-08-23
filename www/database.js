@@ -6,6 +6,8 @@ const MLBDB = {
   censusSqlKey: 'rank_census_v1',
   betsStorageKey: 'mlb_v5_bets',
   betsSqlKey: 'bets_v1',
+  bankStorageKey: 'mlb_v71_bank',
+  bankSqlKey: 'bank_v1',
 
   showStatus(message, ok) {
     let badge = document.getElementById('mlb-sqlite-status');
@@ -80,6 +82,7 @@ const MLBDB = {
 
       const censusMode = await this.initCensusPersistence();
       const betsMode = await this.initBetsPersistence();
+      const bankMode = await this.initBankPersistence();
 
       if (censusMode === 'restored') {
         this.showStatus('SQLite OK · Censo restaurado', true);
@@ -223,6 +226,52 @@ const MLBDB = {
       }
     } catch (err) {
       console.warn('No se pudieron restaurar Apuestas:', err);
+    }
+
+    return 'empty';
+  },
+
+  async saveBankSnapshot(data) {
+    if (!data || typeof data !== 'object') return false;
+    return this.setKV(this.bankSqlKey, JSON.stringify(data));
+  },
+
+  async initBankPersistence() {
+    let localRaw = null;
+
+    try {
+      localRaw = localStorage.getItem(this.bankStorageKey);
+    } catch {}
+
+    if (localRaw !== null) {
+      try {
+        const local = JSON.parse(localRaw);
+
+        if (local && typeof local === 'object') {
+          await this.saveBankSnapshot(local);
+          return 'backed-up';
+        }
+      } catch {}
+    }
+
+    try {
+      const nativeRaw = await this.getKV(this.bankSqlKey);
+
+      if (nativeRaw !== null) {
+        const native = JSON.parse(nativeRaw);
+
+        if (native && typeof native === 'object') {
+          localStorage.setItem(
+            this.bankStorageKey,
+            JSON.stringify(native)
+          );
+
+          window.renderBank?.();
+          return 'restored';
+        }
+      }
+    } catch (err) {
+      console.warn('No se pudo restaurar Bank:', err);
     }
 
     return 'empty';
