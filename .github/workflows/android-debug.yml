@@ -1,9 +1,11 @@
-name: Build Android APK V0
+name: Build Android APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "android-v7" ]
+    branches:
+      - android-v7
+      - v1-sqlite
 
 jobs:
   build:
@@ -25,7 +27,7 @@ jobs:
           java-version: "21"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Create Android project
         run: |
@@ -33,6 +35,18 @@ jobs:
             npx cap add android
           fi
           npx cap sync android
+
+      - name: Install permanent signing key
+        env:
+          MLB_KEYSTORE: ${{ secrets.MLB_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/.android"
+          echo "$MLB_KEYSTORE" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey
 
       - name: Build debug APK
         run: |
@@ -42,11 +56,11 @@ jobs:
 
       - name: Collect APK
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk MLB_Total_Labs_7_0_V0-debug.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk MLB_Total_Labs_7_V1-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB_Total_Labs_7_0_V0_APK
-          path: MLB_Total_Labs_7_0_V0-debug.apk
+          name: MLB_Total_Labs_7_V1_APK
+          path: MLB_Total_Labs_7_V1-debug.apk
           retention-days: 30
