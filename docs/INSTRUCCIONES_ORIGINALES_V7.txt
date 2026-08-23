@@ -1,0 +1,47 @@
+MLB TOTALS LAB V7.0 - FULL GAME O/U ONLY
+==========================================
+
+PAQUETE COMPLETO PARA NETLIFY.
+No tienes que mezclar ni reemplazar archivos de otras versiones.
+
+ENFOQUE ÚNICO
+-------------
+La aplicación trabaja únicamente el mercado Over/Under del JUEGO COMPLETO.
+F5 y Team Totals quedan fuera del Ranking, Sportsbook LAB, Censo, Equipos y Apuestas activas.
+
+FLUJO DIARIO
+------------
+1. Abre la app.
+2. Pulsa “Actualizar todo”.
+3. Carga jornada y línea/momios Full Game.
+4. Ejecuta el mismo motor profundo (lineups, splits, Statcast, abridores, bullpen, Markov/RE24, NegBin, PLN y COM-Poisson).
+5. Genera un único pick Over/Under por partido.
+6. El Ranking entra automáticamente al Censo.
+7. Al terminar los juegos, pulsa “Liquidar laboratorio” para actualizar Brier y la pestaña Equipos.
+
+PESOS BASE
+----------
+PA Markov/RE24: 30%
+Negative Binomial: 25%
+Poisson-Lognormal: 25%
+COM-Poisson: 20%
+Con muestra suficiente pueden adaptarse por Brier dentro de límites.
+
+EQUIPOS
+-------
+La pestaña Equipos mide únicamente Full Game O/U:
+- Acierto y Brier por equipo.
+- MAE y sesgo de carreras.
+- Over vs Under.
+- Equipo como local vs visitante.
+- Semáforo con suavizado y control de muestra.
+
+INSTALACIÓN NUEVA EN NETLIFY
+----------------------------
+1. Entra a https://app.netlify.com/drop
+2. Crea un proyecto nuevo.
+3. Sube este ZIP completo.
+4. Abre la URL https://....netlify.app
+5. En Chrome Android usa ⋮ → Instalar aplicación.
+
+La función netlify/functions/odds.js obtiene Total y momios Over/Under del lado servidor cuando la fuente pública los publica.

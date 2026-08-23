@@ -1,0 +1,7 @@
+MLB Total Labs V7.0 Android V0 audit
+- Original project: 9 files, ~252 KB extracted.
+- Core app: index.html (~204 KB), self-contained HTML/CSS/JS.
+- External serverless component: netlify/functions/odds.js.
+- Persistent state in current V7: localStorage + IndexedDB mirror.
+- Core model buildModels() remains unchanged in V0 starter.
+- V0 goal: packaging/compatibility only; no model tuning.
