@@ -43,16 +43,42 @@ jobs:
           mkdir -p "$HOME/.android"
           echo "$MLB_KEYSTORE" | base64 --decode > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
-          keytool -list \
+
+          cp "$HOME/.android/debug.keystore" android/app/debug.keystore
+
+          keytool -list -v \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
             -alias androiddebugkey
 
-      - name: Build debug APK
+      - name: Build APK with permanent signature
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+
+          ./gradlew assembleDebug \
+            -Pandroid.injected.signing.store.file="$HOME/.android/debug.keystore" \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android
+
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+
+          "$APKSIGNER" verify --print-certs \
+            android/app/build/outputs/apk/debug/app-debug.apk
+
+          APK_SHA=$("$APKSIGNER" verify --print-certs \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            | awk -F': ' '/certificate SHA-256 digest/{print tolower($2); exit}')
+
+          EXPECTED="06c224aeb153d3d983cd59426da3513820651a2f2687fb40fbb703d5cfc05afe"
+
+          echo "APK:      $APK_SHA"
+          echo "EXPECTED: $EXPECTED"
+
+          test "$APK_SHA" = "$EXPECTED"
 
       - name: Collect APK
         run: |
