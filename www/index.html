@@ -2635,6 +2635,340 @@ function riskHistorySummaryHtml(rows){
 }
 
 
+
+/* V7.5A DAILY EXPOSURE STATS */
+
+function dailyExposureStats(rows,day=localDay()){
+
+  const cfg=bankCfg();
+
+  const all=rows.filter(r=>
+    String(r.date||'')===String(day)
+  );
+
+  const settled=all.filter(r=>
+    r.status==='WIN' ||
+    r.status==='LOSS' ||
+    r.status==='PUSH'
+  );
+
+  const pending=all.filter(r=>
+    r.status==='PENDING'
+  );
+
+  const totalStake=all.reduce(
+    (sum,r)=>sum+n(r.stake,0),
+    0
+  );
+
+  const totalUnits=all.reduce(
+    (sum,r)=>sum+(
+      hasRealNumber(r.unitsAtBet)
+        ?Number(r.unitsAtBet)
+        :cfg.unit>0
+          ?n(r.stake,0)/cfg.unit
+          :0
+    ),
+    0
+  );
+
+  const openStake=pending.reduce(
+    (sum,r)=>sum+n(r.stake,0),
+    0
+  );
+
+  const bank=bankMetrics();
+
+  const openExposure=
+    bank.current>0
+      ?openStake/bank.current
+      :NaN;
+
+  const exposures=all
+    .map(r=>
+      hasRealNumber(r.riskExposureAfter)
+        ?Number(r.riskExposureAfter)
+        :NaN
+    )
+    .filter(Number.isFinite);
+
+  const individual=all
+    .map(r=>
+      hasRealNumber(r.riskIndividual)
+        ?Number(r.riskIndividual)
+        :NaN
+    )
+    .filter(Number.isFinite);
+
+  const peakExposure=
+    exposures.length
+      ?Math.max(...exposures)
+      :NaN;
+
+  const maxIndividual=
+    individual.length
+      ?Math.max(...individual)
+      :NaN;
+
+  const profit=settled.reduce(
+    (sum,r)=>sum+n(r.profit,0),
+    0
+  );
+
+  const unitResults=settled
+    .map(betProfitUnits)
+    .filter(Number.isFinite);
+
+  const profitUnits=
+    unitResults.length
+      ?unitResults.reduce((a,b)=>a+b,0)
+      :NaN;
+
+  return{
+    day,
+    all,
+    settled,
+    pending,
+    totalStake,
+    totalUnits,
+    openStake,
+    openExposure,
+    peakExposure,
+    maxIndividual,
+    profit,
+    profitUnits
+  };
+}
+
+
+/* V7.5B DAILY EXPOSURE PANEL */
+
+function dailyExposureSummaryHtml(rows){
+
+  const d=dailyExposureStats(rows);
+  const c=bankCfg();
+
+  if(!d.all.length){
+    return `
+      <div class="section">
+        <h3>Control de exposición diaria</h3>
+        <div class="empty">
+          No hay apuestas registradas hoy.
+        </div>
+      </div>
+    `;
+  }
+
+  const peak=d.peakExposure;
+
+  let level='SIN DATOS';
+  let cls='';
+
+  if(Number.isFinite(peak)){
+
+    if(peak<=.05){
+      level='CONTROLADA';
+      cls='bp-good';
+
+    }else if(peak<=.08){
+      level='MODERADA';
+      cls='bp-mid';
+
+    }else if(peak<=.12){
+      level='ALTA';
+      cls='bp-bad';
+
+    }else{
+      level='EXCESIVA';
+      cls='bp-bad';
+    }
+  }
+
+  return `
+    <div
+      class="section"
+      style="margin-bottom:12px"
+    >
+
+      <h3>
+        Control de exposición diaria
+      </h3>
+
+      <div class="cards">
+
+        <div class="card">
+          <small>Apuestas del día</small>
+
+          <div class="big">
+            ${d.all.length}
+          </div>
+
+          <div class="smalltxt">
+            ${d.settled.length} liquidadas ·
+            ${d.pending.length} pendientes
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Stake total</small>
+
+          <div class="big">
+            ${bankMoney(
+              d.totalStake,
+              c.currency
+            )}
+          </div>
+
+          <div class="smalltxt">
+            ${fix(d.totalUnits,2)} U
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Pico exposición</small>
+
+          <div class="big ${cls}">
+            ${
+              Number.isFinite(peak)
+                ?pct(peak)
+                :'—'
+            }
+          </div>
+
+          <div class="smalltxt">
+            ${level}
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Mayor riesgo individual</small>
+
+          <div class="big">
+            ${
+              Number.isFinite(
+                d.maxIndividual
+              )
+                ?pct(d.maxIndividual)
+                :'—'
+            }
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Exposición abierta</small>
+
+          <div class="big">
+            ${
+              Number.isFinite(
+                d.openExposure
+              )
+                ?pct(d.openExposure)
+                :'—'
+            }
+          </div>
+
+          <div class="smalltxt">
+            ${bankMoney(
+              d.openStake,
+              c.currency
+            )}
+            comprometidos
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>P&L jornada</small>
+
+          <div class="big">
+            ${
+              d.profit>=0
+                ?'+'
+                :''
+            }${bankMoney(
+              d.profit,
+              c.currency
+            )}
+          </div>
+
+          <div class="smalltxt">
+            ${
+              Number.isFinite(
+                d.profitUnits
+              )
+                ?(
+                    d.profitUnits>=0
+                      ?'+'
+                      :''
+                  )+
+                  fix(
+                    d.profitUnits,
+                    2
+                  )+
+                  ' U'
+                :'—'
+            }
+          </div>
+        </div>
+
+      </div>
+
+
+      ${
+        Number.isFinite(peak) &&
+        peak>.12
+
+          ?`
+            <div
+              class="danger"
+              style="margin-top:10px"
+            >
+              <b>
+                EXPOSICIÓN DIARIA EXCESIVA
+              </b>
+
+              <br>
+
+              La jornada alcanzó
+              ${pct(peak)} de exposición.
+
+              <br>
+
+              <span class="smalltxt">
+                Mide concentración de riesgo,
+                no si la jornada ganó o perdió.
+              </span>
+            </div>
+          `
+
+          :`
+            <div
+              class="okbox"
+              style="margin-top:10px"
+            >
+              Pico diario:
+              ${
+                Number.isFinite(peak)
+                  ?pct(peak)
+                  :'—'
+              }.
+            </div>
+          `
+      }
+
+      <div class="note">
+        El pico se conserva aunque todas
+        las apuestas ya hayan terminado.
+      </div>
+
+    </div>
+  `;
+}
+
 function renderHistory(){
 
   const a=
@@ -2836,6 +3170,8 @@ function renderHistory(){
 
     </div>
 
+
+    ${dailyExposureSummaryHtml(a)}
 
     ${riskHistorySummaryHtml(a)}
 
