@@ -3985,6 +3985,144 @@ function teamPredictedRuns(r){return n(r.mean,NaN)}
 function teamStatRows(rows){const fin=rows.filter(r=>r.status==='FINAL'&&Number.isFinite(+r.y)),push=rows.filter(r=>r.status==='PUSH').length,pending=rows.filter(r=>r.status==='PENDING').length,wins=fin.filter(r=>r.y===1).length,losses=fin.length-wins,bs=fin.length?fin.reduce((z,r)=>z+labPickBrierRow(r),0)/fin.length:NaN,errs=[],games=new Set(fin.map(r=>String(r.gamePk)));for(const r of fin){const pred=teamPredictedRuns(r);if(Number.isFinite(pred)&&Number.isFinite(+r.actual))errs.push(+r.actual-pred)}return{n:fin.length,games:games.size,wins,losses,push,pending,hit:fin.length?wins/fin.length:NaN,brier:bs,mae:errs.length?errs.reduce((z,x)=>z+Math.abs(x),0)/errs.length:NaN,bias:errs.length?errs.reduce((z,x)=>z+x,0)/errs.length:NaN,errN:errs.length}}
 function teamGlobalBaseline(versionScope='CURRENT'){const s=teamStatRows(teamRowsBase(versionScope));return{hit:Number.isFinite(s.hit)?s.hit:.5,brier:Number.isFinite(s.brier)?s.brier:.25}}
 function teamSmoothed(team,versionScope='CURRENT'){const s=teamStatRows(teamRows(team,versionScope)),g=teamGlobalBaseline(versionScope),prior=20,hit=(s.wins+prior*g.hit)/(s.n+prior),sumB=Number.isFinite(s.brier)?s.brier*s.n:0,brier=(sumB+prior*g.brier)/(s.n+prior);return{...s,smHit:hit,smBrier:brier,global:g}}
+
+/* V7.8A TEAM RELIABILITY ENGINE */
+
+function wilsonInterval(wins,total,z=1.96){
+
+  if(
+    !Number.isFinite(wins) ||
+    !Number.isFinite(total) ||
+    total<=0
+  ){
+    return{
+      low:NaN,
+      high:NaN
+    };
+  }
+
+  const p=wins/total;
+  const z2=z*z;
+
+  const den=
+    1+(z2/total);
+
+  const center=
+    (p+(z2/(2*total)))/den;
+
+  const margin=
+    (
+      z*
+      Math.sqrt(
+        (p*(1-p)/total)+
+        (z2/(4*total*total))
+      )
+    )/den;
+
+  return{
+    low:clamp(center-margin,0,1),
+    high:clamp(center+margin,0,1)
+  };
+}
+
+
+function teamReliabilityStats(team,versionScope='CURRENT'){
+
+  const rows=
+    teamRows(team,versionScope);
+
+  const settled=
+    rows.filter(r=>
+      r.status==='FINAL' &&
+      Number.isFinite(+r.y)
+    );
+
+  const wins=
+    settled.filter(r=>
+      Number(r.y)===1
+    ).length;
+
+  const losses=
+    settled.length-wins;
+
+  const hit=
+    settled.length
+      ?wins/settled.length
+      :NaN;
+
+  const ci=
+    wilsonInterval(
+      wins,
+      settled.length
+    );
+
+  const probs=
+    settled
+      .map(r=>Number(r.ensembleP))
+      .filter(Number.isFinite);
+
+  const avgProb=
+    probs.length
+      ?probs.reduce(
+          (a,b)=>a+b,
+          0
+        )/probs.length
+      :NaN;
+
+  const calibrationGap=
+    Number.isFinite(hit) &&
+    Number.isFinite(avgProb)
+      ?hit-avgProb
+      :NaN;
+
+  const briers=
+    settled
+      .map(labPickBrierRow)
+      .filter(Number.isFinite);
+
+  const brier=
+    briers.length
+      ?briers.reduce(
+          (a,b)=>a+b,
+          0
+        )/briers.length
+      :NaN;
+
+  let maturity='SIN MUESTRA';
+
+  if(settled.length>0 && settled.length<10){
+    maturity='INSUFICIENTE';
+
+  }else if(settled.length<25){
+    maturity='PRELIMINAR';
+
+  }else if(settled.length<50){
+    maturity='CONFIABILIDAD MEDIA';
+
+  }else if(settled.length>=50){
+    maturity='MUESTRA SÓLIDA';
+  }
+
+  return{
+    n:settled.length,
+    wins,
+    losses,
+    hit,
+
+    ciLow:ci.low,
+    ciHigh:ci.high,
+
+    conservativeFloor:ci.low,
+
+    avgProb,
+    calibrationGap,
+
+    brier,
+    maturity
+  };
+}
+
+
 function teamSampleLabel(games){return games<10?'Muestra insuficiente':games<25?'Preliminar':games<50?'Confiabilidad media':'Muestra sólida'}
 function teamGrade(team,versionScope='CURRENT'){const s=teamSmoothed(team,versionScope);if(s.games<10)return{cls:'small',label:'Muestra insuficiente',score:0,...s};const bAdv=s.global.brier-s.smBrier,hAdv=s.smHit-s.global.hit,score=.72*(bAdv/.035)+.28*(hAdv/.07);if(score>=.35)return{cls:'strong',label:'Modelo fuerte',score,...s};if(score<=-.35)return{cls:'weak',label:'Modelo débil',score,...s};return{cls:'normal',label:'Normal',score,...s}}
 function teamMarketRows(team,kind,versionScope='CURRENT'){const rows=teamRows(team,versionScope);return rows.filter(r=>{const side=teamSideInRow(team,r);if(kind==='TOTAL')return r.market==='TOTAL';if(kind==='OVER')return r.side==='OVER';if(kind==='UNDER')return r.side==='UNDER';if(kind==='HOME')return side==='home';if(kind==='AWAY')return side==='away';if(kind==='LINEUP')return side==='away'?(r.awayLineupConfirmed??r.lineupConfirmed):(r.homeLineupConfirmed??r.lineupConfirmed);if(kind==='PROXY')return !(side==='away'?(r.awayLineupConfirmed??r.lineupConfirmed):(r.homeLineupConfirmed??r.lineupConfirmed));return true})}
@@ -3994,7 +4132,185 @@ function teamSelectedKey(){return $('#teamSelect')?.value||''}
 function teamPerformanceRows(versionScope='CURRENT'){
  const entities=teamEntities(versionScope);return entities.map(team=>{const g=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope));return{team,g,total,over,under}})
 }
-function renderTeamDetail(team,versionScope='CURRENT'){const host=$('#teamDetail');if(!host||!team)return;const all=teamStatRows(teamRows(team,versionScope)),grade=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope)),home=teamStatRows(teamMarketRows(team,'HOME',versionScope)),away=teamStatRows(teamMarketRows(team,'AWAY',versionScope)),lineup=teamStatRows(teamMarketRows(team,'LINEUP',versionScope)),proxy=teamStatRows(teamMarketRows(team,'PROXY',versionScope)),recent=teamRows(team,versionScope).filter(r=>r.status!=='PENDING').sort((a,b)=>labTime(b)-labTime(a)).slice(0,40);host.innerHTML=`<div class="section"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3 style="margin-bottom:4px">${esc(teamDisplayName(team))}</h3><div class="team-muted">${teamSampleLabel(all.games)} · ${all.games} juegos Full Game · ${all.n} pronósticos liquidados · ${all.pending} pendientes · ${all.push} pushes</div></div><span class="team-status ${grade.cls}"><span class="team-dot ${grade.cls}"></span>${esc(grade.label)}</span></div><div class="team-detail-grid" style="margin-top:12px">${teamMetricBox('General Full Game',total)}${teamMetricBox('Picks Over',over)}${teamMetricBox('Picks Under',under)}${teamMetricBox('Equipo como local',home)}${teamMetricBox('Equipo como visitante',away)}${teamMetricBox('Lineup confirmado',lineup)}${teamMetricBox('Lineup proxy',proxy)}</div><div class="note" style="margin-top:10px">Sesgo positivo real−proj = ocurrieron más carreras de las proyectadas; negativo = el modelo proyectó de más. El semáforo usa Brier suavizado como métrica principal y exige muestra antes de clasificar.</div></div>${recent.length?`<div class="section team-table-wrap"><h3>Últimos Full Game con ${esc(team.abbr||team.name)}</h3><table><thead><tr><th>Fecha</th><th>Juego</th><th>Pick</th><th>Prob.</th><th>Resultado</th><th>Brier</th><th>Total real / Proy.</th></tr></thead><tbody>${recent.map(r=>{const pred=teamPredictedRuns(r),res=r.status==='PUSH'?'PUSH':r.y===1?'WIN':'LOSS';return`<tr><td>${esc(r.date)}</td><td>${esc(r.away)} @ ${esc(r.home)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td class="${res==='WIN'?'team-good':res==='LOSS'?'team-bad':'team-neutral'}">${res}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'} / ${fix(pred,1)}</td></tr>`}).join('')}</tbody></table></div>`:''}`}
+/* V7.8B TEAM RELIABILITY PANEL */
+
+function teamReliabilityPanelHtml(team,versionScope='CURRENT'){
+
+  const r=
+    teamReliabilityStats(
+      team,
+      versionScope
+    );
+
+  const record=
+    r.n
+      ?`${r.wins}-${r.losses}`
+      :'—';
+
+  const hit=
+    Number.isFinite(r.hit)
+      ?pct(r.hit)
+      :'—';
+
+  const ci=
+    Number.isFinite(r.ciLow) &&
+    Number.isFinite(r.ciHigh)
+      ?`${pct(r.ciLow)} – ${pct(r.ciHigh)}`
+      :'—';
+
+  const floor=
+    Number.isFinite(r.conservativeFloor)
+      ?pct(r.conservativeFloor)
+      :'—';
+
+  const avgProb=
+    Number.isFinite(r.avgProb)
+      ?pct(r.avgProb)
+      :'—';
+
+  const gap=
+    Number.isFinite(r.calibrationGap)
+      ?`${r.calibrationGap>=0?'+':''}${pct(r.calibrationGap)}`
+      :'—';
+
+  const brier=
+    Number.isFinite(r.brier)
+      ?fix(r.brier,3)
+      :'—';
+
+  let gapClass='';
+
+  if(Number.isFinite(r.calibrationGap)){
+
+    const a=
+      Math.abs(r.calibrationGap);
+
+    if(a<=.03){
+      gapClass='bp-good';
+
+    }else if(a<=.07){
+      gapClass='bp-mid';
+
+    }else{
+      gapClass='bp-bad';
+    }
+  }
+
+  let maturityClass='bp-mid';
+
+  if(r.maturity==='MUESTRA SÓLIDA'){
+    maturityClass='bp-good';
+
+  }else if(r.maturity==='SIN MUESTRA'){
+    maturityClass='';
+  }
+
+
+  return `
+    <div class="section">
+
+      <h3>
+        Confiabilidad estadística
+      </h3>
+
+      <div class="cards">
+
+        <div class="card">
+          <small>Muestra</small>
+          <div class="big">
+            ${r.n}
+          </div>
+          <div class="smalltxt">
+            resultados liquidados
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Récord</small>
+          <div class="big">
+            ${record}
+          </div>
+          <div class="smalltxt">
+            W-L
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Acierto observado</small>
+          <div class="big">
+            ${hit}
+          </div>
+        </div>
+
+        <div class="card">
+          <small>IC 95%</small>
+          <div class="big">
+            ${ci}
+          </div>
+          <div class="smalltxt">
+            intervalo Wilson
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Piso conservador</small>
+          <div class="big">
+            ${floor}
+          </div>
+          <div class="smalltxt">
+            límite inferior IC95
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Probabilidad modelo</small>
+          <div class="big">
+            ${avgProb}
+          </div>
+          <div class="smalltxt">
+            promedio pregame
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Gap calibración</small>
+          <div class="big ${gapClass}">
+            ${gap}
+          </div>
+          <div class="smalltxt">
+            real − pronosticado
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Brier</small>
+          <div class="big">
+            ${brier}
+          </div>
+        </div>
+
+      </div>
+
+      <div
+        class="note ${maturityClass}"
+        style="margin-top:10px"
+      >
+        Madurez estadística:
+        <b>${r.maturity}</b>
+      </div>
+
+      <div class="note">
+        El piso conservador evita interpretar un récord
+        pequeño como si fuera una ventaja comprobada.
+        Cuanto mayor sea la muestra, más estrecho será
+        el intervalo de confianza.
+      </div>
+
+    </div>
+  `;
+}
+
+function renderTeamDetail(team,versionScope='CURRENT'){const host=$('#teamDetail');if(!host||!team)return;const all=teamStatRows(teamRows(team,versionScope)),grade=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope)),home=teamStatRows(teamMarketRows(team,'HOME',versionScope)),away=teamStatRows(teamMarketRows(team,'AWAY',versionScope)),lineup=teamStatRows(teamMarketRows(team,'LINEUP',versionScope)),proxy=teamStatRows(teamMarketRows(team,'PROXY',versionScope)),recent=teamRows(team,versionScope).filter(r=>r.status!=='PENDING').sort((a,b)=>labTime(b)-labTime(a)).slice(0,40);host.innerHTML=`<div class="section"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3 style="margin-bottom:4px">${esc(teamDisplayName(team))}</h3><div class="team-muted">${teamSampleLabel(all.games)} · ${all.games} juegos Full Game · ${all.n} pronósticos liquidados · ${all.pending} pendientes · ${all.push} pushes</div></div><span class="team-status ${grade.cls}"><span class="team-dot ${grade.cls}"></span>${esc(grade.label)}</span></div><div class="team-detail-grid" style="margin-top:12px">${teamMetricBox('General Full Game',total)}${teamMetricBox('Picks Over',over)}${teamMetricBox('Picks Under',under)}${teamMetricBox('Equipo como local',home)}${teamMetricBox('Equipo como visitante',away)}${teamMetricBox('Lineup confirmado',lineup)}${teamMetricBox('Lineup proxy',proxy)}</div><div class="note" style="margin-top:10px">Sesgo positivo real−proj = ocurrieron más carreras de las proyectadas; negativo = el modelo proyectó de más. El semáforo usa Brier suavizado como métrica principal y exige muestra antes de clasificar.</div></div>${teamReliabilityPanelHtml(team,versionScope)}${recent.length?`<div class="section team-table-wrap"><h3>Últimos Full Game con ${esc(team.abbr||team.name)}</h3><table><thead><tr><th>Fecha</th><th>Juego</th><th>Pick</th><th>Prob.</th><th>Resultado</th><th>Brier</th><th>Total real / Proy.</th></tr></thead><tbody>${recent.map(r=>{const pred=teamPredictedRuns(r),res=r.status==='PUSH'?'PUSH':r.y===1?'WIN':'LOSS';return`<tr><td>${esc(r.date)}</td><td>${esc(r.away)} @ ${esc(r.home)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td class="${res==='WIN'?'team-good':res==='LOSS'?'team-bad':'team-neutral'}">${res}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'} / ${fix(pred,1)}</td></tr>`}).join('')}</tbody></table></div>`:''}`}
 function renderTeams(){const host=$('#teamContent');if(!host)return;const versionScope=$('#teamVersionScope')?.value||'CURRENT',sortBy=$('#teamSort')?.value||'BRIER',entities=teamEntities(versionScope),rows=teamPerformanceRows(versionScope),baseline=teamGlobalBaseline(versionScope),settled=teamRowsBase(versionScope).filter(r=>r.status==='FINAL').length,pending=teamRowsBase(versionScope).filter(r=>r.status==='PENDING').length;const sorter=(a,b)=>sortBy==='HIT'?n(b.g.smHit)-n(a.g.smHit):sortBy==='N'?b.g.n-a.g.n:sortBy==='TOTAL_MAE'?n(a.total.mae,99)-n(b.total.mae,99):n(a.g.smBrier,99)-n(b.g.smBrier,99);rows.sort(sorter);const strong=rows.filter(x=>x.g.cls==='strong').length,weak=rows.filter(x=>x.g.cls==='weak').length,oldTeam=teamSelectedKey();host.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Rendimiento por equipo · Full Game O/U:</b> sólo usa pronósticos oficiales del Sportsbook LAB del Total de juego completo. No mezcla Apuestas ni Censo.</div><div class="team-toolbar"><div class="field"><label>Equipo para detalle</label><select id="teamSelect">${entities.map(t=>`<option value="${esc(t.key)}">${esc(teamDisplayName(t))}</option>`).join('')}</select></div><div class="field"><label>Historia usada</label><select id="teamVersionScope"><option value="CURRENT" ${versionScope==='CURRENT'?'selected':''}>Motor corregido V6.4+</option><option value="ALL" ${versionScope==='ALL'?'selected':''}>Todo Full Game disponible</option></select></div><div class="field"><label>Ordenar equipos</label><select id="teamSort"><option value="BRIER" ${sortBy==='BRIER'?'selected':''}>Mejor Brier suavizado</option><option value="HIT" ${sortBy==='HIT'?'selected':''}>Mayor acierto suavizado</option><option value="TOTAL_MAE" ${sortBy==='TOTAL_MAE'?'selected':''}>Menor MAE Total</option><option value="N" ${sortBy==='N'?'selected':''}>Mayor muestra</option></select></div><button class="btn" id="teamApply">Aplicar</button></div><div class="team-kpis"><div class="card"><small>Equipos registrados</small><div class="big">${rows.length}</div></div><div class="card"><small>Full Game liquidados</small><div class="big">${settled}</div></div><div class="card"><small>Pendientes</small><div class="big">${pending}</div></div><div class="card"><small>Brier base</small><div class="big">${fix(baseline.brier,3)}</div></div><div class="card"><small>Modelo fuerte</small><div class="big team-good">${strong}</div></div><div class="card"><small>Modelo débil</small><div class="big team-bad">${weak}</div></div></div>${rows.length?`<div class="section team-table-wrap"><h3>Mapa de desempeño Full Game por equipo</h3><table><thead><tr><th>#</th><th>Equipo</th><th>Estado</th><th>Juegos</th><th>Acierto</th><th>Brier</th><th>MAE</th><th>Sesgo</th><th>Over</th><th>Under</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td class="team-rank">${i+1}</td><td><button class="team-row-btn" data-team-key="${esc(x.team.key)}"><span class="team-dot ${x.g.cls}"></span>${esc(x.team.abbr||x.team.name)}</button><div class="smalltxt">${esc(teamSampleLabel(x.g.games))}</div></td><td><span class="team-status ${x.g.cls}">${esc(x.g.label)}</span></td><td>${x.g.games}<div class="smalltxt">${x.g.n} picks</div></td><td>${pct(x.g.hit)}<div class="smalltxt">suav. ${pct(x.g.smHit)}</div></td><td>${fix(x.g.brier,3)}<div class="smalltxt">suav. ${fix(x.g.smBrier,3)}</div></td><td>${fix(x.total.mae,2)}</td><td>${Number.isFinite(x.total.bias)?`${x.total.bias>0?'+':''}${fix(x.total.bias,2)}`:'—'}</td><td>${x.over.n?`${x.over.wins}-${x.over.losses}`:'—'}<div class="smalltxt">${fix(x.over.brier,3)}</div></td><td>${x.under.n?`${x.under.wins}-${x.under.losses}`:'—'}<div class="smalltxt">${fix(x.under.brier,3)}</div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay suficientes Totales Full Game liquidados. Ejecuta Escaneo LAB y liquida resultados; esta pestaña se irá llenando sola.</div>'}<div id="teamDetail"></div>`;const sel=$('#teamSelect');if(sel&&oldTeam&&[...sel.options].some(o=>o.value===oldTeam))sel.value=oldTeam;const selected=entities.find(t=>t.key===(sel?.value||''))||entities[0];if(selected)renderTeamDetail(selected,versionScope);$('#teamVersionScope').onchange=renderTeams;$('#teamSort').onchange=renderTeams;$('#teamApply').onclick=renderTeams;if(sel)sel.onchange=()=>renderTeamDetail(entities.find(t=>t.key===sel.value),$('#teamVersionScope').value);$$('[data-team-key]').forEach(b=>b.onclick=()=>{if(sel)sel.value=b.dataset.teamKey;const t=entities.find(x=>x.key===b.dataset.teamKey);renderTeamDetail(t,$('#teamVersionScope').value);$('#teamDetail')?.scrollIntoView({behavior:'smooth',block:'start'})})}
 function exportTeamsCsv(){const scope=$('#teamVersionScope')?.value||'CURRENT',rows=teamPerformanceRows(scope).sort((a,b)=>n(a.g.smBrier,99)-n(b.g.smBrier,99)),head=['rank','team','abbr','status','games','wins','losses','hit_rate','brier','smoothed_hit','smoothed_brier','total_mae','total_bias_real_minus_proj','over_wins','over_losses','over_brier','under_wins','under_losses','under_brier'];const body=rows.map((x,i)=>[i+1,x.team.name,x.team.abbr,x.g.label,x.g.games,x.g.wins,x.g.losses,x.g.hit,x.g.brier,x.g.smHit,x.g.smBrier,x.total.mae,x.total.bias,x.over.wins,x.over.losses,x.over.brier,x.under.wins,x.under.losses,x.under.brier].map(v=>JSON.stringify(Number.isFinite(v)?v:(v??''))).join(','));download(`mlb_v70_team_full_game_${scope.toLowerCase()}.csv`,[head.join(','),...body].join('\n'),'text/csv')}
 
