@@ -3243,6 +3243,281 @@ function dailyExposureSummaryHtml(rows){
   `;
 }
 
+
+/* V7.6D1 DISCIPLINE HISTORY STATS */
+
+function disciplineHistoryStats(rows){
+
+  const validKeys=[
+    'FOLLOW',
+    'BET_LEAN',
+    'BET_PASS',
+    'OVERRIDE'
+  ];
+
+  const withSnapshot=(rows||[]).filter(r=>
+    validKeys.includes(
+      String(r.disciplineKey||'')
+    )
+  );
+
+  const groups={};
+
+  for(const key of validKeys){
+
+    const all=withSnapshot.filter(r=>
+      String(r.disciplineKey)===key
+    );
+
+    const settled=all.filter(r=>
+      r.status==='WIN' ||
+      r.status==='LOSS' ||
+      r.status==='PUSH'
+    );
+
+    const wins=settled.filter(
+      r=>r.status==='WIN'
+    ).length;
+
+    const losses=settled.filter(
+      r=>r.status==='LOSS'
+    ).length;
+
+    const pushes=settled.filter(
+      r=>r.status==='PUSH'
+    ).length;
+
+    const decisions=wins+losses;
+
+    const hitRate=
+      decisions>0
+        ?wins/decisions
+        :NaN;
+
+    const unitResults=settled
+      .map(betProfitUnits)
+      .filter(Number.isFinite);
+
+    const profitUnits=
+      unitResults.length
+        ?unitResults.reduce(
+            (a,b)=>a+b,
+            0
+          )
+        :NaN;
+
+    const profitMoney=settled.reduce(
+      (sum,r)=>
+        sum+n(r.profit,0),
+      0
+    );
+
+    const stake=settled.reduce(
+      (sum,r)=>
+        sum+n(r.stake,0),
+      0
+    );
+
+    const roi=
+      stake>0
+        ?profitMoney/stake
+        :NaN;
+
+    const briers=settled
+      .map(r=>
+        hasRealNumber(r.brier)
+          ?Number(r.brier)
+          :NaN
+      )
+      .filter(Number.isFinite);
+
+    const brier=
+      briers.length
+        ?briers.reduce(
+            (a,b)=>a+b,
+            0
+          )/briers.length
+        :NaN;
+
+    groups[key]={
+      key,
+      all,
+      settled,
+      pending:
+        all.length-settled.length,
+      wins,
+      losses,
+      pushes,
+      hitRate,
+      profitUnits,
+      profitMoney,
+      stake,
+      roi,
+      brier
+    };
+  }
+
+  const classifiedSettled=
+    withSnapshot.filter(r=>
+      r.status==='WIN' ||
+      r.status==='LOSS' ||
+      r.status==='PUSH'
+    );
+
+  const legacy=(rows||[]).filter(r=>
+    !validKeys.includes(
+      String(r.disciplineKey||'')
+    )
+  );
+
+  return{
+    withSnapshot,
+    classifiedSettled,
+    legacy,
+    groups
+  };
+}
+
+
+/* V7.6D2 DISCIPLINE HISTORY PANEL */
+
+function disciplineHistorySummaryHtml(rows){
+
+  const d=disciplineHistoryStats(rows);
+
+  const defs=[
+    {
+      key:'FOLLOW',
+      label:'SIGUE MODELO',
+      desc:'Apuesta alineada con la selección principal.'
+    },
+    {
+      key:'BET_LEAN',
+      label:'APUESTA LEAN',
+      desc:'Se apostó una señal secundaria.'
+    },
+    {
+      key:'BET_PASS',
+      label:'APUESTA PASS',
+      desc:'Se apostó pese al filtro PASS.'
+    },
+    {
+      key:'OVERRIDE',
+      label:'CONTRA MODELO',
+      desc:'La apuesta difirió de la selección principal.'
+    }
+  ];
+
+  if(!d.withSnapshot.length){
+
+    return `
+      <div class="section">
+        <h3>Disciplina del modelo</h3>
+
+        <div class="empty">
+          Todavía no hay apuestas con Discipline Snapshot.
+        </div>
+
+        ${
+          d.legacy.length
+            ?`<div class="note">
+                ${d.legacy.length}
+                apuestas anteriores permanecen
+                sin snapshot.
+              </div>`
+            :''
+        }
+      </div>
+    `;
+  }
+
+
+  return `
+    <div class="section" style="margin-bottom:12px">
+
+      <h3>Disciplina del modelo</h3>
+
+      <div class="cards">
+
+        ${defs.map(def=>{
+
+          const g=d.groups[def.key];
+
+          const record=
+            `${g.wins}-${g.losses}-${g.pushes}`;
+
+          const hit=
+            Number.isFinite(g.hitRate)
+              ?pct(g.hitRate)
+              :'—';
+
+          const units=
+            Number.isFinite(g.profitUnits)
+              ?`${g.profitUnits>=0?'+':''}${fix(g.profitUnits,2)} U`
+              :'—';
+
+          const roi=
+            Number.isFinite(g.roi)
+              ?pct(g.roi)
+              :'—';
+
+          const brier=
+            Number.isFinite(g.brier)
+              ?fix(g.brier,3)
+              :'—';
+
+          return `
+            <div class="card">
+
+              <small>${def.label}</small>
+
+              <div class="big">
+                ${record}
+              </div>
+
+              <div class="smalltxt">
+                ${g.all.length} registradas ·
+                ${g.pending} pendientes
+              </div>
+
+              <div class="smalltxt">
+                Acierto: <b>${hit}</b>
+              </div>
+
+              <div class="smalltxt">
+                P&L: <b>${units}</b>
+              </div>
+
+              <div class="smalltxt">
+                ROI: <b>${roi}</b>
+              </div>
+
+              <div class="smalltxt">
+                Brier: <b>${brier}</b>
+              </div>
+
+              <div class="note">
+                ${def.desc}
+              </div>
+
+            </div>
+          `;
+
+        }).join('')}
+
+      </div>
+
+      <div class="note">
+        Con snapshot:
+        ${d.withSnapshot.length}
+        · Sin snapshot:
+        ${d.legacy.length}
+      </div>
+
+    </div>
+  `;
+}
+
 function renderHistory(){
 
   const a=
@@ -3446,6 +3721,8 @@ function renderHistory(){
 
 
     ${dailyExposureSummaryHtml(a)}
+
+    ${disciplineHistorySummaryHtml(a)}
 
     ${riskHistorySummaryHtml(a)}
 
