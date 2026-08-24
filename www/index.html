@@ -4001,7 +4001,294 @@ function exportTeamsCsv(){const scope=$('#teamVersionScope')?.value||'CURRENT',r
 function labLeader(total,f5){if(total.n<5||f5.n<5)return{label:'Muestra insuficiente',detail:'Se requieren al menos 5 resultados en ambos mercados.'};const diff=Math.abs(total.brier-f5.brier);if(diff<.005)return{label:'Empate técnico',detail:`Diferencia Brier ${fix(diff,3)}.`};const win=total.brier<f5.brier?total:f5;return{label:win.market==='TOTAL'?'Total juego':'F5',detail:`Mejor Brier por ${fix(diff,3)}.`}}
 function labDirectionSummary(side,scope='SPORTSBOOK'){const rows=labPickRows('TOTAL','FINAL',scope,true).filter(r=>r.side===side&&teamVersionNumber(r.modelVersion)>=604),wins=rows.filter(r=>r.y===1).length;return{n:rows.length,wins,losses:rows.length-wins,hit:rows.length?wins/rows.length:NaN,brier:ensembleBrier(rows)}}
 function recentLabTable(rows,title='Picks oficiales del Sportsbook LAB'){if(!rows.length)return'<div class="empty">Todavía no hay picks automáticos en esta categoría.</div>';return`<div class="section" style="overflow:auto"><h3>${esc(title)}</h3><table><thead><tr><th>Juego</th><th>Mercado</th><th>Pick LAB</th><th>Prob. decisión</th><th>Push</th><th>Resultado</th><th>Brier</th><th>Estado</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.away)} @ ${esc(r.home)}<div class="smalltxt">${esc(r.date)} · línea ${fix(r.line,1)} · ${esc(r.labType||'LEGACY')}</div></td><td>${esc(r.label||r.market)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td>${pct(n(r.pushProb))}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${esc(r.status)}</td></tr>`).join('')}</tbody></table></div>`}
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div><div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+
+/* V7.7A CALIBRATION BUCKET ENGINE */
+
+function calibrationBucketStats(){
+
+  const rows=
+    labPickRows(
+      'TOTAL',
+      'FINAL',
+      'SPORTSBOOK',
+      true
+    ).filter(r=>
+      teamVersionNumber(r.modelVersion)>=604 &&
+      Number.isFinite(+r.ensembleP) &&
+      Number.isFinite(+r.y)
+    );
+
+  const defs=[
+    {key:'50_54',label:'50–54.9%',min:.50,max:.55},
+    {key:'55_59',label:'55–59.9%',min:.55,max:.60},
+    {key:'60_64',label:'60–64.9%',min:.60,max:.65},
+    {key:'65_69',label:'65–69.9%',min:.65,max:.70},
+    {key:'70_PLUS',label:'70%+',min:.70,max:1.001}
+  ];
+
+  const buckets=defs.map(def=>{
+
+    const sample=rows.filter(r=>{
+      const p=Number(r.ensembleP);
+      return p>=def.min && p<def.max;
+    });
+
+    const n=sample.length;
+
+    const wins=
+      sample.filter(r=>Number(r.y)===1).length;
+
+    const losses=
+      sample.filter(r=>Number(r.y)===0).length;
+
+    const avgProb=
+      n
+        ?sample.reduce(
+            (sum,r)=>sum+Number(r.ensembleP),
+            0
+          )/n
+        :NaN;
+
+    const hitRate=
+      n
+        ?wins/n
+        :NaN;
+
+    const gap=
+      Number.isFinite(avgProb) &&
+      Number.isFinite(hitRate)
+        ?hitRate-avgProb
+        :NaN;
+
+    const brier=
+      n
+        ?sample.reduce(
+            (sum,r)=>sum+labPickBrierRow(r),
+            0
+          )/n
+        :NaN;
+
+    const absGap=
+      Number.isFinite(gap)
+        ?Math.abs(gap)
+        :NaN;
+
+    let calibration='SIN MUESTRA';
+
+    if(n>0 && n<10){
+      calibration='MUESTRA BAJA';
+
+    }else if(n>=10 && absGap<=.03){
+      calibration='BIEN CALIBRADO';
+
+    }else if(n>=10 && absGap<=.07){
+      calibration='VIGILAR';
+
+    }else if(n>=10){
+      calibration='DESAJUSTADO';
+    }
+
+    return{
+      ...def,
+      n,
+      wins,
+      losses,
+      avgProb,
+      hitRate,
+      gap,
+      absGap,
+      brier,
+      calibration
+    };
+  });
+
+  const used=
+    buckets.filter(b=>
+      b.n>0 &&
+      Number.isFinite(b.absGap)
+    );
+
+  const totalN=
+    used.reduce(
+      (sum,b)=>sum+b.n,
+      0
+    );
+
+  const ece=
+    totalN
+      ?used.reduce(
+          (sum,b)=>sum+(b.absGap*b.n),
+          0
+        )/totalN
+      :NaN;
+
+  return{
+    rows,
+    buckets,
+    totalN,
+    ece
+  };
+}
+
+
+/* V7.7B CALIBRATION BUCKET PANEL */
+
+function calibrationBucketPanelHtml(){
+
+  const c=calibrationBucketStats();
+
+  const ece=
+    Number.isFinite(c.ece)
+      ?pct(c.ece)
+      :'—';
+
+  const reliable=
+    c.buckets.filter(b=>b.n>=10).length;
+
+  return `
+    <div class="section">
+
+      <h3>
+        Calibración por probabilidad
+      </h3>
+
+      <div class="cards">
+
+        <div class="card">
+          <small>Muestra</small>
+          <div class="big">${c.totalN}</div>
+          <div class="smalltxt">
+            picks oficiales liquidados
+          </div>
+        </div>
+
+        <div class="card">
+          <small>ECE</small>
+          <div class="big">${ece}</div>
+          <div class="smalltxt">
+            error absoluto de calibración
+          </div>
+        </div>
+
+        <div class="card">
+          <small>Buckets maduros</small>
+          <div class="big">${reliable}</div>
+          <div class="smalltxt">
+            con mínimo 10 resultados
+          </div>
+        </div>
+
+      </div>
+
+      <div style="overflow:auto;margin-top:10px">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Probabilidad</th>
+              <th>N</th>
+              <th>Récord</th>
+              <th>Prob. media</th>
+              <th>Acierto real</th>
+              <th>Gap</th>
+              <th>Brier</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            ${c.buckets.map(b=>{
+
+              const avg=
+                Number.isFinite(b.avgProb)
+                  ?pct(b.avgProb)
+                  :'—';
+
+              const hit=
+                Number.isFinite(b.hitRate)
+                  ?pct(b.hitRate)
+                  :'—';
+
+              const gap=
+                Number.isFinite(b.gap)
+                  ?`${b.gap>=0?'+':''}${pct(b.gap)}`
+                  :'—';
+
+              const bs=
+                Number.isFinite(b.brier)
+                  ?fix(b.brier,3)
+                  :'—';
+
+              let cls='';
+
+              if(b.calibration==='BIEN CALIBRADO'){
+                cls='bp-good';
+
+              }else if(
+                b.calibration==='VIGILAR' ||
+                b.calibration==='MUESTRA BAJA'
+              ){
+                cls='bp-mid';
+
+              }else if(
+                b.calibration==='DESAJUSTADO'
+              ){
+                cls='bp-bad';
+              }
+
+              return `
+                <tr>
+
+                  <td>
+                    <b>${b.label}</b>
+                  </td>
+
+                  <td>${b.n}</td>
+
+                  <td>
+                    ${b.wins}-${b.losses}
+                  </td>
+
+                  <td>${avg}</td>
+
+                  <td>${hit}</td>
+
+                  <td class="${cls}">
+                    ${gap}
+                  </td>
+
+                  <td>${bs}</td>
+
+                  <td class="${cls}">
+                    ${b.calibration}
+                  </td>
+
+                </tr>
+              `;
+
+            }).join('')}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+      <div class="note">
+        Gap = acierto real − probabilidad pronosticada.
+        Gap positivo: el modelo fue conservador.
+        Gap negativo: el modelo estuvo sobreconfiado.
+        Con menos de 10 resultados por rango,
+        no sacamos conclusiones fuertes.
+      </div>
+
+    </div>
+  `;
+}
+
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function currentRankingRows(){const rows=[];for(const [pk,a] of S.analyses){const g=S.games.find(x=>x.gamePk===pk);if(!g||!a?.best?.ev||!a?.best?.pick)continue;rows.push({g,...a.best,analysis:a})}rows.sort((a,b)=>{const x=a.pick,y=b.pick;return (x.pass-y.pass)||(Number.isFinite(y.edge)?y.edge:0)-(Number.isFinite(x.edge)?x.edge:0)||y.p-x.p});return rows}
 
