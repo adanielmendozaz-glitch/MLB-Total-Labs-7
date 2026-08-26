@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06111e">
-<title>MLB Totals Lab V7.8.2 · Full Game O/U Focus</title>
+<title>MLB Totals Lab V7.8.3 · Full Game O/U Focus</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#071728">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,15 +77,1415 @@
 @media(max-width:900px){.team-kpis{grid-template-columns:repeat(3,1fr)}.team-detail-grid{grid-template-columns:repeat(2,1fr)}.team-toolbar{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.team-kpis{grid-template-columns:repeat(2,1fr)}.team-detail-grid{grid-template-columns:1fr}.team-toolbar{grid-template-columns:1fr}.team-table-wrap th:nth-child(5),.team-table-wrap td:nth-child(5),.team-table-wrap th:nth-child(6),.team-table-wrap td:nth-child(6){display:none}}
 
+
+/* V7.8.3A DASHBOARD UI PRO · NATIVE SHELL */
+
+:root{
+  --ui-bg:#050b14;
+  --ui-surface:#091624;
+  --ui-surface2:#0d2034;
+  --ui-border:rgba(133,177,220,.20);
+  --ui-border2:rgba(116,185,245,.34);
+  --ui-text:#f5f9ff;
+  --ui-muted:#8fa6bc;
+  --ui-blue:#63b4ff;
+  --ui-green:#48dda0;
+  --ui-shadow:0 12px 36px rgba(0,0,0,.28);
+}
+
+html{
+  background:var(--ui-bg);
+}
+
+body{
+  background:
+    radial-gradient(circle at 12% -5%,rgba(40,108,178,.27),transparent 32%),
+    radial-gradient(circle at 95% 0,rgba(99,74,190,.20),transparent 28%),
+    linear-gradient(180deg,#071321,#050b14 72%);
+  color:var(--ui-text);
+  overscroll-behavior-y:none;
+}
+
+.app{
+  max-width:1280px;
+  padding:
+    max(9px,env(safe-area-inset-top))
+    10px
+    calc(90px + env(safe-area-inset-bottom));
+}
+
+/* Header */
+
+.hero{
+  border:1px solid var(--ui-border);
+  border-radius:22px;
+  background:
+    linear-gradient(145deg,#102c49f2,#071624fa);
+  box-shadow:var(--ui-shadow);
+  padding:17px;
+  overflow:hidden;
+}
+
+.hero h1{
+  font-weight:950;
+  letter-spacing:-.045em;
+}
+
+.hero .sub{
+  color:var(--ui-muted);
+}
+
+/* Control center */
+
+.toolbar{
+  position:relative;
+  top:auto;
+  margin:11px 0;
+  padding:11px;
+  gap:8px;
+  border:1px solid var(--ui-border);
+  border-radius:21px;
+  background:rgba(7,21,35,.88);
+  box-shadow:var(--ui-shadow);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+.field input,
+.field select,
+input,
+select,
+textarea{
+  min-height:44px;
+  border:1px solid var(--ui-border2);
+  border-radius:14px;
+  background:#051321e8;
+}
+
+.btn{
+  min-height:44px;
+  border-radius:14px;
+  border:1px solid var(--ui-border2);
+  box-shadow:0 4px 13px rgba(0,0,0,.15);
+  transition:transform .12s ease;
+}
+
+.btn:active{
+  transform:scale(.97);
+}
+
+.btn.primary{
+  background:linear-gradient(135deg,#167bd8,#6957e8);
+}
+
+.btn.green{
+  background:linear-gradient(135deg,#167a52,#125f42);
+}
+
+/* Status */
+
+.status,
+.origin-warning{
+  border-radius:19px;
+  box-shadow:var(--ui-shadow);
+}
+
+/* Cards */
+
+.game,
+.section,
+.card,
+.pitcher,
+.metric{
+  border-color:var(--ui-border);
+}
+
+.game{
+  border-radius:20px;
+  background:
+    linear-gradient(155deg,#0d2237,#05111e);
+  box-shadow:var(--ui-shadow);
+  transition:transform .12s ease;
+}
+
+.game:active{
+  transform:scale(.985);
+}
+
+.game:before{
+  height:2px;
+}
+
+.section{
+  border-radius:20px;
+  background:
+    linear-gradient(150deg,#091b2d,#06131f);
+  box-shadow:var(--ui-shadow);
+}
+
+.card,
+.pitcher,
+.metric{
+  border-radius:14px;
+  background:
+    linear-gradient(155deg,#091a2a,#06131f);
+}
+
+/* Analysis sheet */
+
+dialog{
+  border-radius:26px 26px 0 0;
+  border:1px solid var(--ui-border2);
+  background:
+    linear-gradient(180deg,#081827,#050e18);
+}
+
+.mh{
+  background:rgba(9,29,47,.94);
+  backdrop-filter:blur(18px);
+}
+
+/* MOBILE NATIVE NAV */
+
+@media(max-width:720px){
+
+  body{
+    padding-bottom:
+      calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .app{
+    padding:
+      max(8px,env(safe-area-inset-top))
+      8px
+      calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .hero{
+    padding:14px;
+    border-radius:20px;
+  }
+
+  .hero .sub,
+  .hero .badges,
+  .hero .version{
+    display:none;
+  }
+
+  .hero h1{
+    font-size:1.5rem;
+  }
+
+  .toolbar{
+    border-radius:20px;
+    padding:10px;
+  }
+
+  .games{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .tabs{
+    left:8px;
+    right:8px;
+    bottom:
+      calc(7px + env(safe-area-inset-bottom));
+    min-height:68px;
+    padding:6px;
+    border-radius:22px;
+    border:1px solid var(--ui-border2);
+    background:rgba(5,16,28,.94);
+    box-shadow:0 14px 44px rgba(0,0,0,.55);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
+  }
+
+  .tab{
+    min-width:72px;
+    padding:7px 8px;
+    border-radius:16px;
+    border-color:transparent;
+    background:transparent;
+    color:#8299af;
+    font-size:.60rem;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:2px;
+  }
+
+  .tab::before{
+    display:block;
+    font-size:1.12rem;
+    line-height:1;
+  }
+
+  .tab[data-tab="daily"]::before{content:"⌂"}
+  .tab[data-tab="ranking"]::before{content:"▥"}
+  .tab[data-tab="census"]::before{content:"◫"}
+  .tab[data-tab="teams"]::before{content:"⚾"}
+  .tab[data-tab="history"]::before{content:"✓"}
+  .tab[data-tab="bank"]::before{content:"$"}
+  .tab[data-tab="lab"]::before{content:"⌁"}
+  .tab[data-tab="settings"]::before{content:"⚙"}
+
+  .tab.active{
+    color:white;
+    border-color:rgba(99,180,255,.42);
+    background:
+      linear-gradient(145deg,#1c4a73,#143854);
+    box-shadow:0 5px 18px rgba(40,118,190,.22);
+  }
+
+  dialog{
+    width:100%;
+    max-width:100%;
+    max-height:94vh;
+    margin:auto 0 0;
+    border-left:0;
+    border-right:0;
+    border-bottom:0;
+  }
+}
+
+@media(max-width:440px){
+
+  .games{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+  .gh{
+    padding:11px 10px;
+  }
+
+  .gb{
+    padding:10px;
+  }
+
+  .teams{
+    font-size:.96rem;
+  }
+}
+
+
+/* V7.8.3B HOME DASHBOARD */
+
+.home-dashboard{
+  margin:12px 0 14px;
+  padding:16px;
+  border:1px solid var(--ui-border);
+  border-radius:22px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(10,31,50,.98),
+      rgba(5,17,29,.99)
+    );
+  box-shadow:var(--ui-shadow);
+}
+
+.home-dashboard-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.home-dashboard-eyebrow{
+  color:#7f9ab3;
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.home-dashboard-title{
+  margin-top:4px;
+  font-size:clamp(1.15rem,4.8vw,1.65rem);
+  font-weight:950;
+  letter-spacing:-.035em;
+}
+
+.home-dashboard-sub{
+  margin-top:4px;
+  color:var(--ui-muted);
+  font-size:.72rem;
+}
+
+.home-live-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 9px;
+  border-radius:999px;
+  border:1px solid rgba(72,221,160,.32);
+  background:rgba(20,88,63,.22);
+  color:#94efc5;
+  font-size:.64rem;
+  font-weight:900;
+}
+
+.home-live-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--ui-green);
+  box-shadow:0 0 0 4px rgba(72,221,160,.10);
+}
+
+.home-live-chip.off{
+  color:#91a3b5;
+  border-color:var(--ui-border);
+  background:rgba(30,44,58,.30);
+}
+
+.home-live-chip.off .home-live-dot{
+  background:#778b9e;
+  box-shadow:none;
+}
+
+.home-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+}
+
+.home-kpi{
+  position:relative;
+  overflow:hidden;
+  min-height:92px;
+  padding:13px;
+  border-radius:17px;
+  border:1px solid var(--ui-border);
+  background:
+    linear-gradient(
+      155deg,
+      rgba(11,30,48,.96),
+      rgba(5,17,28,.98)
+    );
+}
+
+.home-kpi::after{
+  content:"";
+  position:absolute;
+  width:60px;
+  height:60px;
+  right:-25px;
+  top:-25px;
+  border-radius:50%;
+  background:rgba(99,180,255,.06);
+}
+
+.home-kpi-label{
+  color:#839bb2;
+  font-size:.60rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.home-kpi-value{
+  margin-top:6px;
+  font-size:clamp(1.40rem,5vw,2rem);
+  font-weight:950;
+  line-height:1;
+  letter-spacing:-.04em;
+}
+
+.home-kpi-note{
+  margin-top:7px;
+  color:#758da4;
+  font-size:.63rem;
+}
+
+.home-kpi.play .home-kpi-value{
+  color:var(--ui-green);
+}
+
+.home-kpi.lines .home-kpi-value{
+  color:var(--ui-blue);
+}
+
+.home-dashboard-foot{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:11px;
+  padding-top:11px;
+  border-top:1px solid rgba(130,171,210,.11);
+  color:#7890a7;
+  font-size:.65rem;
+}
+
+@media(max-width:720px){
+  .home-dashboard{
+    padding:14px;
+    border-radius:20px;
+  }
+
+  .home-kpis{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:440px){
+  .home-kpi{
+    min-height:86px;
+    padding:12px;
+  }
+
+  .home-dashboard-title{
+    font-size:1.20rem;
+  }
+}
+
+
+
+/* V7.8.3C GAME CARDS PRO */
+
+/* =========================
+   TARJETA BASE
+   ========================= */
+
+.game{
+  position:relative;
+
+  overflow:hidden;
+
+  border:
+    1px solid
+    rgba(110,169,224,.19);
+
+  border-radius:21px;
+
+  background:
+    linear-gradient(
+      160deg,
+      rgba(12,31,50,.99),
+      rgba(4,14,24,.99)
+    );
+
+  box-shadow:
+    0 10px 32px
+    rgba(0,0,0,.28);
+
+  isolation:isolate;
+}
+
+
+.game::after{
+  content:"";
+
+  position:absolute;
+
+  width:130px;
+  height:130px;
+
+  right:-70px;
+  top:-70px;
+
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(99,180,255,.10),
+      transparent 68%
+    );
+
+  pointer-events:none;
+
+  z-index:-1;
+}
+
+
+.game:before{
+  height:3px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #2995ff,
+      #7567ff 58%,
+      transparent
+    );
+
+  opacity:.90;
+}
+
+
+/* =========================
+   CABECERA
+   ========================= */
+
+.game .gh{
+  padding:
+    13px 14px 12px;
+
+  align-items:flex-start;
+
+  border-bottom:
+    1px solid
+    rgba(133,176,218,.12);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(13,35,56,.52),
+      transparent
+    );
+}
+
+
+.game .teams{
+  font-size:
+    clamp(
+      .98rem,
+      3.7vw,
+      1.13rem
+    );
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+
+  color:#f5f9ff;
+}
+
+
+.game .meta{
+  margin-top:5px;
+
+  font-size:.67rem;
+
+  color:#748ba1;
+
+  line-height:1.35;
+}
+
+
+/* =========================
+   CUERPO
+   ========================= */
+
+.game .gb{
+  padding:
+    13px 14px 14px;
+}
+
+
+/* =========================
+   PITCHERS
+   ========================= */
+
+.game .pitchers{
+  gap:7px;
+
+  margin-bottom:10px;
+}
+
+
+.game .pitcher{
+  position:relative;
+
+  padding:
+    9px 10px;
+
+  border:
+    1px solid
+    rgba(120,166,208,.14);
+
+  border-radius:13px;
+
+  background:
+    rgba(4,16,27,.60);
+}
+
+
+.game .pitcher b{
+  color:#dce9f5;
+
+  font-size:.72rem;
+
+  font-weight:850;
+
+  white-space:nowrap;
+
+  overflow:hidden;
+
+  text-overflow:ellipsis;
+}
+
+
+.game .pitcher span{
+  margin-top:3px;
+
+  color:#6f879e;
+
+  font-size:.63rem;
+}
+
+
+/* =========================
+   SCOREBOX
+   ========================= */
+
+.game .scorebox{
+  margin-bottom:10px;
+
+  padding:
+    11px 10px;
+
+  border:
+    1px solid
+    rgba(123,173,219,.17);
+
+  border-radius:15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(5,19,32,.94),
+      rgba(8,27,43,.84)
+    );
+
+  box-shadow:
+    inset 0 1px
+    rgba(255,255,255,.02);
+}
+
+
+.game .scoreteam{
+  color:#dce8f4;
+
+  font-size:.77rem;
+
+  font-weight:900;
+}
+
+
+.game .scoreteam strong{
+  margin-top:3px;
+
+  font-size:
+    clamp(
+      1.45rem,
+      5vw,
+      1.85rem
+    );
+
+  line-height:1;
+
+  color:#ffffff;
+
+  font-weight:950;
+}
+
+
+.game .scoremid{
+  min-width:70px;
+
+  color:#71889e;
+
+  font-size:.62rem;
+}
+
+
+.game .scoremid b{
+  color:#b8cade;
+
+  font-size:.68rem;
+
+  font-weight:850;
+}
+
+
+/* =========================
+   CHIPS / SEÑALES
+   ========================= */
+
+.game .sourcechip,
+.game .signalchip,
+.game .livechip,
+.game .tag{
+  border-radius:999px;
+
+  font-weight:900;
+
+  letter-spacing:.02em;
+
+  box-shadow:
+    inset 0 1px
+    rgba(255,255,255,.02);
+}
+
+
+.game .sourcechip{
+  background:
+    rgba(5,17,28,.54);
+}
+
+
+.game .signalchip.play{
+  background:
+    rgba(31,111,78,.18);
+}
+
+
+.game .signalchip.lean{
+  background:
+    rgba(130,99,31,.16);
+}
+
+
+.game .signalchip.pass{
+  background:
+    rgba(72,89,107,.12);
+}
+
+
+/* =========================
+   COMPACT READS
+   ========================= */
+
+.game .compact-dual{
+  gap:7px;
+}
+
+
+.game .compact-read{
+  padding:
+    9px 10px;
+
+  border:
+    1px solid
+    rgba(115,164,207,.14);
+
+  border-radius:13px;
+
+  background:
+    rgba(5,18,30,.70);
+}
+
+
+.game .compact-read small{
+  color:#738ca4;
+
+  font-size:.59rem;
+
+  letter-spacing:.07em;
+}
+
+
+.game .compact-read b{
+  margin-top:4px;
+
+  color:#eef6ff;
+
+  font-size:.91rem;
+
+  font-weight:900;
+}
+
+
+/* =========================
+   MÉTRICAS
+   ========================= */
+
+.game .metric{
+  border:
+    1px solid
+    rgba(113,162,207,.13);
+
+  background:
+    rgba(5,17,28,.56);
+
+  border-radius:13px;
+}
+
+
+.game .metric small{
+  color:#6e869e;
+
+  font-size:.57rem;
+}
+
+
+.game .metric strong{
+  font-size:.94rem;
+
+  font-weight:900;
+}
+
+
+/* =========================
+   INTERACCIÓN
+   ========================= */
+
+.game{
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+
+.game:active{
+  transform:
+    scale(.985);
+
+  border-color:
+    rgba(99,180,255,.35);
+}
+
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media(max-width:720px){
+
+  .game{
+    border-radius:19px;
+  }
+
+  .game .gh{
+    padding:
+      11px 10px 10px;
+  }
+
+  .game .gb{
+    padding:
+      10px;
+  }
+
+  .game .pitchers{
+    grid-template-columns:1fr;
+  }
+
+  .game .pitcher{
+    padding:
+      7px 8px;
+  }
+
+}
+
+
+/* =========================
+   SMALL PHONE
+   ========================= */
+
+@media(max-width:440px){
+
+  .game .teams{
+    font-size:.95rem;
+  }
+
+  .game .meta{
+    font-size:.61rem;
+  }
+
+  .game .scorebox{
+    padding:
+      9px 7px;
+  }
+
+  .game .scoreteam strong{
+    font-size:1.5rem;
+  }
+
+  .game .compact-read{
+    padding:
+      8px;
+  }
+
+}
+
+
+
+/* V7.8.3D GLOBAL DASHBOARD POLISH */
+
+/* =========================
+   TRANSICIÓN DE PANELES
+   ========================= */
+
+.panel:not(.hidden){
+  animation:
+    dashboardFade .18s ease;
+}
+
+@keyframes dashboardFade{
+  from{
+    opacity:.45;
+    transform:translateY(4px);
+  }
+
+  to{
+    opacity:1;
+    transform:none;
+  }
+}
+
+
+/* =========================
+   SECCIONES
+   ========================= */
+
+.section{
+  position:relative;
+  overflow:hidden;
+}
+
+.section::after{
+  content:"";
+
+  position:absolute;
+
+  width:120px;
+  height:120px;
+
+  right:-75px;
+  top:-75px;
+
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(99,180,255,.055),
+      transparent 70%
+    );
+
+  pointer-events:none;
+}
+
+
+.section > h3{
+  position:relative;
+
+  padding-left:11px;
+
+  font-size:
+    clamp(
+      .98rem,
+      3.8vw,
+      1.12rem
+    );
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+}
+
+
+.section > h3::before{
+  content:"";
+
+  position:absolute;
+
+  left:0;
+  top:3px;
+  bottom:3px;
+
+  width:3px;
+
+  border-radius:99px;
+
+  background:
+    linear-gradient(
+      180deg,
+      var(--ui-blue),
+      #7767ff
+    );
+}
+
+
+/* =========================
+   KPI CARDS
+   ========================= */
+
+.cards .card,
+.grid4 .card,
+.grid3 .card,
+.grid2 .card{
+  position:relative;
+  overflow:hidden;
+
+  border:
+    1px solid
+    rgba(119,166,210,.16);
+
+  border-radius:16px;
+
+  background:
+    linear-gradient(
+      155deg,
+      rgba(9,27,44,.94),
+      rgba(5,16,27,.97)
+    );
+
+  box-shadow:
+    0 6px 18px
+    rgba(0,0,0,.15);
+}
+
+
+.card small{
+  color:#8199b0;
+
+  font-size:.59rem;
+
+  font-weight:900;
+
+  letter-spacing:.075em;
+}
+
+
+.card .big{
+  margin-top:6px;
+
+  color:#f5f9ff;
+
+  font-size:
+    clamp(
+      1.05rem,
+      4.2vw,
+      1.42rem
+    );
+
+  font-weight:950;
+
+  line-height:1.1;
+
+  letter-spacing:-.035em;
+}
+
+
+.smalltxt{
+  color:#7e94aa;
+
+  line-height:1.48;
+}
+
+
+/* =========================
+   RANKING
+   ========================= */
+
+.rank{
+  gap:9px;
+}
+
+
+.rankrow{
+  border:
+    1px solid
+    rgba(119,168,211,.16);
+
+  border-radius:16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(9,27,44,.96),
+      rgba(5,17,28,.98)
+    );
+
+  box-shadow:
+    0 5px 15px
+    rgba(0,0,0,.14);
+
+  transition:
+    transform .12s ease,
+    border-color .12s ease;
+}
+
+
+.rankrow:active{
+  transform:scale(.987);
+
+  border-color:
+    rgba(99,180,255,.34);
+}
+
+
+.num{
+  width:32px;
+  height:32px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1c4b76,
+      #163753
+    );
+
+  border:
+    1px solid
+    rgba(99,180,255,.24);
+
+  box-shadow:
+    0 4px 12px
+    rgba(0,0,0,.18);
+}
+
+
+/* =========================
+   TABLAS
+   ========================= */
+
+table{
+  border-radius:14px;
+
+  background:
+    rgba(4,15,26,.30);
+}
+
+
+thead{
+  background:
+    rgba(11,30,48,.70);
+}
+
+
+th{
+  padding:
+    10px 8px;
+
+  color:#89a1b8;
+
+  font-size:.60rem;
+
+  font-weight:900;
+
+  letter-spacing:.075em;
+}
+
+
+td{
+  padding:
+    10px 8px;
+
+  color:#dce7f2;
+}
+
+
+tbody tr{
+  transition:
+    background .12s ease;
+}
+
+
+tbody tr:active{
+  background:
+    rgba(77,139,196,.07);
+}
+
+
+/* =========================
+   MENSAJES
+   ========================= */
+
+.okbox,
+.warn,
+.danger{
+  border-radius:14px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.025);
+
+  border-right:
+    1px solid
+    rgba(255,255,255,.025);
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,.025);
+
+  box-shadow:
+    0 5px 16px
+    rgba(0,0,0,.14);
+}
+
+
+.okbox{
+  background:
+    linear-gradient(
+      135deg,
+      rgba(15,64,46,.50),
+      rgba(7,29,27,.70)
+    );
+}
+
+
+.warn{
+  background:
+    linear-gradient(
+      135deg,
+      rgba(79,59,15,.44),
+      rgba(36,29,12,.68)
+    );
+}
+
+
+.danger{
+  background:
+    linear-gradient(
+      135deg,
+      rgba(92,31,42,.42),
+      rgba(43,18,25,.70)
+    );
+}
+
+
+/* =========================
+   TAGS / ESTADOS
+   ========================= */
+
+.tag,
+.sourcechip,
+.signalchip{
+  backdrop-filter:
+    blur(6px);
+
+  -webkit-backdrop-filter:
+    blur(6px);
+}
+
+
+.tag.good{
+  background:
+    rgba(30,110,76,.12);
+}
+
+
+.tag.warn{
+  background:
+    rgba(120,91,28,.11);
+}
+
+
+/* =========================
+   EMPTY STATES
+   ========================= */
+
+.empty{
+  padding:
+    28px 18px;
+
+  border:
+    1px dashed
+    rgba(122,173,220,.28);
+
+  border-radius:19px;
+
+  background:
+    rgba(5,18,30,.38);
+
+  color:#8097ad;
+}
+
+
+/* =========================
+   PROGRESS
+   ========================= */
+
+.progress{
+  height:8px;
+
+  border:
+    1px solid
+    rgba(98,151,197,.13);
+
+  background:
+    rgba(3,13,22,.80);
+}
+
+
+.progress span{
+  background:
+    linear-gradient(
+      90deg,
+      #2995ff,
+      #48dda0
+    );
+}
+
+
+/* =========================
+   SCROLLBARS
+   ========================= */
+
+*{
+  scrollbar-color:
+    #234665
+    transparent;
+}
+
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media(max-width:720px){
+
+  .section{
+    margin-bottom:10px;
+  }
+
+  .section > h3{
+    font-size:.98rem;
+  }
+
+  table{
+    font-size:.72rem;
+  }
+
+  th,
+  td{
+    padding:
+      9px 7px;
+  }
+
+}
+
+
+/* =========================
+   SMALL PHONE
+   ========================= */
+
+@media(max-width:440px){
+
+  .cards,
+  .grid4{
+    gap:8px;
+  }
+
+  .card{
+    padding:10px;
+  }
+
+  .card .big{
+    font-size:1.08rem;
+  }
+
+}
+
 </style>
 </head>
 <body>
 <div class="app">
-<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.2</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.2</div></div></header>
+<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.3</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.3</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
 <div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
-<section id="daily" class="panel"><div id="games" class="games"></div></section>
+<section id="daily" class="panel"><div id="homeDashboard"></div><div id="games" class="games"></div></section>
 <section id="ranking" class="panel hidden"><div id="rankContent"></div></section>
 <section id="census" class="panel hidden"><div id="censusContent"></div></section>
 <section id="teams" class="panel hidden"><div class="histbar" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button class="btn green" id="settleTeams">Liquidar LAB + actualizar</button><button class="btn" id="exportTeams">Exportar equipos CSV</button><button class="btn ghost" id="refreshTeams">Recalcular vista</button></div><div id="teamContent"></div></section>
@@ -107,7 +1507,7 @@
 <script>
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
-const APP_VERSION='V7.8.2',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
+const APP_VERSION='V7.8.3',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
 const LG={rpg:4.45,paGame:38.1,k:.225,bb:.083,hbp:.011,s1:.146,s2:.043,s3:.004,hr:.031,out:.457,era:4.20,whip:1.28};
 const PARK={"Coors Field":1.145,"Great American Ball Park":1.075,"Fenway Park":1.055,"Yankee Stadium":1.045,"Citizens Bank Park":1.04,"Globe Life Field":1.015,"Dodger Stadium":1.01,"Oriole Park at Camden Yards":.99,"Wrigley Field":1,"Truist Park":1.015,"Minute Maid Park":1.01,"Kauffman Stadium":1.01,"Chase Field":1.005,"American Family Field":1.01,"Busch Stadium":.985,"Progressive Field":.99,"Comerica Park":.975,"Target Field":.99,"Citi Field":.975,"Nationals Park":1,"loanDepot park":.965,"Petco Park":.955,"Oracle Park":.95,"T-Mobile Park":.955,"Angel Stadium":.99,"Rogers Centre":1.015,"Tropicana Field":.97,"Rate Field":1.015,"Sutter Health Park":1.035};
 const S={loadedDay:'',games:[],data:new Map(),analyses:new Map(),cache:new Map(),odds:new Map(),bullpens:new Map(),lineups:new Map(),people:new Map(),statcast:new Map(),statcastSeason:null,statcastPromise:null,statcastStatus:{state:'idle',at:0,message:''},current:null,liveOn:true,liveTimer:null,lastOddsAt:0,lastOddsDay:'',oddsRemaining:null,publicOddsStatus:{source:'',at:0,error:''},refreshingAll:false};
@@ -6488,6 +7888,199 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
 
 function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
+function renderHomeDashboard(){
+
+  const el=
+    document.getElementById('homeDashboard');
+
+  if(!el) return;
+
+
+  const games=
+    Array.isArray(S.games)
+      ?S.games.length
+      :0;
+
+
+  const lines=
+    S.odds instanceof Map
+      ?S.odds.size
+      :0;
+
+
+  const analyzed=
+    S.analyses instanceof Map
+      ?S.analyses.size
+      :0;
+
+
+  let plays=0;
+
+  if(S.analyses instanceof Map){
+
+    for(const a of S.analyses.values()){
+
+      if(
+        a?.best?.pick &&
+        a.best.pick.pass===false
+      ){
+        plays++;
+      }
+    }
+  }
+
+
+  const rawDate=
+    document.getElementById('date')
+      ?.value || '';
+
+
+  let dateLabel='Jornada MLB';
+
+  if(rawDate){
+
+    try{
+
+      const d=
+        new Date(
+          rawDate+'T12:00:00'
+        );
+
+      dateLabel=
+        new Intl.DateTimeFormat(
+          'es-MX',
+          {
+            weekday:'long',
+            day:'numeric',
+            month:'long'
+          }
+        ).format(d);
+
+    }catch{}
+  }
+
+
+  const live=
+    S.liveOn===true;
+
+
+  const lineCoverage=
+    games
+      ?Math.round(lines/games*100)
+      :0;
+
+
+  el.innerHTML=`
+    <div class="home-dashboard">
+
+      <div class="home-dashboard-head">
+
+        <div>
+          <div class="home-dashboard-eyebrow">
+            MLB LABS · FULL GAME O/U
+          </div>
+
+          <div class="home-dashboard-title">
+            ${esc(dateLabel)}
+          </div>
+
+          <div class="home-dashboard-sub">
+            Panel operativo de la jornada
+          </div>
+        </div>
+
+
+        <div
+          class="home-live-chip ${live?'':'off'}"
+        >
+          <span class="home-live-dot"></span>
+          ${live?'LIVE':'PAUSADO'}
+        </div>
+
+      </div>
+
+
+      <div class="home-kpis">
+
+        <div class="home-kpi">
+          <div class="home-kpi-label">
+            Juegos
+          </div>
+
+          <div class="home-kpi-value">
+            ${games}
+          </div>
+
+          <div class="home-kpi-note">
+            cargados hoy
+          </div>
+        </div>
+
+
+        <div class="home-kpi lines">
+          <div class="home-kpi-label">
+            Líneas
+          </div>
+
+          <div class="home-kpi-value">
+            ${lines}
+          </div>
+
+          <div class="home-kpi-note">
+            ${lineCoverage}% cobertura
+          </div>
+        </div>
+
+
+        <div class="home-kpi play">
+          <div class="home-kpi-label">
+            Jugables
+          </div>
+
+          <div class="home-kpi-value">
+            ${plays}
+          </div>
+
+          <div class="home-kpi-note">
+            cumplen filtros
+          </div>
+        </div>
+
+
+        <div class="home-kpi">
+          <div class="home-kpi-label">
+            Analizados
+          </div>
+
+          <div class="home-kpi-value">
+            ${analyzed}
+          </div>
+
+          <div class="home-kpi-note">
+            motor ejecutado
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="home-dashboard-foot">
+
+        <span>
+          App ${APP_VERSION}
+          · Motor ${MODEL_VERSION}
+        </span>
+
+        <span>
+          Data Vault activo
+        </span>
+
+      </div>
+
+    </div>
+  `;
+}
+
 function currentRankingRows(){const rows=[];for(const [pk,a] of S.analyses){const g=S.games.find(x=>x.gamePk===pk);if(!g||!a?.best?.ev||!a?.best?.pick)continue;rows.push({g,...a.best,analysis:a})}rows.sort((a,b)=>{const x=a.pick,y=b.pick;return (x.pass-y.pass)||(Number.isFinite(y.edge)?y.edge:0)-(Number.isFinite(x.edge)?x.edge:0)||y.p-x.p});return rows}
 
 /* ---------- V6.0 · Censo permanente del Ranking ---------- */
@@ -7092,6 +8685,25 @@ function importJson(file){const r=new FileReader;r.onload=()=>{try{const x=JSON.
 $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab')renderLab();if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
 $('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=settleBets;$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=settleLab;$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=settleLab;$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#resetAll').onclick=()=>{if(confirm('¿Restablecer ajustes, mercados, apuestas y calibración?')){STORE.clearPrefix('mlb_v5_');STORE.removeItem('mlb_v60_rank_census');STORE.removeItem('mlb_v71_bank');STORE.removeItem('mlb_v61_public_odds_cache');location.reload()}};
 async function boot(){renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
+
+/* V7.8.3B HOME DASHBOARD REFRESH */
+
+window.addEventListener(
+  'DOMContentLoaded',
+  ()=>{
+    renderHomeDashboard();
+
+    setInterval(
+      ()=>{
+        if(!document.hidden){
+          renderHomeDashboard();
+        }
+      },
+      1500
+    );
+  }
+);
+
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 </script>
 <script src="./database.js"></script>
