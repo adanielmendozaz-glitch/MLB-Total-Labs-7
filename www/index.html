@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06111e">
-<title>MLB Totals Lab V7.8.1 · Full Game O/U Focus</title>
+<title>MLB Totals Lab V7.8.2 · Full Game O/U Focus</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#071728">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -81,7 +81,7 @@
 </head>
 <body>
 <div class="app">
-<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.1</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.1</div></div></header>
+<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.2</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.2</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
 <div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
@@ -107,7 +107,7 @@
 <script>
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
-const MODEL_VERSION='V7.0',MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
+const APP_VERSION='V7.8.2',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
 const LG={rpg:4.45,paGame:38.1,k:.225,bb:.083,hbp:.011,s1:.146,s2:.043,s3:.004,hr:.031,out:.457,era:4.20,whip:1.28};
 const PARK={"Coors Field":1.145,"Great American Ball Park":1.075,"Fenway Park":1.055,"Yankee Stadium":1.045,"Citizens Bank Park":1.04,"Globe Life Field":1.015,"Dodger Stadium":1.01,"Oriole Park at Camden Yards":.99,"Wrigley Field":1,"Truist Park":1.015,"Minute Maid Park":1.01,"Kauffman Stadium":1.01,"Chase Field":1.005,"American Family Field":1.01,"Busch Stadium":.985,"Progressive Field":.99,"Comerica Park":.975,"Target Field":.99,"Citi Field":.975,"Nationals Park":1,"loanDepot park":.965,"Petco Park":.955,"Oracle Park":.95,"T-Mobile Park":.955,"Angel Stadium":.99,"Rogers Centre":1.015,"Tropicana Field":.97,"Rate Field":1.015,"Sutter Health Park":1.035};
 const S={loadedDay:'',games:[],data:new Map(),analyses:new Map(),cache:new Map(),odds:new Map(),bullpens:new Map(),lineups:new Map(),people:new Map(),statcast:new Map(),statcastSeason:null,statcastPromise:null,statcastStatus:{state:'idle',at:0,message:''},current:null,liveOn:true,liveTimer:null,lastOddsAt:0,lastOddsDay:'',oddsRemaining:null,publicOddsStatus:{source:'',at:0,error:''},refreshingAll:false};
@@ -2006,7 +2006,30 @@ function calibrate(p,market='TOTAL',side=''){const base=labPickRows('TOTAL','FIN
 function modelProb(models,key,line,side){const out={};for(const k of ['struct','nb','pln','com']){const q=probLine(models[k][key],line),den=q.over+q.under;out[k]=den>0?q[side]/den:.5}return out}
 function ensembleProb(mp,weights){let p=0;for(const k of ['struct','nb','pln','com'])p+=weights[k]*mp[k];return p}function disagreement(mp){return Math.max(...Object.values(mp))-Math.min(...Object.values(mp))}
 function noVig(oo,uo){const a=implied(oo),b=implied(uo);if(!Number.isFinite(a)||!Number.isFinite(b))return null;return{over:a/(a+b),under:b/(a+b)}}
-function evaluateMarket(models,key,line,oo,uo,market,source='MODEL'){const w=learnedWeights(market),condO=modelProb(models,key,line,'over'),condU=modelProb(models,key,line,'under'),rawByModel={};for(const k of ['struct','nb','pln','com'])rawByModel[k]=probLine(models[k][key],line);const rawWinO=Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].over,0),rawWinU=Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].under,0),push=clamp(Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].push,0),0,.95),decisionMass=Math.max(.001,1-push),rawO=rawWinO/Math.max(.001,rawWinO+rawWinU),rawU=rawWinU/Math.max(.001,rawWinO+rawWinU),c=cfg(),nv=noVig(oo,uo);let shrinkO=rawO,shrinkU=rawU;if(nv){shrinkO=rawO*(1-c.prior)+nv.over*c.prior;shrinkU=rawU*(1-c.prior)+nv.under*c.prior}const co=calibrate(shrinkO,market,'OVER'),cu=calibrate(shrinkU,market,'UNDER'),norm=Math.max(.001,co.p+cu.p),pO=co.p/norm,pU=cu.p/norm,edgeO=nv?pO-nv.over:NaN,edgeU=nv?pU-nv.under:NaN;return{line,source,labType:isRealLineSource(source)?'SPORTSBOOK':'MODEL',overOdds:oo,underOdds:uo,over:{p:pO,win:pO*decisionMass,loss:pU*decisionMass,raw:rawO,edge:edgeO,models:condO,dis:disagreement(condO),fair:fair(pO)},under:{p:pU,win:pU*decisionMass,loss:pO*decisionMass,raw:rawU,edge:edgeU,models:condU,dis:disagreement(condU),fair:fair(pU)},push,weights:w,calN:Math.max(co.n,cu.n),market}}
+/* V7.8.2B CALIBRATION SNAPSHOT DETAILS */
+function evaluateMarket(models,key,line,oo,uo,market,source='MODEL'){const w=learnedWeights(market),condO=modelProb(models,key,line,'over'),condU=modelProb(models,key,line,'under'),rawByModel={};for(const k of ['struct','nb','pln','com'])rawByModel[k]=probLine(models[k][key],line);const rawWinO=Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].over,0),rawWinU=Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].under,0),push=clamp(Object.keys(w).filter(k=>rawByModel[k]).reduce((z,k)=>z+n(w[k])*rawByModel[k].push,0),0,.95),decisionMass=Math.max(.001,1-push),rawO=rawWinO/Math.max(.001,rawWinO+rawWinU),rawU=rawWinU/Math.max(.001,rawWinO+rawWinU),c=cfg(),nv=noVig(oo,uo);let shrinkO=rawO,shrinkU=rawU;if(nv){shrinkO=rawO*(1-c.prior)+nv.over*c.prior;shrinkU=rawU*(1-c.prior)+nv.under*c.prior}const co=calibrate(shrinkO,market,'OVER'),cu=calibrate(shrinkU,market,'UNDER'),norm=Math.max(.001,co.p+cu.p),pO=co.p/norm,pU=cu.p/norm,edgeO=nv?pO-nv.over:NaN,edgeU=nv?pU-nv.under:NaN;return{line,source,labType:isRealLineSource(source)?'SPORTSBOOK':'MODEL',overOdds:oo,underOdds:uo,over:{p:pO,win:pO*decisionMass,loss:pU*decisionMass,raw:rawO,edge:edgeO,models:condO,dis:disagreement(condO),fair:fair(pO)},under:{p:pU,win:pU*decisionMass,loss:pO*decisionMass,raw:rawU,edge:edgeU,models:condU,dis:disagreement(condU),fair:fair(pU)},push,
+weights:w,
+calN:Math.max(co.n,cu.n),
+
+calibration:{
+  over:{
+    active:co.active===true,
+    directional:co.directional===true,
+    n:co.n,
+    input:shrinkO,
+    output:co.p
+  },
+
+  under:{
+    active:cu.active===true,
+    directional:cu.directional===true,
+    n:cu.n,
+    input:shrinkU,
+    output:cu.p
+  }
+},
+
+market}}
 function assessSide(ev,side){const c=cfg(),z=ev[String(side).toLowerCase()],hasOdds=Number.isFinite(z.edge),pass=z.p<c.prob||z.dis>c.dis||(hasOdds&&z.edge<c.edge);let why=[];if(z.p<c.prob)why.push('probabilidad insuficiente');if(z.dis>c.dis)why.push('modelos divididos');if(hasOdds&&z.edge<c.edge)why.push('sin edge suficiente');if(!hasOdds)why.push('sin momios: sólo confianza estadística');return{side:String(side).toUpperCase(),...z,pass,why:why.join(' · ')||'cumple filtros'}}
 function pickMarket(ev){return[assessSide(ev,'OVER'),assessSide(ev,'UNDER')].sort((a,b)=>(Number.isFinite(b.edge)?b.edge:-1)-(Number.isFinite(a.edge)?a.edge:-1)||b.p-a.p)[0]}
 function selectBest(markets){return markets.map(x=>({ev:x,pick:pickMarket(x)})).sort((a,b)=>{const sa=(a.pick.pass?0:1)*10+(Number.isFinite(a.pick.edge)?a.pick.edge:0)+a.pick.p*.1,bs=(b.pick.pass?0:1)*10+(Number.isFinite(b.pick.edge)?b.pick.edge:0)+b.pick.p*.1;return bs-sa})[0]}
@@ -2024,7 +2047,421 @@ function modalBase(g,d){const ctx=autoContext(g,d),mean=meanProjection(ctx),def=
 async function openGame(pk){const g=S.games.find(x=>x.gamePk===pk);if(!g)return;S.current=g;$('#modalTitle').textContent=`${g.teams.away.team.name} @ ${g.teams.home.team.name}`;$('#modalMeta').textContent=`${localTime(g.gameDate)} · ${g.venue?.name||'Sede por confirmar'}`;$('#analysisBody').innerHTML='<div class="empty"><span class="loader"></span> Cargando lineups, splits, Statcast, abridores y relevistas…</div>';$('#analysis').showModal();try{const d=await hydrateGame(g);modalBase(g,d)}catch(e){$('#analysisBody').innerHTML=`<div class="danger"><b>No pude cargar todos los datos.</b><br>${esc(e.message)}. Revisa conexión o CORS del navegador.</div>`}}
 function renderModelBars(side){return Object.entries(side.models).map(([k,p])=>`<div class="modelbar"><span>${({struct:'PA Markov/RE24',nb:'NegBin',pln:'Poisson-Lognormal',com:'COM-Poisson'})[k]}</span><div class="progress"><span style="width:${clamp(p*100,0,100)}%"></span></div><b>${pct(p)}</b></div>`).join('')}
 function marketTable(evals,N=0){return`<div class="section"><h3>Mercados analizados · probabilidad condicionada a decisión</h3><div style="overflow:auto"><table class="market-table-mobile"><thead><tr><th>Mercado</th><th>Línea</th><th>Over</th><th>Under</th><th>Push</th><th>Desacuerdo O/U</th></tr></thead><tbody>${evals.map((x,i)=>`<tr><td>${esc(x.label)}<span class="market-source"><span class="sourcechip ${sourceClass(x.source)}">${sourceLabel(x.source)}</span></span></td><td>${x.line}</td><td><b>${pct(x.over.p)}</b><div class="smalltxt">Gana ${pct(x.over.win)} · cuota ${x.over.fair}</div>${Number.isFinite(x.over.edge)?`<div class="smalltxt">edge ${pct(x.over.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|OVER">Elegir Over</button></div></td><td><b>${pct(x.under.p)}</b><div class="smalltxt">Gana ${pct(x.under.win)} · cuota ${x.under.fair}</div>${Number.isFinite(x.under.edge)?`<div class="smalltxt">edge ${pct(x.under.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|UNDER">Elegir Under</button></div></td><td>${pct(x.push)}</td><td>${pct(x.over.dis)} / ${pct(x.under.dis)}</td></tr>`).join('')}</tbody></table></div><div class="note">En líneas enteras, la probabilidad principal excluye el push. “Gana” conserva la probabilidad absoluta de cobro.</div></div>`}
-function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),modelVersion:MODEL_VERSION,isLabPick:upper===labSide,status:'PENDING',created:stamp,updated:stamp,seed:built.seed,includeExtras:built.ctx?.gameRules?.extras!==false},key=labForecastKey(fresh),idx=rows.findIndex(r=>labForecastKey(r)===key);if(idx>=0){if(rows[idx].status==='PENDING'){rows[idx]={...rows[idx],...fresh,id:rows[idx].id||fresh.id,created:rows[idx].created||stamp};updated++}}else{rows.push(fresh);saved++}}}rows=dedupeLabRows(rows);saveLab(rows);return{saved,updated,skippedModel,skipped:false}}
+
+/* V7.8.2A PREDICTION SNAPSHOT ENGINE */
+
+function predictionSnapshot(
+  ev,
+  side,
+  built,
+  g=null
+){
+
+  const upper=
+    String(
+      side || ''
+    ).toUpperCase();
+
+  const lower=
+    upper.toLowerCase();
+
+  const x=
+    ev?.[lower] || {};
+
+  const weights=
+    ev?.weights || {};
+
+  const nv=
+    noVig(
+      ev?.overOdds,
+      ev?.underOdds
+    );
+
+
+  const finiteOrNull=v=>
+    Number.isFinite(Number(v))
+      ?Number(v)
+      :null;
+
+
+  return{
+
+    schema:
+      DATA_SCHEMA,
+
+    appVersion:
+      APP_VERSION,
+
+    modelVersion:
+      MODEL_VERSION,
+
+    capturedAt:
+      new Date().toISOString(),
+
+
+    game:{
+      gamePk:
+        g?.gamePk ?? null,
+
+      date:
+        $('#date')?.value || null,
+
+      away:
+        g?.teams?.away?.team?.name ||
+        null,
+
+      home:
+        g?.teams?.home?.team?.name ||
+        null
+    },
+
+
+    market:{
+      type:
+        String(
+          ev?.market || 'TOTAL'
+        ).toUpperCase(),
+
+      side:
+        upper,
+
+      line:
+        finiteOrNull(
+          ev?.line
+        ),
+
+      source:
+        String(
+          ev?.source || ''
+        ),
+
+      labType:
+        String(
+          ev?.labType || ''
+        )
+    },
+
+
+    sportsbook:{
+
+      overOdds:
+        ev?.overOdds ?? null,
+
+      underOdds:
+        ev?.underOdds ?? null,
+
+      noVigOver:
+        finiteOrNull(
+          nv?.over
+        ),
+
+      noVigUnder:
+        finiteOrNull(
+          nv?.under
+        )
+    },
+
+
+    prediction:{
+
+      probability:
+        finiteOrNull(
+          x.p
+        ),
+
+      winProbability:
+        finiteOrNull(
+          x.win
+        ),
+
+      rawProbability:
+        finiteOrNull(
+          x.raw
+        ),
+
+      pushProbability:
+        finiteOrNull(
+          ev?.push
+        ),
+
+      edge:
+        finiteOrNull(
+          x.edge
+        ),
+
+      disagreement:
+        finiteOrNull(
+          x.dis
+        ),
+
+      fairOdds:
+        x.fair ?? null,
+
+
+      models:
+        x.models &&
+        typeof x.models==='object'
+          ?{
+              struct:
+                finiteOrNull(
+                  x.models.struct
+                ),
+
+              nb:
+                finiteOrNull(
+                  x.models.nb
+                ),
+
+              pln:
+                finiteOrNull(
+                  x.models.pln
+                ),
+
+              com:
+                finiteOrNull(
+                  x.models.com
+                )
+            }
+          :null
+    },
+
+
+    ensemble:{
+
+      weights:{
+
+        struct:
+          finiteOrNull(
+            weights.struct
+          ),
+
+        nb:
+          finiteOrNull(
+            weights.nb
+          ),
+
+        pln:
+          finiteOrNull(
+            weights.pln
+          ),
+
+        com:
+          finiteOrNull(
+            weights.com
+          )
+      },
+
+      adaptiveActive:
+        weights.active === true,
+
+      learningSample:
+        finiteOrNull(
+          weights.n
+        )
+    },
+
+
+    calibration:{
+
+      sample:
+        finiteOrNull(
+          ev?.calN
+        ),
+
+      over:{
+        active:
+          ev?.calibration
+            ?.over
+            ?.active === true,
+
+        directional:
+          ev?.calibration
+            ?.over
+            ?.directional === true,
+
+        sample:
+          finiteOrNull(
+            ev?.calibration
+              ?.over
+              ?.n
+          ),
+
+        inputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.over
+              ?.input
+          ),
+
+        outputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.over
+              ?.output
+          )
+      },
+
+      under:{
+        active:
+          ev?.calibration
+            ?.under
+            ?.active === true,
+
+        directional:
+          ev?.calibration
+            ?.under
+            ?.directional === true,
+
+        sample:
+          finiteOrNull(
+            ev?.calibration
+              ?.under
+              ?.n
+          ),
+
+        inputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.under
+              ?.input
+          ),
+
+        outputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.under
+              ?.output
+          )
+      },
+
+      selected:{
+        side:
+          upper,
+
+        active:
+          ev?.calibration
+            ?.[lower]
+            ?.active === true,
+
+        directional:
+          ev?.calibration
+            ?.[lower]
+            ?.directional === true,
+
+        sample:
+          finiteOrNull(
+            ev?.calibration
+              ?.[lower]
+              ?.n
+          ),
+
+        inputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.[lower]
+              ?.input
+          ),
+
+        outputProbability:
+          finiteOrNull(
+            ev?.calibration
+              ?.[lower]
+              ?.output
+          )
+      }
+    },
+
+
+    dataQuality:{
+
+      awayLineupConfirmed:
+        !!built
+          ?.ctx
+          ?.away
+          ?.lineup
+          ?.confirmed,
+
+      homeLineupConfirmed:
+        !!built
+          ?.ctx
+          ?.home
+          ?.lineup
+          ?.confirmed,
+
+      awayBullpenAutomatic:
+        !!built
+          ?.ctx
+          ?.away
+          ?.bullpen
+          ?.automatic,
+
+      homeBullpenAutomatic:
+        !!built
+          ?.ctx
+          ?.home
+          ?.bullpen
+          ?.automatic,
+
+      statcastReady:
+        finiteOrNull(
+          Number(
+            built
+              ?.ctx
+              ?.away
+              ?.lineup
+              ?.statcastReady || 0
+          ) +
+          Number(
+            built
+              ?.ctx
+              ?.home
+              ?.lineup
+              ?.statcastReady || 0
+          )
+        ),
+
+      extrasIncluded:
+        built
+          ?.ctx
+          ?.gameRules
+          ?.extras !== false
+    },
+
+
+    simulation:{
+
+      seed:
+        built?.seed ?? null,
+
+      projectedTotal:
+        finiteOrNull(
+          built?.mean?.total
+        ),
+
+      projectedAway:
+        finiteOrNull(
+          built?.mean?.away
+        ),
+
+      projectedHome:
+        finiteOrNull(
+          built?.mean?.home
+        )
+    }
+
+  };
+}
+
+function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),appVersion:APP_VERSION,
+dataSchema:DATA_SCHEMA,
+modelVersion:MODEL_VERSION,
+predictionSnapshot:predictionSnapshot(
+  e,
+  upper,
+  built,
+  g
+),
+isLabPick:upper===labSide,status:'PENDING',created:stamp,updated:stamp,seed:built.seed,includeExtras:built.ctx?.gameRules?.extras!==false},key=labForecastKey(fresh),idx=rows.findIndex(r=>labForecastKey(r)===key);if(idx>=0){if(rows[idx].status==='PENDING'){rows[idx]={...rows[idx],...fresh,id:rows[idx].id||fresh.id,created:rows[idx].created||stamp};updated++}}else{rows.push(fresh);saved++}}}rows=dedupeLabRows(rows);saveLab(rows);return{saved,updated,skippedModel,skipped:false}}
 
 /* ---------- V7.3 · RISK MANAGER V1 ---------- */
 
@@ -2325,6 +2762,27 @@ async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hid
 function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
 function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,
+
+appVersion:
+  r.appVersion
+    ?String(r.appVersion)
+    :null,
+
+dataSchema:
+  Number.isFinite(+r.dataSchema)
+    ?+r.dataSchema
+    :null,
+
+modelVersion:
+  r.modelVersion
+    ?String(r.modelVersion)
+    :null,
+
+predictionSnapshot:
+  r.predictionSnapshot &&
+  typeof r.predictionSnapshot==='object'
+    ?r.predictionSnapshot
+    :null,
 bankAtBet:hasRealNumber(r.bankAtBet)?Number(r.bankAtBet):null,
 unitsAtBet:hasRealNumber(r.unitsAtBet)?Number(r.unitsAtBet):null,
 riskIndividual:hasRealNumber(r.riskIndividual)?Number(r.riskIndividual):null,
@@ -2593,6 +3051,7 @@ function refreshDisciplinePreview(evals){
 }
 
 
+/* V7.8.2C PERSISTENT PREDICTION SNAPSHOTS */
 function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value),stake=n($('#betStake').value),choice=selectedBetChoice(evals);if(!o.valid||stake<=0){alert('Captura un momio válido y stake mayor a cero.');return}const risk=betRiskSnapshot(stake);
      const discipline=disciplineSnapshot(evals,choice);
      const e=choice.ev,p=choice.assessment,z=e[choice.side.toLowerCase()],row={id:`b_${Date.now()}_${rand()}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built?.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built?.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built?.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built?.ctx?.home?.bullpen?.automatic,market:'TOTAL',label:'Total juego completo',line:e.line,lineSource:e.source,side:choice.side,odds:o.decimal,american:o.american,
@@ -2618,7 +3077,15 @@ function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value)
 
      followedModel:discipline.followed,
      p:p.p,
-     winProb:z.win,pushProb:e.push,includeExtras:cfg().gameRules?.extras!==false,edge:p.edge,dis:p.dis,recommended:!p.pass,manualPass:p.pass,status:'PENDING',created:new Date().toISOString(),profit:null,closingLine:null,closingOdds:null,clv:NaN,modelVersion:MODEL_VERSION};const a=bets();a.push(row);saveBets(a);renderHistory();const note=$('#betSaveStatus');if(note){note.className='okbox';note.innerHTML=`Guardada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`}status(STORAGE_MODE==='memoria temporal'?'Apuesta guardada sólo durante esta sesión; exporta JSON.':'Apuesta Full Game guardada y persistida.',STORAGE_MODE==='memoria temporal'?'err':'ok')}
+     winProb:z.win,pushProb:e.push,includeExtras:cfg().gameRules?.extras!==false,edge:p.edge,dis:p.dis,recommended:!p.pass,manualPass:p.pass,status:'PENDING',created:new Date().toISOString(),profit:null,closingLine:null,closingOdds:null,clv:NaN,appVersion:APP_VERSION,
+dataSchema:DATA_SCHEMA,
+modelVersion:MODEL_VERSION,
+predictionSnapshot:predictionSnapshot(
+  e,
+  choice.side,
+  built,
+  g
+)};const a=bets();a.push(row);saveBets(a);renderHistory();const note=$('#betSaveStatus');if(note){note.className='okbox';note.innerHTML=`Guardada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`}status(STORAGE_MODE==='memoria temporal'?'Apuesta guardada sólo durante esta sesión; exporta JSON.':'Apuesta Full Game guardada y persistida.',STORAGE_MODE==='memoria temporal'?'err':'ok')}
 window.deleteBet=id=>{if(!confirm('¿Eliminar esta apuesta del historial?'))return;saveBets(bets().filter(x=>String(x.id)!==String(id)));renderHistory()};
 function settleValue(row,a,h){const total=row.market==='AWAY_TT'?a:row.market==='HOME_TT'?h:a+h;if(row.market==='F5')return null;if(total===row.line)return'PUSH';const win=row.side==='OVER'?total>row.line:total<row.line;return win?'WIN':'LOSS'}
 async function finalScore(pk){const d=await fetchJ(`${API11}/game/${pk}/feed/live`,0),g=d.gameData||{},l=d.liveData?.linescore||{},st=g.status||{};if(st.abstractGameState!=='Final')return null;return{away:n(l.teams?.away?.runs),home:n(l.teams?.home?.runs),innings:l.innings||[]}}
@@ -5688,7 +6155,338 @@ function calibrationBucketPanelHtml(){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+/* V7.8.2D PREDICTION SNAPSHOT AUDIT */
+
+function predictionSnapshotAuditPanelHtml(rows=[]){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+  const withSnapshot=
+    all.filter(
+      r=>
+        r?.predictionSnapshot &&
+        typeof r.predictionSnapshot==='object'
+    );
+
+  const legacy=
+    all.length-
+    withSnapshot.length;
+
+  const coverage=
+    all.length
+      ?withSnapshot.length/all.length
+      :NaN;
+
+
+  const latest=
+    [...withSnapshot]
+      .sort((a,b)=>{
+
+        const ta=
+          Date.parse(
+            a?.predictionSnapshot?.capturedAt ||
+            a?.created ||
+            0
+          ) || 0;
+
+        const tb=
+          Date.parse(
+            b?.predictionSnapshot?.capturedAt ||
+            b?.created ||
+            0
+          ) || 0;
+
+        return tb-ta;
+
+      })[0];
+
+
+  const snap=
+    latest?.predictionSnapshot;
+
+
+  const ptxt=v=>
+    Number.isFinite(Number(v))
+      ?pct(Number(v))
+      :'—';
+
+
+  const ntxt=(v,k=2)=>
+    Number.isFinite(Number(v))
+      ?fix(Number(v),k)
+      :'—';
+
+
+  const latestHtml=
+    snap
+      ?`
+        <div
+          class="section"
+          style="margin-top:10px"
+        >
+
+          <h3>
+            Último snapshot capturado
+          </h3>
+
+          <div class="grid4">
+
+            <div class="card">
+              <small>Partido</small>
+              <div class="big">
+                ${esc(
+                  snap.game?.away ||
+                  latest?.away ||
+                  '—'
+                )}
+                @
+                ${esc(
+                  snap.game?.home ||
+                  latest?.home ||
+                  '—'
+                )}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>Pick</small>
+              <div class="big">
+                ${esc(
+                  snap.market?.side ||
+                  latest?.side ||
+                  '—'
+                )}
+                ${snap.market?.line ?? latest?.line ?? '—'}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>Probabilidad</small>
+              <div class="big">
+                ${ptxt(
+                  snap.prediction?.probability
+                )}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>Edge</small>
+              <div class="big">
+                ${ptxt(
+                  snap.prediction?.edge
+                )}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>App / motor</small>
+              <div class="big">
+                ${esc(
+                  snap.appVersion ||
+                  '—'
+                )}
+              </div>
+
+              <div class="smalltxt">
+                Motor
+                ${esc(
+                  snap.modelVersion ||
+                  '—'
+                )}
+                · schema
+                ${snap.schema ?? '—'}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>Adaptativo</small>
+              <div class="big">
+                ${
+                  snap.ensemble?.adaptiveActive
+                    ?'ACTIVO'
+                    :'OFF'
+                }
+              </div>
+
+              <div class="smalltxt">
+                n=
+                ${snap.ensemble?.learningSample ?? '—'}
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>Calibración</small>
+              <div class="big">
+                ${
+                  snap.calibration
+                    ?.selected
+                    ?.active
+                    ?'ACTIVA'
+                    :'OFF'
+                }
+              </div>
+
+              <div class="smalltxt">
+                ${
+                  snap.calibration
+                    ?.selected
+                    ?.side ||
+                  snap.market?.side ||
+                  '—'
+                }
+                · n=
+                ${
+                  snap.calibration
+                    ?.selected
+                    ?.sample ??
+                  '—'
+                }
+              </div>
+            </div>
+
+
+            <div class="card">
+              <small>No-vig</small>
+              <div class="big">
+                O
+                ${ptxt(
+                  snap.sportsbook?.noVigOver
+                )}
+              </div>
+
+              <div class="smalltxt">
+                U
+                ${ptxt(
+                  snap.sportsbook?.noVigUnder
+                )}
+              </div>
+            </div>
+
+          </div>
+
+
+          <div
+            class="note"
+            style="margin-top:10px"
+          >
+            Pesos:
+            Markov/RE24
+            ${ptxt(
+              snap.ensemble?.weights?.struct
+            )}
+            · NegBin
+            ${ptxt(
+              snap.ensemble?.weights?.nb
+            )}
+            · Poisson-LN
+            ${ptxt(
+              snap.ensemble?.weights?.pln
+            )}
+            · COM-Poisson
+            ${ptxt(
+              snap.ensemble?.weights?.com
+            )}
+            · Proyección total
+            ${ntxt(
+              snap.simulation?.projectedTotal
+            )}
+          </div>
+
+        </div>
+      `
+      :`
+        <div
+          class="warn"
+          style="margin-top:10px"
+        >
+          Todavía no existen pronósticos
+          creados con Prediction Snapshot.
+
+          El próximo análisis pregame
+          generará el primero.
+        </div>
+      `;
+
+
+  return`
+    <div class="section">
+
+      <h3>
+        Prediction Snapshot Audit
+      </h3>
+
+
+      <div class="grid4">
+
+        <div class="card">
+          <small>Snapshots</small>
+          <div class="big">
+            ${withSnapshot.length}
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Históricos legacy</small>
+          <div class="big">
+            ${legacy}
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Cobertura</small>
+          <div class="big">
+            ${
+              Number.isFinite(coverage)
+                ?pct(coverage)
+                :'—'
+            }
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>Schema actual</small>
+          <div class="big">
+            ${DATA_SCHEMA}
+          </div>
+
+          <div class="smalltxt">
+            ${APP_VERSION}
+            · motor
+            ${MODEL_VERSION}
+          </div>
+        </div>
+
+      </div>
+
+
+      ${latestHtml}
+
+
+      <div class="note">
+        Los registros anteriores permanecen
+        intactos como legacy.
+
+        No reconstruimos información
+        histórica que nunca fue capturada.
+      </div>
+
+    </div>
+  `;
+}
+
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function currentRankingRows(){const rows=[];for(const [pk,a] of S.analyses){const g=S.games.find(x=>x.gamePk===pk);if(!g||!a?.best?.ev||!a?.best?.pick)continue;rows.push({g,...a.best,analysis:a})}rows.sort((a,b)=>{const x=a.pick,y=b.pick;return (x.pass-y.pass)||(Number.isFinite(y.edge)?y.edge:0)-(Number.isFinite(x.edge)?x.edge:0)||y.p-x.p});return rows}
 
