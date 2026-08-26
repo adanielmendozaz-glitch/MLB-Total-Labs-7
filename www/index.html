@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06111e">
-<title>MLB Totals Lab V7.0 · Full Game O/U Focus</title>
+<title>MLB Totals Lab V7.8 · Full Game O/U Focus</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#071728">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -81,7 +81,7 @@
 </head>
 <body>
 <div class="app">
-<header class="hero"><div><h1>⚾ MLB Totals Lab V7.0</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.0</div></div></header>
+<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
 <div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
@@ -5775,10 +5775,123 @@ function renderCensus(){
  ${today?`<div class="section"><h3>Detalle ${esc(selected)}</h3><div class="census-table"><table><thead><tr><th>#</th><th>Juego</th><th>Mercado</th><th>Pick</th><th>Prob.</th><th>Momio</th><th>Resultado</th><th>Brier</th><th>1u</th></tr></thead><tbody>${(today.rows||[]).map(r=>{const rt=censusResultText(r),cls=rt==='WIN'?'census-win':rt==='LOSS'?'census-loss':rt==='PUSH'?'census-push':'census-pending',u=censusUnit(r);return`<tr><td>${r.rank??'—'}</td><td>${esc(r.awayAbbr)} @ ${esc(r.homeAbbr)}</td><td>${esc(r.label||r.market)}</td><td>${esc(r.side)} ${fix(r.line,1)}<br><span class="signalchip ${censusSignalClass(r.signal)}">${esc(r.signal||'LAB')}</span></td><td>${pct(r.p)}</td><td>${Number.isFinite(+r.odds)?oddsBoth(+r.odds):'—'}</td><td class="${cls}">${esc(rt)}${r.actual!==null&&r.actual!==''&&Number.isFinite(Number(r.actual))?` · ${fix(Number(r.actual),1)}`:''}</td><td>${r.brier!==null&&r.brier!==''&&Number.isFinite(Number(r.brier))?fix(Number(r.brier),3):'—'}</td><td>${Number.isFinite(u)?`${u>0?'+':''}${fix(u,2)}u`:'—'}</td></tr>`}).join('')}</tbody></table></div></div>`:''}
  <div class="census-note">Las unidades usan 1u plana sólo cuando el Ranking tenía un momio real guardado. PASS permanece archivado, pero no entra al récord principal ni a las unidades. El Censo es observación histórica; no retroalimenta los pesos del motor.</div>`;
  $('#censusSettle').onclick=()=>settleRankingCensus(false);
- $('#censusExport').onclick=exportCensusCsv;
+ $('#censusExport').onclick=exportCensusCsvV78;
  $('#censusBackup').onclick=()=>download('mlb_v70_censo_full_game.json',JSON.stringify(rankCensus(),null,2),'application/json');
  $$('[data-census-date]').forEach(b=>b.onclick=()=>{$('#date').value=b.dataset.censusDate;renderRanking();renderCensus();document.querySelector('.tab[data-tab="ranking"]')?.click()})
 }
+
+/* V7.8 CENSUS CSV EXPORT */
+function exportCensusCsvV78(){
+
+  const rows=
+    censusAllRows();
+
+  if(!rows.length){
+
+    status(
+      'El Censo todavía no tiene registros para exportar.',
+      'err'
+    );
+
+    return false;
+  }
+
+
+  const head=[
+    'date',
+    'rank',
+    'away',
+    'home',
+    'market',
+    'label',
+    'side',
+    'line',
+    'probability',
+    'push_probability',
+    'signal',
+    'line_source',
+    'odds',
+    'status',
+    'actual',
+    'brier',
+    'units_1u'
+  ];
+
+
+  const body=
+    rows.map(r=>{
+
+      const data={
+
+        date:r.date,
+
+        rank:r.rank,
+
+        away:r.awayAbbr,
+
+        home:r.homeAbbr,
+
+        market:r.market,
+
+        label:r.label,
+
+        side:r.side,
+
+        line:r.line,
+
+        probability:r.p,
+
+        push_probability:r.pushProb,
+
+        signal:r.signal,
+
+        line_source:r.lineSource,
+
+        odds:r.odds,
+
+        status:
+          censusResultText(r),
+
+        actual:r.actual,
+
+        brier:r.brier,
+
+        units_1u:
+          censusUnit(r)
+      };
+
+
+      return head
+        .map(
+          k=>
+            JSON.stringify(
+              data[k]??''
+            )
+        )
+        .join(',');
+    });
+
+
+  /*
+   * BOM UTF-8:
+   * Excel/Sheets reconoce mejor
+   * acentos y caracteres.
+   */
+  const csv=
+    '\uFEFF'+
+    [
+      head.join(','),
+      ...body
+    ].join('\r\n');
+
+
+  return download(
+    'mlb_v78_censo_full_game.csv',
+    csv,
+    'text/csv;charset=utf-8'
+  );
+}
+
 function exportCensusCsv(){
  const rows=censusAllRows(),head=['date','rank','away','home','market','label','side','line','probability','push_probability','signal','line_source','odds','status','actual','brier','units_1u'],
  body=rows.map(r=>head.map(k=>JSON.stringify(({date:r.date,rank:r.rank,away:r.awayAbbr,home:r.homeAbbr,market:r.market,label:r.label,side:r.side,line:r.line,probability:r.p,push_probability:r.pushProb,signal:r.signal,line_source:r.lineSource,odds:r.odds,status:censusResultText(r),actual:r.actual,brier:r.brier,units_1u:censusUnit(r)})[k]??'')).join(','));
@@ -5810,7 +5923,159 @@ async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.
 async function refreshLive(){if(!S.liveOn||!S.games.length)return;try{const d=await fetchJ(`${API}/schedule?sportId=1&date=${$('#date').value}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`,0),fresh=(d.dates||[]).flatMap(x=>x.games||[]),map=new Map(fresh.map(x=>[x.gamePk,x]));S.games=S.games.map(x=>map.get(x.gamePk)||x);renderGames()}catch{}}
 function startLive(){clearInterval(S.liveTimer);if(S.liveOn)S.liveTimer=setInterval(refreshLive,n($('#liveEvery').value,60)*1000)}
 async function scanDay(mode='preview'){const isLab=mode==='lab',N=isLab?Math.max(3000,n($('#sims').value,8000)):2000,btn=isLab?$('#scanLab'):$('#scanDay');if(btn)btn.disabled=true;status(`<span class="loader"></span> ${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} · ${N.toLocaleString()} simulaciones…`);let done=0,labSaved=0,modelSkipped=0;for(const g of S.games){try{const d=await hydrateGame(g),ctx=autoContext(g,d),pre=meanProjection(ctx),def=defaultLines(g,pre),built=await buildModels(ctx,N,()=>{},JSON.stringify(def));built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',def.line,def.oo,def.uo,'TOTAL',def.lineSource),key:'total',label:'Total juego completo'}],best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs:def});if(isLab){const r=addLabForecast(g,ev,built,{realOnly:true});labSaved+=r.saved+r.updated;modelSkipped+=r.skippedModel||0}done++;status(`${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} ${done}/${S.games.length}…`)}catch(e){console.warn('scan',g.gamePk,e)}}renderGames();renderRanking();persistRankingDraft();renderLab();renderCensus();renderTeams();if(btn)btn.disabled=false;status(isLab?`Escaneo LAB terminado: ${done} juegos · ${labSaved} Totales reales actualizados · ${modelSkipped} juegos sin línea real excluidos.`:`Vista rápida terminada: ${done} juegos Full Game. No modificó aprendizaje ni Brier.`,'ok')}
-function download(name,text,type='text/plain'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+/* V7.8 NATIVE EXPORT FIX */
+async function download(
+  name,
+  text,
+  type='text/plain'
+){
+
+  const native=
+    window.Capacitor
+    ?.isNativePlatform
+    ?.()===true;
+
+  try{
+
+    /*
+     * APK Android:
+     * escribimos archivo real
+     * en caché nativa y abrimos
+     * guardar/compartir.
+     */
+    if(native){
+
+      const Filesystem=
+        window.Capacitor
+        ?.Plugins
+        ?.Filesystem;
+
+      const Share=
+        window.Capacitor
+        ?.Plugins
+        ?.Share;
+
+      if(
+        !Filesystem ||
+        !Share
+      ){
+        throw new Error(
+          'Plugins de exportación no disponibles'
+        );
+      }
+
+
+      const saved=
+        await Filesystem.writeFile({
+          path:name,
+          data:String(text),
+          directory:'CACHE',
+          encoding:'utf8',
+          recursive:true
+        });
+
+
+      let uri=
+        saved?.uri;
+
+
+      if(!uri){
+
+        const u=
+          await Filesystem.getUri({
+            path:name,
+            directory:'CACHE'
+          });
+
+        uri=u?.uri;
+      }
+
+
+      if(!uri){
+        throw new Error(
+          'No se pudo obtener URI del archivo'
+        );
+      }
+
+
+      await Share.share({
+        title:name,
+        text:'MLB Totals Lab V7.8',
+        files:[uri],
+        dialogTitle:
+          'Guardar o compartir archivo'
+      });
+
+
+      status(
+        'Archivo listo: '+name,
+        'ok'
+      );
+
+      return true;
+    }
+
+
+    /*
+     * Navegador/PWA:
+     * conservamos el método web.
+     */
+    const blob=
+      new Blob(
+        [text],
+        {type}
+      );
+
+    const url=
+      URL.createObjectURL(blob);
+
+    const a=
+      document.createElement('a');
+
+    a.href=url;
+    a.download=name;
+    a.style.display='none';
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    setTimeout(
+      ()=>URL.revokeObjectURL(url),
+      1500
+    );
+
+
+    status(
+      'Archivo exportado: '+name,
+      'ok'
+    );
+
+    return true;
+
+
+  }catch(e){
+
+    console.error(
+      'Export error:',
+      e
+    );
+
+    status(
+      'No se pudo exportar '+
+      name+
+      ': '+
+      String(
+        e?.message||e
+      ),
+      'err'
+    );
+
+    return false;
+  }
+}
 function exportCsv(){const a=bets().filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL'),head=['date','away','home','label','side','line','odds','stake','p','edge','status','profit'],rows=a.map(x=>head.map(k=>JSON.stringify(x[k]??'')).join(','));download('mlb_v70_apuestas_full_game.csv',[head.join(','),...rows].join('\n'),'text/csv')}
 function exportJson(){download('mlb_v70_respaldo_full_game.json',JSON.stringify({bets:bets(),lab:lab(),cfg:cfg(),markets:markets(),rankCensus:rankCensus(),rankDrafts:rankDraftStore(),bank:bankCfg()},null,2),'application/json')}
 function exportLab(){download('mlb_v70_calibracion_full_game.json',JSON.stringify(lab(),null,2),'application/json')}
