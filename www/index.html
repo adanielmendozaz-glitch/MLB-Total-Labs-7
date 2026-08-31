@@ -4005,6 +4005,7 @@ function dataQualitySnapshot(
 
 /* V7.8.2A PREDICTION SNAPSHOT ENGINE */
 
+/* V7.8.6A3 DATA QUALITY SNAPSHOT COLLISION FIX */
 function predictionSnapshot(
   ev,
   side,
@@ -4334,8 +4335,7 @@ function predictionSnapshot(
     },
 
 
-    dataQuality:{
-
+    dataContext:{
       awayLineupConfirmed:
         !!built
           ?.ctx
@@ -8141,6 +8141,756 @@ function calibrationBucketPanelHtml(){
 }
 
 
+
+/* V7.8.6B1 GATE PERFORMANCE ENGINE */
+
+function gateTokensFromRow(
+  r={}
+){
+
+  const raw=
+    String(
+      r?.gateFailed ??
+      r?.predictionSnapshot
+        ?.decisionAudit
+        ?.gateFailed ??
+      ''
+    )
+    .trim()
+    .toUpperCase();
+
+
+  if(
+    !raw ||
+    raw==='NONE'
+  ){
+    return [];
+  }
+
+
+  return[
+    ...new Set(
+      raw
+        .split(/[|·,;]/)
+        .map(
+          x=>x.trim()
+        )
+        .filter(Boolean)
+    )
+  ];
+}
+
+
+function gateOutcomeSummary(
+  rows=[]
+){
+
+  const settled=
+    (
+      Array.isArray(rows)
+        ?rows
+        :[]
+    )
+    .filter(r=>
+      r?.status==='FINAL' &&
+      Number.isFinite(+r?.y)
+    );
+
+
+  const wins=
+    settled.filter(
+      r=>+r.y===1
+    ).length;
+
+
+  const losses=
+    settled.length-wins;
+
+
+  const hit=
+    settled.length
+      ?wins/settled.length
+      :NaN;
+
+
+  const ci=
+    wilsonInterval(
+      wins,
+      settled.length
+    );
+
+
+  const probs=
+    settled
+      .map(
+        r=>Number(r?.ensembleP)
+      )
+      .filter(Number.isFinite);
+
+
+  const avgProb=
+    probs.length
+      ?probs.reduce(
+          (a,b)=>a+b,
+          0
+        )/probs.length
+      :NaN;
+
+
+  const briers=
+    settled
+      .map(
+        labPickBrierRow
+      )
+      .filter(Number.isFinite);
+
+
+  const brier=
+    briers.length
+      ?briers.reduce(
+          (a,b)=>a+b,
+          0
+        )/briers.length
+      :NaN;
+
+
+  return{
+
+    n:
+      settled.length,
+
+    wins,
+    losses,
+
+    hit,
+
+    ciLow:
+      ci.low,
+
+    ciHigh:
+      ci.high,
+
+    avgProb,
+    brier
+
+  };
+}
+
+
+function gatePerformanceStats(
+  rows=[]
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  /*
+   * Sólo consideramos auditado un registro
+   * si realmente guardó gateFailed.
+   * Los anteriores permanecen LEGACY.
+   */
+
+  const audited=
+    all.filter(r=>
+      r?.gateFailed!==undefined &&
+      r?.gateFailed!==null
+    );
+
+
+  const settled=
+    audited.filter(r=>
+      r?.status==='FINAL' &&
+      Number.isFinite(+r?.y)
+    );
+
+
+  const pending=
+    audited.filter(
+      r=>r?.status==='PENDING'
+    ).length;
+
+
+  const pushes=
+    audited.filter(
+      r=>r?.status==='PUSH'
+    ).length;
+
+
+  const knownGates=[
+    'PROBABILITY',
+    'DISPERSION',
+    'EDGE',
+    'NO_REAL_LINE'
+  ];
+
+
+  const discovered=[
+    ...new Set(
+      audited.flatMap(
+        gateTokensFromRow
+      )
+    )
+  ];
+
+
+  const gates=[
+    ...new Set([
+      ...knownGates,
+      ...discovered
+    ])
+  ];
+
+
+  const gateRows=
+    gates.map(gate=>{
+
+      const failed=
+        settled.filter(r=>
+          gateTokensFromRow(r)
+            .includes(gate)
+        );
+
+
+      const exclusive=
+        failed.filter(r=>{
+
+          const tokens=
+            gateTokensFromRow(r);
+
+          return(
+            tokens.length===1 &&
+            tokens[0]===gate
+          );
+
+        });
+
+
+      const passed=
+        settled.filter(r=>
+          !gateTokensFromRow(r)
+            .includes(gate)
+        );
+
+
+      const failStats=
+        gateOutcomeSummary(
+          failed
+        );
+
+
+      const exclusiveStats=
+        gateOutcomeSummary(
+          exclusive
+        );
+
+
+      const passStats=
+        gateOutcomeSummary(
+          passed
+        );
+
+
+      /*
+       * blockedLosses:
+       * el gate estuvo presente y el pick
+       * finalmente perdió.
+       *
+       * blockedWinners:
+       * el gate estuvo presente pero el pick
+       * finalmente habría ganado.
+       *
+       * NO implica causalidad todavía.
+       */
+
+      const blockedLosses=
+        failStats.losses;
+
+
+      const blockedWinners=
+        failStats.wins;
+
+
+      const protectionBalance=
+        blockedLosses-
+        blockedWinners;
+
+
+      return{
+
+        gate,
+
+        failed:
+          failStats,
+
+        exclusive:
+          exclusiveStats,
+
+        passed:
+          passStats,
+
+        blockedLosses,
+        blockedWinners,
+
+        protectionBalance,
+
+        exclusiveN:
+          exclusiveStats.n,
+
+        coFailureN:
+          failStats.n-
+          exclusiveStats.n
+
+      };
+
+    });
+
+
+  const noFailedGate=
+    settled.filter(
+      r=>
+        gateTokensFromRow(r)
+          .length===0
+    );
+
+
+  return{
+
+    total:
+      all.length,
+
+    audited:
+      audited.length,
+
+    settled:
+      settled.length,
+
+    pending,
+    pushes,
+
+    legacy:
+      all.length-
+      audited.length,
+
+    coverage:
+      all.length
+        ?audited.length/all.length
+        :NaN,
+
+    noFailedGate:
+      gateOutcomeSummary(
+        noFailedGate
+      ),
+
+    gates:
+      gateRows
+
+  };
+}
+
+
+
+/* V7.8.6B2 GATE PERFORMANCE DASHBOARD */
+
+function gatePerformanceDashboardHtml(
+  rows=[]
+){
+
+  const d=
+    gatePerformanceStats(
+      rows
+    );
+
+
+  const coverage=
+    Number.isFinite(d.coverage)
+      ?pct(d.coverage)
+      :'—';
+
+
+  const noGate=
+    d.noFailedGate||{};
+
+
+  const noGateRecord=
+    noGate.n
+      ?`${noGate.wins}-${noGate.losses}`
+      :'—';
+
+
+  const noGateHit=
+    Number.isFinite(noGate.hit)
+      ?pct(noGate.hit)
+      :'—';
+
+
+  const rowsHtml=
+    d.gates.map(g=>{
+
+      const f=
+        g.failed||{};
+
+      const p=
+        g.passed||{};
+
+      const e=
+        g.exclusive||{};
+
+
+      const failRecord=
+        f.n
+          ?`${f.wins}-${f.losses}`
+          :'—';
+
+
+      const passRecord=
+        p.n
+          ?`${p.wins}-${p.losses}`
+          :'—';
+
+
+      const failHit=
+        Number.isFinite(f.hit)
+          ?pct(f.hit)
+          :'—';
+
+
+      const passHit=
+        Number.isFinite(p.hit)
+          ?pct(p.hit)
+          :'—';
+
+
+      const failBrier=
+        Number.isFinite(f.brier)
+          ?fix(f.brier,3)
+          :'—';
+
+
+      const passBrier=
+        Number.isFinite(p.brier)
+          ?fix(p.brier,3)
+          :'—';
+
+
+      const ci=
+        Number.isFinite(f.ciLow) &&
+        Number.isFinite(f.ciHigh)
+          ?`${pct(f.ciLow)} – ${pct(f.ciHigh)}`
+          :'—';
+
+
+      const delta=
+        Number.isFinite(p.hit) &&
+        Number.isFinite(f.hit)
+          ?p.hit-f.hit
+          :NaN;
+
+
+      const deltaTxt=
+        Number.isFinite(delta)
+          ?`${delta>=0?'+':''}${pct(delta)}`
+          :'—';
+
+
+      let interpretation=
+        'SIN MUESTRA';
+
+
+      let cls='bp-mid';
+
+
+      /*
+       * Sólo etiqueta descriptiva.
+       * No modifica ninguna señal.
+       */
+
+      if(f.n>=10){
+
+        if(
+          g.blockedLosses >
+          g.blockedWinners
+        ){
+          interpretation=
+            'PROTECCIÓN POSITIVA';
+
+          cls='bp-good';
+
+        }else if(
+          g.blockedWinners >
+          g.blockedLosses
+        ){
+          interpretation=
+            'VIGILAR';
+
+          cls='bp-bad';
+
+        }else{
+          interpretation=
+            'NEUTRO';
+
+          cls='bp-mid';
+        }
+
+      }else if(f.n>0){
+
+        interpretation=
+          'MUESTRA BAJA';
+
+        cls='bp-mid';
+      }
+
+
+      return`
+        <tr>
+
+          <td>
+            <b>${g.gate}</b>
+            <div class="smalltxt ${cls}">
+              ${interpretation}
+            </div>
+          </td>
+
+
+          <td>
+            ${f.n}
+          </td>
+
+
+          <td>
+            ${failRecord}
+            <div class="smalltxt">
+              ${failHit}
+            </div>
+          </td>
+
+
+          <td class="bp-good">
+            ${g.blockedLosses}
+          </td>
+
+
+          <td class="bp-bad">
+            ${g.blockedWinners}
+          </td>
+
+
+          <td>
+            ${g.exclusiveN}
+            <div class="smalltxt">
+              co-falla ${g.coFailureN}
+            </div>
+          </td>
+
+
+          <td>
+            ${passRecord}
+            <div class="smalltxt">
+              ${passHit}
+            </div>
+          </td>
+
+
+          <td>
+            ${deltaTxt}
+          </td>
+
+
+          <td>
+            ${failBrier}
+            <div class="smalltxt">
+              pasa ${passBrier}
+            </div>
+          </td>
+
+
+          <td>
+            ${ci}
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+
+
+  return`
+    <div class="section">
+
+      <h3>
+        Gate Performance · auditoría
+      </h3>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Con auditoría Gate
+          </small>
+
+          <div class="big">
+            ${d.audited}
+          </div>
+
+          <div class="smalltxt">
+            de ${d.total} pronósticos
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cobertura
+          </small>
+
+          <div class="big">
+            ${coverage}
+          </div>
+
+          <div class="smalltxt">
+            gate snapshot disponible
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados
+          </small>
+
+          <div class="big">
+            ${d.settled}
+          </div>
+
+          <div class="smalltxt">
+            auditables
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Legacy
+          </small>
+
+          <div class="big">
+            ${d.legacy}
+          </div>
+
+          <div class="smalltxt">
+            sin gate histórico
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="card"
+        style="margin-top:10px"
+      >
+
+        <small>
+          Sin gate fallido
+        </small>
+
+        <div class="big">
+          ${noGateRecord}
+        </div>
+
+        <div class="smalltxt">
+
+          n=${noGate.n||0}
+          · acierto ${noGateHit}
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          overflow:auto;
+          margin-top:12px
+        "
+      >
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Gate</th>
+              <th>N falla</th>
+              <th>Récord falla</th>
+              <th>Loss</th>
+              <th>Win</th>
+              <th>Exclusivo</th>
+              <th>Récord pasa</th>
+              <th>Δ acierto</th>
+              <th>Brier</th>
+              <th>IC95 falla</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${rowsHtml}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="note">
+
+        LOSS = pronósticos que terminaron
+        perdiendo cuando ese gate estaba
+        fallado.
+
+        WIN = pronósticos que terminaron
+        ganando a pesar de que ese gate
+        estaba fallado.
+
+        Exclusivo indica cuántas veces ese
+        fue el único gate incumplido.
+
+        Δ acierto compara el grupo que pasó
+        el gate contra el grupo que lo falló.
+
+        Este análisis muestra asociación,
+        NO causalidad.
+
+        Ningún resultado de este panel
+        modifica todavía JUGABLE, LEAN,
+        PASS, ranking, thresholds,
+        probabilidad ni pesos del ensamble.
+
+      </div>
+
+    </div>
+  `;
+
+}
+
+
 /* V7.8.6A2 DATA QUALITY DASHBOARD */
 
 function dataQualityPerformanceStats(
@@ -8970,7 +9720,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
