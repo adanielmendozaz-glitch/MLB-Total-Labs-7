@@ -1,7 +1,7 @@
 {
-  "name": "MLB Totals Lab V7.8.4 · Full Game O/U",
+  "name": "MLB Totals Lab V7.8.5 · Full Game O/U",
   "short_name": "MLB O/U Lab",
-  "description": "Motor MLB enfocado exclusivamente en Over/Under de juego completo, Ranking, Censo, Brier y rendimiento por equipo.",
+  "description": "MLB Totals Lab V7.8.5 · Motor V7.0 · Full Game Over/Under",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
