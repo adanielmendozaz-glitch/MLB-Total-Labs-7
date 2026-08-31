@@ -10470,6 +10470,58 @@ function runCoreSelfTests(){
   );
 
 
+
+
+  /* V7.8.5C3 RELEASE IDENTITY TEST */
+
+  test(
+    'Release identity V7.8.5',
+    ()=>{
+
+      assert(
+        APP_VERSION==='V7.8.5',
+        'APP_VERSION incorrecta: '+
+        APP_VERSION
+      );
+
+
+      assert(
+        MODEL_VERSION==='V7.0',
+        'MODEL_VERSION alterada: '+
+        MODEL_VERSION
+      );
+
+
+      assert(
+        document.title.includes(
+          'MLB Totals Lab V7.8.5'
+        ),
+        'Título HTML desincronizado'
+      );
+
+
+      const hero=
+        document.querySelector(
+          '.hero h1'
+        );
+
+
+      assert(
+        hero &&
+        hero.textContent.includes(
+          'MLB Totals Lab V7.8.5'
+        ),
+        'Header visual desincronizado'
+      );
+
+
+      return(
+        'App V7.8.5 · Motor V7.0'
+      );
+    }
+  );
+
+
   const passed=
     results.filter(
       x=>x.ok
