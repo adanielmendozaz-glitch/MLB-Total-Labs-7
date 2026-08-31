@@ -3693,6 +3693,316 @@ async function openGame(pk){const g=S.games.find(x=>x.gamePk===pk);if(!g)return;
 function renderModelBars(side){return Object.entries(side.models).map(([k,p])=>`<div class="modelbar"><span>${({struct:'PA Markov/RE24',nb:'NegBin',pln:'Poisson-Lognormal',com:'COM-Poisson'})[k]}</span><div class="progress"><span style="width:${clamp(p*100,0,100)}%"></span></div><b>${pct(p)}</b></div>`).join('')}
 function marketTable(evals,N=0){return`<div class="section"><h3>Mercados analizados · probabilidad condicionada a decisión</h3><div style="overflow:auto"><table class="market-table-mobile"><thead><tr><th>Mercado</th><th>Línea</th><th>Over</th><th>Under</th><th>Push</th><th>Desacuerdo O/U</th></tr></thead><tbody>${evals.map((x,i)=>`<tr><td>${esc(x.label)}<span class="market-source"><span class="sourcechip ${sourceClass(x.source)}">${sourceLabel(x.source)}</span></span></td><td>${x.line}</td><td><b>${pct(x.over.p)}</b><div class="smalltxt">Gana ${pct(x.over.win)} · cuota ${x.over.fair}</div>${Number.isFinite(x.over.edge)?`<div class="smalltxt">edge ${pct(x.over.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|OVER">Elegir Over</button></div></td><td><b>${pct(x.under.p)}</b><div class="smalltxt">Gana ${pct(x.under.win)} · cuota ${x.under.fair}</div>${Number.isFinite(x.under.edge)?`<div class="smalltxt">edge ${pct(x.under.edge)}</div>`:''}<div style="margin-top:5px"><button class="btn small ghost" data-pick-choice="${i}|UNDER">Elegir Under</button></div></td><td>${pct(x.push)}</td><td>${pct(x.over.dis)} / ${pct(x.under.dis)}</td></tr>`).join('')}</tbody></table></div><div class="note">En líneas enteras, la probabilidad principal excluye el push. “Gana” conserva la probabilidad absoluta de cobro.</div></div>`}
 
+
+/* V7.8.6A1 DATA QUALITY SNAPSHOT */
+
+function dataQualitySnapshot(
+  ev={},
+  built={},
+  g=null
+){
+
+  const ctx=
+    built?.ctx||{};
+
+
+  const awayLineup=
+    ctx?.away?.lineup||{};
+
+  const homeLineup=
+    ctx?.home?.lineup||{};
+
+
+  const awayConfirmed=
+    awayLineup.confirmed===true;
+
+  const homeConfirmed=
+    homeLineup.confirmed===true;
+
+
+  const platoonCount=
+    clamp(
+      n(awayLineup.platoonReady)+
+      n(homeLineup.platoonReady),
+      0,
+      18
+    );
+
+
+  const statcastCount=
+    clamp(
+      n(awayLineup.statcastReady)+
+      n(homeLineup.statcastReady),
+      0,
+      18
+    );
+
+
+  const awayPen=
+    ctx?.away?.bullpen||{};
+
+  const homePen=
+    ctx?.home?.bullpen||{};
+
+
+  const awayBullpenAutomatic=
+    awayPen.automatic===true;
+
+  const homeBullpenAutomatic=
+    homePen.automatic===true;
+
+
+  const awayStarter=
+    g?.teams
+      ?.away
+      ?.probablePitcher;
+
+  const homeStarter=
+    g?.teams
+      ?.home
+      ?.probablePitcher;
+
+
+  const awayStarterKnown=
+    !!(
+      awayStarter?.id ||
+      awayStarter?.fullName
+    );
+
+  const homeStarterKnown=
+    !!(
+      homeStarter?.id ||
+      homeStarter?.fullName
+    );
+
+
+  const source=
+    String(
+      ev?.source||''
+    ).toUpperCase();
+
+
+  const lineValid=
+    Number.isFinite(
+      Number(ev?.line)
+    );
+
+
+  /*
+   * Línea:
+   * sportsbook/API = 20
+   * captura manual real = 16
+   * sin línea válida = 0
+   */
+
+  let linePoints=0;
+  let lineStatus='SIN LÍNEA';
+
+
+  if(
+    lineValid &&
+    typeof isRealLineSource==='function' &&
+    isRealLineSource(ev?.source)
+  ){
+
+    linePoints=20;
+    lineStatus='SPORTSBOOK';
+
+  }else if(
+    lineValid &&
+    source.includes('MANUAL')
+  ){
+
+    linePoints=16;
+    lineStatus='MANUAL';
+
+  }else if(lineValid){
+
+    linePoints=10;
+    lineStatus='RESPALDO';
+  }
+
+
+  /* Abridores · 10 pts cada uno */
+
+  const starterPoints=
+    (
+      awayStarterKnown
+        ?10
+        :0
+    )+
+    (
+      homeStarterKnown
+        ?10
+        :0
+    );
+
+
+  /* Lineups · 12.5 pts cada uno */
+
+  const lineupPoints=
+    (
+      awayConfirmed
+        ?12.5
+        :0
+    )+
+    (
+      homeConfirmed
+        ?12.5
+        :0
+    );
+
+
+  /* Splits · máximo 10 */
+
+  const platoonPoints=
+    10*(
+      platoonCount/18
+    );
+
+
+  /* Statcast · máximo 10 */
+
+  const statcastPoints=
+    10*(
+      statcastCount/18
+    );
+
+
+  /* Bullpen · 7.5 pts cada uno */
+
+  const bullpenPoints=
+    (
+      awayBullpenAutomatic
+        ?7.5
+        :0
+    )+
+    (
+      homeBullpenAutomatic
+        ?7.5
+        :0
+    );
+
+
+  const score=
+    clamp(
+      linePoints+
+      starterPoints+
+      lineupPoints+
+      platoonPoints+
+      statcastPoints+
+      bullpenPoints,
+      0,
+      100
+    );
+
+
+  let tier='BAJA';
+
+  if(score>=90){
+
+    tier='EXCELENTE';
+
+  }else if(score>=75){
+
+    tier='ALTA';
+
+  }else if(score>=60){
+
+    tier='MEDIA';
+  }
+
+
+  return{
+
+    version:'DQ1',
+
+    capturedAt:
+      new Date().toISOString(),
+
+    score:
+      Math.round(
+        score*10
+      )/10,
+
+    tier,
+
+    components:{
+
+      line:{
+        points:linePoints,
+        max:20,
+        status:lineStatus,
+        source:
+          ev?.source||null
+      },
+
+      starters:{
+        points:starterPoints,
+        max:20,
+
+        away:
+          awayStarterKnown,
+
+        home:
+          homeStarterKnown,
+
+        awayName:
+          awayStarter?.fullName||
+          null,
+
+        homeName:
+          homeStarter?.fullName||
+          null
+      },
+
+      lineups:{
+        points:lineupPoints,
+        max:25,
+
+        awayConfirmed,
+        homeConfirmed
+      },
+
+      platoon:{
+        points:
+          Math.round(
+            platoonPoints*10
+          )/10,
+
+        max:10,
+        ready:platoonCount,
+        possible:18
+      },
+
+      statcast:{
+        points:
+          Math.round(
+            statcastPoints*10
+          )/10,
+
+        max:10,
+        ready:statcastCount,
+        possible:18
+      },
+
+      bullpen:{
+        points:bullpenPoints,
+        max:15,
+
+        awayAutomatic:
+          awayBullpenAutomatic,
+
+        homeAutomatic:
+          homeBullpenAutomatic
+      }
+
+    }
+
+  };
+}
+
+
 /* V7.8.2A PREDICTION SNAPSHOT ENGINE */
 
 function predictionSnapshot(
@@ -3730,6 +4040,13 @@ function predictionSnapshot(
 
 
   return{
+
+    dataQuality:
+      dataQualitySnapshot(
+        ev,
+        built,
+        g
+      ),
 
     schema:
       DATA_SCHEMA,
@@ -4097,7 +4414,30 @@ function predictionSnapshot(
   };
 }
 
-function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,lossProb:x.loss,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),appVersion:APP_VERSION,
+function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,lossProb:x.loss,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),
+
+dataQualitySnapshot:
+  dataQualitySnapshot(
+    e,
+    built,
+    g
+  ),
+
+dataQualityScore:
+  dataQualitySnapshot(
+    e,
+    built,
+    g
+  ).score,
+
+dataQualityTier:
+  dataQualitySnapshot(
+    e,
+    built,
+    g
+  ).tier,
+
+appVersion:APP_VERSION,
 dataSchema:DATA_SCHEMA,
 modelVersion:MODEL_VERSION,
 predictionSnapshot:predictionSnapshot(
@@ -7800,6 +8140,505 @@ function calibrationBucketPanelHtml(){
   `;
 }
 
+
+/* V7.8.6A2 DATA QUALITY DASHBOARD */
+
+function dataQualityPerformanceStats(
+  rows=[]
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  const usable=
+    all.filter(r=>
+      Number.isFinite(
+        Number(
+          r?.dataQualityScore ??
+          r?.dataQualitySnapshot?.score ??
+          r?.predictionSnapshot
+            ?.dataQuality
+            ?.score
+        )
+      )
+    );
+
+
+  const settled=
+    usable.filter(r=>
+      r.status==='FINAL' &&
+      Number.isFinite(+r.y)
+    );
+
+
+  const tiers=[
+    'EXCELENTE',
+    'ALTA',
+    'MEDIA',
+    'BAJA'
+  ];
+
+
+  const tierForRow=r=>{
+
+    const stored=
+      String(
+        r?.dataQualityTier ??
+        r?.dataQualitySnapshot?.tier ??
+        r?.predictionSnapshot
+          ?.dataQuality
+          ?.tier ??
+        ''
+      ).toUpperCase();
+
+
+    if(tiers.includes(stored)){
+      return stored;
+    }
+
+
+    const score=
+      Number(
+        r?.dataQualityScore ??
+        r?.dataQualitySnapshot?.score ??
+        r?.predictionSnapshot
+          ?.dataQuality
+          ?.score
+      );
+
+
+    if(score>=90)return 'EXCELENTE';
+    if(score>=75)return 'ALTA';
+    if(score>=60)return 'MEDIA';
+
+    return 'BAJA';
+  };
+
+
+  const scoreForRow=r=>
+    Number(
+      r?.dataQualityScore ??
+      r?.dataQualitySnapshot?.score ??
+      r?.predictionSnapshot
+        ?.dataQuality
+        ?.score
+    );
+
+
+  const groups=
+    tiers.map(tier=>{
+
+      const rowsTier=
+        settled.filter(
+          r=>tierForRow(r)===tier
+        );
+
+
+      const pending=
+        usable.filter(
+          r=>
+            tierForRow(r)===tier &&
+            r.status==='PENDING'
+        ).length;
+
+
+      const pushes=
+        usable.filter(
+          r=>
+            tierForRow(r)===tier &&
+            r.status==='PUSH'
+        ).length;
+
+
+      const wins=
+        rowsTier.filter(
+          r=>Number(r.y)===1
+        ).length;
+
+
+      const losses=
+        rowsTier.length-wins;
+
+
+      const hit=
+        rowsTier.length
+          ?wins/rowsTier.length
+          :NaN;
+
+
+      const ci=
+        wilsonInterval(
+          wins,
+          rowsTier.length
+        );
+
+
+      const scores=
+        rowsTier
+          .map(scoreForRow)
+          .filter(Number.isFinite);
+
+
+      const avgScore=
+        scores.length
+          ?scores.reduce(
+              (a,b)=>a+b,
+              0
+            )/scores.length
+          :NaN;
+
+
+      const probs=
+        rowsTier
+          .map(
+            r=>Number(r.ensembleP)
+          )
+          .filter(Number.isFinite);
+
+
+      const avgProb=
+        probs.length
+          ?probs.reduce(
+              (a,b)=>a+b,
+              0
+            )/probs.length
+          :NaN;
+
+
+      const gap=
+        Number.isFinite(hit) &&
+        Number.isFinite(avgProb)
+          ?hit-avgProb
+          :NaN;
+
+
+      const briers=
+        rowsTier
+          .map(labPickBrierRow)
+          .filter(Number.isFinite);
+
+
+      const brier=
+        briers.length
+          ?briers.reduce(
+              (a,b)=>a+b,
+              0
+            )/briers.length
+          :NaN;
+
+
+      return{
+
+        tier,
+
+        n:
+          rowsTier.length,
+
+        wins,
+        losses,
+        pushes,
+        pending,
+
+        hit,
+
+        ciLow:
+          ci.low,
+
+        ciHigh:
+          ci.high,
+
+        avgScore,
+        avgProb,
+        gap,
+        brier
+
+      };
+
+    });
+
+
+  return{
+
+    total:
+      all.length,
+
+    usable:
+      usable.length,
+
+    settled:
+      settled.length,
+
+    coverage:
+      all.length
+        ?usable.length/all.length
+        :NaN,
+
+    legacy:
+      all.length-usable.length,
+
+    groups
+
+  };
+}
+
+
+function dataQualityDashboardHtml(
+  rows=[]
+){
+
+  const d=
+    dataQualityPerformanceStats(
+      rows
+    );
+
+
+  const coverage=
+    Number.isFinite(d.coverage)
+      ?pct(d.coverage)
+      :'—';
+
+
+  const rowHtml=
+    d.groups.map(g=>{
+
+      const record=
+        g.n
+          ?`${g.wins}-${g.losses}`
+          :'—';
+
+
+      const hit=
+        Number.isFinite(g.hit)
+          ?pct(g.hit)
+          :'—';
+
+
+      const score=
+        Number.isFinite(g.avgScore)
+          ?fix(g.avgScore,1)
+          :'—';
+
+
+      const prob=
+        Number.isFinite(g.avgProb)
+          ?pct(g.avgProb)
+          :'—';
+
+
+      const gap=
+        Number.isFinite(g.gap)
+          ?`${g.gap>=0?'+':''}${pct(g.gap)}`
+          :'—';
+
+
+      const brier=
+        Number.isFinite(g.brier)
+          ?fix(g.brier,3)
+          :'—';
+
+
+      const ci=
+        Number.isFinite(g.ciLow) &&
+        Number.isFinite(g.ciHigh)
+          ?`${pct(g.ciLow)} – ${pct(g.ciHigh)}`
+          :'—';
+
+
+      let cls='';
+
+
+      if(g.tier==='EXCELENTE'){
+        cls='bp-good';
+
+      }else if(g.tier==='ALTA'){
+        cls='bp-good';
+
+      }else if(g.tier==='MEDIA'){
+        cls='bp-mid';
+
+      }else{
+        cls='bp-bad';
+      }
+
+
+      return`
+        <tr>
+
+          <td class="${cls}">
+            <b>${g.tier}</b>
+          </td>
+
+          <td>${g.n}</td>
+
+          <td>
+            ${record}
+          </td>
+
+          <td>
+            ${hit}
+          </td>
+
+          <td>
+            ${score}
+          </td>
+
+          <td>
+            ${prob}
+          </td>
+
+          <td>
+            ${gap}
+          </td>
+
+          <td>
+            ${brier}
+          </td>
+
+          <td>
+            ${ci}
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+
+
+  return`
+    <div class="section">
+
+      <h3>
+        Data Quality · rendimiento
+      </h3>
+
+
+      <div class="cards">
+
+        <div class="card">
+          <small>
+            Con Data Quality
+          </small>
+
+          <div class="big">
+            ${d.usable}
+          </div>
+
+          <div class="smalltxt">
+            de ${d.total} pronósticos
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>
+            Cobertura
+          </small>
+
+          <div class="big">
+            ${coverage}
+          </div>
+
+          <div class="smalltxt">
+            nuevos snapshots
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>
+            Liquidados DQ
+          </small>
+
+          <div class="big">
+            ${d.settled}
+          </div>
+
+          <div class="smalltxt">
+            disponibles para estudiar
+          </div>
+        </div>
+
+
+        <div class="card">
+          <small>
+            Legacy
+          </small>
+
+          <div class="big">
+            ${d.legacy}
+          </div>
+
+          <div class="smalltxt">
+            sin información reconstruida
+          </div>
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          overflow:auto;
+          margin-top:12px
+        "
+      >
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Calidad</th>
+              <th>N</th>
+              <th>Récord</th>
+              <th>Acierto</th>
+              <th>Score</th>
+              <th>Prob.</th>
+              <th>Gap</th>
+              <th>Brier</th>
+              <th>IC95</th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${rowHtml}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="note">
+
+        Este panel es exclusivamente
+        diagnóstico.
+
+        Data Quality todavía NO cambia
+        JUGABLE, LEAN, PASS, ranking,
+        probabilidad ni pesos del ensamble.
+
+        Primero acumularemos resultados
+        suficientes para comprobar si una
+        mayor calidad de información produce
+        mejor Brier y mayor tasa de acierto.
+
+      </div>
+
+    </div>
+  `;
+}
+
+
 /* V7.8.2D PREDICTION SNAPSHOT AUDIT */
 
 function predictionSnapshotAuditPanelHtml(rows=[]){
@@ -8131,7 +8970,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
