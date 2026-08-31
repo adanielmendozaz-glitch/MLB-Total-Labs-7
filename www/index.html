@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06111e">
-<title>MLB Totals Lab V7.8.3 · Full Game O/U Focus</title>
+<title>MLB Totals Lab V7.8.4 · Full Game O/U Focus</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#071728">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1507,7 +1507,7 @@ tbody tr:active{
 <script>
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
-const APP_VERSION='V7.8.3',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
+const APP_VERSION='V7.8.4',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
 const LG={rpg:4.45,paGame:38.1,k:.225,bb:.083,hbp:.011,s1:.146,s2:.043,s3:.004,hr:.031,out:.457,era:4.20,whip:1.28};
 const PARK={"Coors Field":1.145,"Great American Ball Park":1.075,"Fenway Park":1.055,"Yankee Stadium":1.045,"Citizens Bank Park":1.04,"Globe Life Field":1.015,"Dodger Stadium":1.01,"Oriole Park at Camden Yards":.99,"Wrigley Field":1,"Truist Park":1.015,"Minute Maid Park":1.01,"Kauffman Stadium":1.01,"Chase Field":1.005,"American Family Field":1.01,"Busch Stadium":.985,"Progressive Field":.99,"Comerica Park":.975,"Target Field":.99,"Citi Field":.975,"Nationals Park":1,"loanDepot park":.965,"Petco Park":.955,"Oracle Park":.95,"T-Mobile Park":.955,"Angel Stadium":.99,"Rogers Centre":1.015,"Tropicana Field":.97,"Rate Field":1.015,"Sutter Health Park":1.035};
 const S={loadedDay:'',games:[],data:new Map(),analyses:new Map(),cache:new Map(),odds:new Map(),bullpens:new Map(),lineups:new Map(),people:new Map(),statcast:new Map(),statcastSeason:null,statcastPromise:null,statcastStatus:{state:'idle',at:0,message:''},current:null,liveOn:true,liveTimer:null,lastOddsAt:0,lastOddsDay:'',oddsRemaining:null,publicOddsStatus:{source:'',at:0,error:''},refreshingAll:false};
@@ -1727,6 +1727,248 @@ function labTime(r){const t=Date.parse(r.updated||r.settled||r.created||'');retu
 function dedupeLabRows(input){const map=new Map();for(const raw of Array.isArray(input)?input:[]){if(!raw||!raw.gamePk||!raw.market||!raw.side||!Number.isFinite(+raw.line))continue;const inferred=raw.labType||raw.scope||(raw.lineSource?(isRealLineSource(raw.lineSource)?'SPORTSBOOK':'MODEL'):'LEGACY'),r={...raw,market:String(raw.market).toUpperCase(),side:String(raw.side).toUpperCase(),line:+raw.line,labType:String(inferred).toUpperCase()},key=labForecastKey(r),prev=map.get(key);if(!prev){map.set(key,r);continue}const rank=x=>x.status==='FINAL'?3:x.status==='PUSH'?2:1,choose=rank(r)>rank(prev)||rank(r)===rank(prev)&&labTime(r)>=labTime(prev);if(choose)map.set(key,{...prev,...r,id:prev.id||r.id,created:prev.created||r.created})}const rows=[...map.values()],lineGroups=new Map();for(const r of rows){const k=`${labGroupKey(r)}|${r.labType}`;if(!lineGroups.has(k))lineGroups.set(k,[]);lineGroups.get(k).push(r)}for(const group of lineGroups.values()){let best=group[0];for(const r of group)if(n(r.ensembleP,-1)>n(best.ensembleP,-1))best=r;for(const r of group)r.isLabPick=labForecastKey(r)===labForecastKey(best)}for(const r of rows)r.isOfficial=false;const officialGroups=new Map();for(const r of rows.filter(x=>x.isLabPick)){const k=`${r.gamePk}|${r.market}|${r.labType}`;if(!officialGroups.has(k))officialGroups.set(k,[]);officialGroups.get(k).push(r)}for(const group of officialGroups.values()){const chosen=[...group].sort((a,b)=>labTime(b)-labTime(a))[0];chosen.isOfficial=true}return rows.sort((a,b)=>labTime(a)-labTime(b))}
 function repairLabHistory(){const before=lab(),after=dedupeLabRows(before);const changed=before.length!==after.length||after.some((r,i)=>r.isLabPick!==before[i]?.isLabPick||labForecastKey(r)!==labForecastKey(before[i]||{}));if(changed)saveLab(after);return{before:before.length,after:after.length,removed:Math.max(0,before.length-after.length)}}
 function labPickRows(market=null,status=null,scope=null,officialOnly=true){const wanted=scope||cfg().labScope||'SPORTSBOOK';return dedupeLabRows(lab()).filter(r=>r.isLabPick===true&&(!officialOnly||r.isOfficial===true)&&(!market||r.market===market)&&(!status||r.status===status)&&(wanted==='ALL'||r.labType===wanted))}
+
+/* V7.8.4C WPL PROBABILITY AUDIT */
+
+function wplProbabilities(r={}){
+
+  let push=
+    Number.isFinite(+r.probPush)
+      ?+r.probPush
+      :(
+        Number.isFinite(+r.pushProb)
+          ?+r.pushProb
+          :NaN
+      );
+
+  let win=
+    Number.isFinite(+r.probWin)
+      ?+r.probWin
+      :(
+        Number.isFinite(+r.winProb)
+          ?+r.winProb
+          :NaN
+      );
+
+  let loss=
+    Number.isFinite(+r.probLoss)
+      ?+r.probLoss
+      :(
+        Number.isFinite(+r.lossProb)
+          ?+r.lossProb
+          :NaN
+      );
+
+
+  /*
+   * Legacy compatible:
+   * p / ensembleP es probabilidad condicional
+   * WIN vs LOSS, excluyendo PUSH.
+   */
+
+  if(
+    !Number.isFinite(win) &&
+    Number.isFinite(push)
+  ){
+
+    const conditional=
+      Number.isFinite(+r.decisionProbability)
+        ?+r.decisionProbability
+        :(
+          Number.isFinite(+r.ensembleP)
+            ?+r.ensembleP
+            :(
+              Number.isFinite(+r.p)
+                ?+r.p
+                :NaN
+            )
+        );
+
+    if(Number.isFinite(conditional)){
+
+      const mass=
+        1-clamp(push,0,.999);
+
+      win=
+        clamp(conditional,0,1)*mass;
+
+      loss=
+        (1-clamp(conditional,0,1))*mass;
+    }
+  }
+
+
+  if(
+    Number.isFinite(win) &&
+    Number.isFinite(push) &&
+    !Number.isFinite(loss)
+  ){
+    loss=
+      1-win-push;
+  }
+
+
+  if(
+    Number.isFinite(win) &&
+    Number.isFinite(loss) &&
+    !Number.isFinite(push)
+  ){
+    push=
+      1-win-loss;
+  }
+
+
+  if(
+    !Number.isFinite(win) ||
+    !Number.isFinite(push) ||
+    !Number.isFinite(loss)
+  ){
+    return null;
+  }
+
+
+  win=clamp(win,0,1);
+  push=clamp(push,0,1);
+  loss=clamp(loss,0,1);
+
+  const total=
+    win+push+loss;
+
+  if(total<=0){
+    return null;
+  }
+
+
+  return{
+
+    win:
+      win/total,
+
+    push:
+      push/total,
+
+    loss:
+      loss/total
+
+  };
+}
+
+
+function wplOutcome(r={}){
+
+  const status=
+    String(r.status||'').toUpperCase();
+
+  if(status==='PUSH'){
+    return 'PUSH';
+  }
+
+  if(
+    status==='FINAL' &&
+    Number.isFinite(+r.y)
+  ){
+    return +r.y===1
+      ?'WIN'
+      :'LOSS';
+  }
+
+  return null;
+}
+
+
+function brierWPLRow(r={}){
+
+  const probs=
+    wplProbabilities(r);
+
+  const outcome=
+    wplOutcome(r);
+
+  if(!probs || !outcome){
+    return NaN;
+  }
+
+
+  const ow=
+    outcome==='WIN'?1:0;
+
+  const op=
+    outcome==='PUSH'?1:0;
+
+  const ol=
+    outcome==='LOSS'?1:0;
+
+
+  /*
+   * Brier multinomial estándar:
+   *
+   * (Pwin-Owin)^2
+   * +(Ppush-Opush)^2
+   * +(Ploss-Oloss)^2
+   *
+   * Rango 0..2.
+   * Menor = mejor.
+   */
+
+  return(
+    Math.pow(probs.win-ow,2)+
+    Math.pow(probs.push-op,2)+
+    Math.pow(probs.loss-ol,2)
+  );
+}
+
+
+function brierWPLSummary(rows=[]){
+
+  const scored=
+    (Array.isArray(rows)?rows:[])
+      .map(r=>({
+        row:r,
+        score:brierWPLRow(r)
+      }))
+      .filter(x=>
+        Number.isFinite(x.score)
+      );
+
+
+  const wins=
+    scored.filter(x=>
+      wplOutcome(x.row)==='WIN'
+    ).length;
+
+  const pushes=
+    scored.filter(x=>
+      wplOutcome(x.row)==='PUSH'
+    ).length;
+
+  const losses=
+    scored.filter(x=>
+      wplOutcome(x.row)==='LOSS'
+    ).length;
+
+
+  return{
+
+    n:
+      scored.length,
+
+    wins,
+
+    pushes,
+
+    losses,
+
+    brier:
+      scored.length
+        ?scored.reduce(
+            (z,x)=>z+x.score,
+            0
+          )/scored.length
+        :NaN
+
+  };
+}
+
 function labPickBrierRow(r){return r.status==='FINAL'&&Number.isFinite(+r.y)?Math.pow(clamp(n(r.ensembleP,.5),.001,.999)-r.y,2):NaN}
 function labPickSummary(market){const all=labPickRows(market,null,'SPORTSBOOK',true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=all.filter(r=>r.status==='FINAL'),wins=fin.reduce((z,r)=>z+(r.y===1?1:0),0),losses=fin.reduce((z,r)=>z+(r.y===0?1:0),0),bs=fin.length?fin.reduce((z,r)=>z+labPickBrierRow(r),0)/fin.length:NaN;return{market,n:fin.length,pending:all.filter(r=>r.status==='PENDING').length,wins,losses,hit:fin.length?wins/fin.length:NaN,brier:bs}}
 function labErrorSummary(market){const rows=labPickRows(market,'FINAL','SPORTSBOOK',true).filter(r=>teamVersionNumber(r.modelVersion)>=604&&Number.isFinite(+r.actual)),errs=[];for(const r of rows){const pred=market==='TOTAL'?n(r.mean,NaN):NaN;if(Number.isFinite(pred))errs.push(pred-r.actual)}return{n:errs.length,mae:errs.length?errs.reduce((z,x)=>z+Math.abs(x),0)/errs.length:NaN,bias:errs.length?errs.reduce((z,x)=>z+x,0)/errs.length:NaN,rmse:errs.length?Math.sqrt(errs.reduce((z,x)=>z+x*x,0)/errs.length):NaN}}
@@ -3852,7 +4094,7 @@ function predictionSnapshot(
   };
 }
 
-function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),appVersion:APP_VERSION,
+function addLabForecast(g,evals,built,options={}){const gm=gameMeta(g);if(gm.live||gm.final)return{saved:0,updated:0,skipped:true,reason:'El juego ya inició; no se añade al aprendizaje pregame.'};let rows=dedupeLabRows(lab()),stamp=new Date().toISOString(),saved=0,updated=0,skippedModel=0;for(const e of evals){if(options.realOnly&&!isRealLineSource(e.source)){skippedModel++;continue}const labSide=n(e.over.p,-1)>=n(e.under.p,-1)?'OVER':'UNDER';for(const side of ['over','under']){const x=e[side],upper=side.toUpperCase(),fresh={id:`lab_${g.gamePk}_${e.market}_${upper}_${labLineKey(e.line)}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built.ctx?.home?.bullpen?.automatic,market:e.market,key:e.key,label:e.label,line:e.line,lineSource:e.source,labType:e.labType,side:upper,ensembleP:x.p,winProb:x.win,pushProb:e.push,lossProb:x.loss,rawP:x.raw,modelProbs:x.models,mean:built.mean.total,f5Mean:built.mean.f5,awayMean:built.mean.away,homeMean:built.mean.home,lineupConfirmed:!!(built.ctx?.away?.lineup?.confirmed&&built.ctx?.home?.lineup?.confirmed),statcastReady:n(built.ctx?.away?.lineup?.statcastReady)+n(built.ctx?.home?.lineup?.statcastReady),appVersion:APP_VERSION,
 dataSchema:DATA_SCHEMA,
 modelVersion:MODEL_VERSION,
 predictionSnapshot:predictionSnapshot(
@@ -8095,9 +8337,133 @@ function censusResultText(r){if(r.status==='FINAL')return r.y===1?'WIN':'LOSS';i
 function censusUnit(r){if(!censusCounted(r)||!Number.isFinite(+r.odds))return NaN;if(r.status==='PUSH')return 0;if(r.status==='FINAL')return r.y===1?(+r.odds-1):-1;return NaN}
 function censusFromViewRow(r,date){
  return{
-  id:`census_${date}_${r.gamePk}`,date,rank:r.rank,gamePk:r.gamePk,gameDate:r.gameDate,
+
+id:
+  `census_${date}_${r.gamePk}`,
+
+date:
+  date,
+
+rank:
+  r.rank,
+
+gamePk:
+  r.gamePk,
+
+gameId:
+  r.gameId
+    ?String(r.gameId)
+    :String(r.gamePk??''),
+
+gameNumber:
+  r.gameNumber!=null &&
+  Number.isFinite(+r.gameNumber)
+    ?+r.gameNumber
+    :null,
+
+seriesGameNumber:
+  r.seriesGameNumber!=null &&
+  Number.isFinite(+r.seriesGameNumber)
+    ?+r.seriesGameNumber
+    :null,
+
+doubleHeader:
+  r.doubleHeader!=null
+    ?String(r.doubleHeader)
+    :null,
+
+startTime:
+  r.startTime ||
+  r.gameDate ||
+  null,
+
+gameDate:
+  r.gameDate,
   awayAbbr:r.awayAbbr,homeAbbr:r.homeAbbr,label:r.label,market:r.market,side:r.side,line:+r.line,
-  p:clamp(n(r.p,.5),.001,.999),pushProb:n(r.pushProb),lineSource:r.lineSource,edge:Number.isFinite(+r.edge)?+r.edge:null,
+
+p:
+  clamp(n(r.p,.5),.001,.999),
+
+decisionProbability:
+  Number.isFinite(+r.decisionProbability)
+    ?+r.decisionProbability
+    :clamp(n(r.p,.5),.001,.999),
+
+probWin:
+  Number.isFinite(+r.probWin)
+    ?+r.probWin
+    :null,
+
+pushProb:
+  n(r.pushProb),
+
+probPush:
+  Number.isFinite(+r.probPush)
+    ?+r.probPush
+    :n(r.pushProb),
+
+probLoss:
+  Number.isFinite(+r.probLoss)
+    ?+r.probLoss
+    :null,
+
+rawProbability:
+  Number.isFinite(+r.rawProbability)
+    ?+r.rawProbability
+    :null,
+
+dispersion:
+  Number.isFinite(+r.dispersion)
+    ?+r.dispersion
+    :null,
+
+modelConsensus:
+  r.modelConsensus
+    ?String(r.modelConsensus)
+    :null,
+
+modelProbabilities:
+  r.modelProbabilities &&
+  typeof r.modelProbabilities==='object'
+    ?{...r.modelProbabilities}
+    :null,
+
+signalReason:
+  r.signalReason
+    ?String(r.signalReason)
+    :null,
+
+gateFailed:
+  r.gateFailed
+    ?String(r.gateFailed)
+    :null,
+
+probThreshold:
+  Number.isFinite(+r.probThreshold)
+    ?+r.probThreshold
+    :null,
+
+dispersionThreshold:
+  Number.isFinite(+r.dispersionThreshold)
+    ?+r.dispersionThreshold
+    :null,
+
+edgeThreshold:
+  Number.isFinite(+r.edgeThreshold)
+    ?+r.edgeThreshold
+    :null,
+
+snapshotTime:
+  r.snapshotTime ||
+  new Date().toISOString(),
+
+lineSource:
+  r.lineSource,
+
+edge:
+  Number.isFinite(+r.edge)
+    ?+r.edge
+    :null,
   odds:Number.isFinite(+r.odds)?+r.odds:null,signal:r.signal||'LAB',signalClass:r.signalClass||censusSignalClass(r.signal),
   pass:r.pass??String(r.signal).toUpperCase()==='PASS',status:'PENDING',actual:null,y:null,brier:null,
   includeExtras:cfg().gameRules?.extras!==false,created:new Date().toISOString(),updated:new Date().toISOString(),modelVersion:MODEL_VERSION
@@ -8178,6 +8544,379 @@ function censusSummaryRows(rows){
  units=counted.map(censusUnit).filter(Number.isFinite),unitNet=units.length?units.reduce((z,x)=>z+x,0):NaN;
  return{counted:counted.length,wins,losses,push,pending,brier,hit:final.length?wins/final.length:NaN,unitNet,unitN:units.length,pass:(rows||[]).filter(r=>!censusCounted(r)).length}
 }
+
+/* V7.8.4D1 DECISION AUDIT PANEL */
+
+function decisionAuditPanelHtml(rows=[]){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+  if(!all.length){
+    return '';
+  }
+
+
+  const audited=
+    all.filter(r=>
+      r.signalReason ||
+      r.gateFailed ||
+      r.decisionSnapshotAt ||
+      r.snapshotTime
+    );
+
+
+  const identity=
+    all.filter(r=>
+      r.gameId ||
+      r.gamePk
+    );
+
+
+  const jugable=
+    all.filter(r=>
+      String(r.signal||'')
+        .toUpperCase()==='JUGABLE'
+    ).length;
+
+  const lean=
+    all.filter(r=>
+      String(r.signal||'')
+        .toUpperCase()==='LEAN'
+    ).length;
+
+  const pass=
+    all.filter(r=>
+      String(r.signal||'')
+        .toUpperCase()==='PASS'
+    ).length;
+
+
+  const wpl=
+    brierWPLSummary(all);
+
+
+  const auditCoverage=
+    all.length
+      ?audited.length/all.length
+      :NaN;
+
+  const idCoverage=
+    all.length
+      ?identity.length/all.length
+      :NaN;
+
+
+  const body=
+    all.map(r=>{
+
+      const probs=
+        wplProbabilities(r);
+
+
+      const reason=
+        r.signalReason
+          ?String(r.signalReason)
+          :'LEGACY · SIN RAZÓN GUARDADA';
+
+
+      let gate='NINGUNO';
+
+      if(r.gateFailed){
+
+        if(Array.isArray(r.gateFailed)){
+
+          gate=
+            r.gateFailed.length
+              ?r.gateFailed.join(' · ')
+              :'NINGUNO';
+
+        }else{
+
+          const raw=
+            String(r.gateFailed);
+
+          gate=
+            (
+              !raw ||
+              raw==='NONE'
+            )
+              ?'NINGUNO'
+              :raw
+                .split('|')
+                .join(' · ');
+        }
+      }
+
+
+      const consensus=
+        r.modelConsensus!==undefined &&
+        r.modelConsensus!==null
+          ?String(r.modelConsensus)
+          :'—';
+
+
+      const dispersion=
+        Number.isFinite(+r.dispersion)
+          ?pct(+r.dispersion)
+          :'—';
+
+
+      const quality=
+        r.dataQuality!==undefined &&
+        r.dataQuality!==null
+          ?String(r.dataQuality)
+          :'—';
+
+
+      const snapRaw=
+        r.decisionSnapshotAt ||
+        r.snapshotTime ||
+        r.created ||
+        null;
+
+      let snap='—';
+
+      if(snapRaw){
+
+        const d=
+          new Date(snapRaw);
+
+        if(Number.isFinite(d.getTime())){
+          snap=
+            d.toLocaleString('es-MX');
+        }
+      }
+
+
+      const wplText=
+        probs
+          ?(
+              'W '+pct(probs.win)+
+              ' · P '+pct(probs.push)+
+              ' · L '+pct(probs.loss)
+            )
+          :'—';
+
+
+      const gameNumber=
+        Number.isFinite(+r.gameNumber)
+          ?' · G'+String(+r.gameNumber)
+          :'';
+
+
+      const probability=
+        Number.isFinite(
+          +r.decisionProbability
+        )
+          ?+r.decisionProbability
+          :+r.p;
+
+
+      return(
+        '<tr>'+
+
+          '<td>'+
+            esc(String(r.rank??'—'))+
+          '</td>'+
+
+          '<td>'+
+            '<b>'+
+              esc(String(r.awayAbbr||''))+
+              ' @ '+
+              esc(String(r.homeAbbr||''))+
+            '</b>'+
+            '<div class="smalltxt">'+
+              'ID '+
+              esc(
+                String(
+                  r.gameId||
+                  r.gamePk||
+                  '—'
+                )
+              )+
+              esc(gameNumber)+
+            '</div>'+
+          '</td>'+
+
+          '<td>'+
+            '<b>'+
+              esc(String(r.signal||'LAB'))+
+            '</b>'+
+            '<div class="smalltxt">'+
+              esc(String(r.side||''))+
+              ' '+
+              (
+                Number.isFinite(+r.line)
+                  ?fix(+r.line,1)
+                  :'—'
+              )+
+            '</div>'+
+          '</td>'+
+
+          '<td>'+
+            (
+              Number.isFinite(probability)
+                ?pct(probability)
+                :'—'
+            )+
+          '</td>'+
+
+          '<td>'+
+            '<b>'+
+              esc(gate)+
+            '</b>'+
+            '<div class="smalltxt">'+
+              esc(reason)+
+            '</div>'+
+          '</td>'+
+
+          '<td>'+
+            esc(consensus)+
+            '<div class="smalltxt">'+
+              'Dispersión '+
+              dispersion+
+              ' · Calidad '+
+              esc(quality)+
+            '</div>'+
+          '</td>'+
+
+          '<td>'+
+            wplText+
+          '</td>'+
+
+          '<td>'+
+            esc(snap)+
+          '</td>'+
+
+        '</tr>'
+      );
+
+    }).join('');
+
+
+  return(
+    '<div class="section">'+
+
+      '<h3>'+
+        'Decision Audit · V7.8.4'+
+      '</h3>'+
+
+      '<div class="cards">'+
+
+        '<div class="card">'+
+          '<small>Razón registrada</small>'+
+          '<div class="big">'+
+            audited.length+
+            ' / '+
+            all.length+
+          '</div>'+
+          '<div class="smalltxt">'+
+            (
+              Number.isFinite(auditCoverage)
+                ?pct(auditCoverage)
+                :'—'
+            )+
+            ' cobertura'+
+          '</div>'+
+        '</div>'+
+
+        '<div class="card">'+
+          '<small>Identidad juego</small>'+
+          '<div class="big">'+
+            identity.length+
+            ' / '+
+            all.length+
+          '</div>'+
+          '<div class="smalltxt">'+
+            (
+              Number.isFinite(idCoverage)
+                ?pct(idCoverage)
+                :'—'
+            )+
+            ' identificados'+
+          '</div>'+
+        '</div>'+
+
+        '<div class="card">'+
+          '<small>Brier W/P/L</small>'+
+          '<div class="big">'+
+            (
+              Number.isFinite(wpl.brier)
+                ?fix(wpl.brier,3)
+                :'—'
+            )+
+          '</div>'+
+          '<div class="smalltxt">'+
+            wpl.n+
+            ' resultados evaluables'+
+          '</div>'+
+        '</div>'+
+
+        '<div class="card">'+
+          '<small>JUGABLE</small>'+
+          '<div class="big bp-good">'+
+            jugable+
+          '</div>'+
+        '</div>'+
+
+        '<div class="card">'+
+          '<small>LEAN</small>'+
+          '<div class="big bp-mid">'+
+            lean+
+          '</div>'+
+        '</div>'+
+
+        '<div class="card">'+
+          '<small>PASS</small>'+
+          '<div class="big">'+
+            pass+
+          '</div>'+
+        '</div>'+
+
+      '</div>'+
+
+
+      '<div style="overflow:auto;margin-top:12px">'+
+
+        '<table>'+
+
+          '<thead>'+
+            '<tr>'+
+              '<th>#</th>'+
+              '<th>Juego</th>'+
+              '<th>Señal</th>'+
+              '<th>Prob.</th>'+
+              '<th>Gate / razón</th>'+
+              '<th>Consenso</th>'+
+              '<th>W / P / L</th>'+
+              '<th>Snapshot</th>'+
+            '</tr>'+
+          '</thead>'+
+
+          '<tbody>'+
+            body+
+          '</tbody>'+
+
+        '</table>'+
+
+      '</div>'+
+
+
+      '<div class="note">'+
+        'Panel exclusivamente de auditoría. '+
+        'No altera probabilidades, filtros, '+
+        'ranking, señales ni pesos del modelo. '+
+        'Los registros anteriores a V7.8.4 '+
+        'pueden aparecer como LEGACY.'+
+      '</div>'+
+
+    '</div>'
+  );
+}
+
 function renderCensus(){
  const e=$('#censusContent');if(!e)return;const data=rankCensus(),days=Object.values(data.days||{}).sort((a,b)=>String(b.date).localeCompare(String(a.date))),all=days.flatMap(d=>d.rows||[]),sum=censusSummaryRows(all),
  positive=days.filter(d=>{const s=censusSummaryRows(d.rows||[]);return Number.isFinite(s.unitNet)&&s.unitNet>0}).length,
@@ -8194,6 +8933,7 @@ function renderCensus(){
   <div class="census-day"><small>Días guardados</small><div class="big">${days.length}</div><div class="smalltxt">sin vencimiento automático</div></div>
  </div>
  ${today?`<div class="section"><h3>${esc(selected)} · cierre diario del Ranking</h3><div class="grid4"><div class="card"><small>Récord</small><div class="big">${ts.wins}-${ts.losses}-${ts.push}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(ts.hit)}</div></div><div class="card"><small>Brier</small><div class="big">${fix(ts.brier,3)}</div></div><div class="card"><small>Unidades</small><div class="big">${Number.isFinite(ts.unitNet)?`${ts.unitNet>0?'+':''}${fix(ts.unitNet,2)}u`:'—'}</div><div class="smalltxt">${ts.unitN} con momio · ${ts.pending} pendientes</div></div></div></div>`:''}
+ ${today?decisionAuditPanelHtml(today.rows||[]):''}
  <div class="section"><h3>Control día por día</h3>${days.length?`<div class="census-table"><table><thead><tr><th>Fecha</th><th>Picks</th><th>Récord</th><th>Acierto</th><th>Brier</th><th>Unidades</th><th>Pend.</th></tr></thead><tbody>${days.map(d=>{const s=censusSummaryRows(d.rows||[]);return`<tr><td><button class="census-date-link" data-census-date="${esc(d.date)}">${esc(d.date)}</button></td><td>${s.counted}${s.pass?` <span class="smalltxt">+ ${s.pass} PASS</span>`:''}</td><td>${s.wins}-${s.losses}-${s.push}</td><td>${pct(s.hit)}</td><td>${fix(s.brier,3)}</td><td>${Number.isFinite(s.unitNet)?`${s.unitNet>0?'+':''}${fix(s.unitNet,2)}u`:'—'}<div class="smalltxt">${s.unitN} con momio</div></td><td>${s.pending}</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay días censados. En cuanto el modelo genere un Ranking, se guardará automáticamente.</div>'}</div>
  ${today?`<div class="section"><h3>Detalle ${esc(selected)}</h3><div class="census-table"><table><thead><tr><th>#</th><th>Juego</th><th>Mercado</th><th>Pick</th><th>Prob.</th><th>Momio</th><th>Resultado</th><th>Brier</th><th>1u</th></tr></thead><tbody>${(today.rows||[]).map(r=>{const rt=censusResultText(r),cls=rt==='WIN'?'census-win':rt==='LOSS'?'census-loss':rt==='PUSH'?'census-push':'census-pending',u=censusUnit(r);return`<tr><td>${r.rank??'—'}</td><td>${esc(r.awayAbbr)} @ ${esc(r.homeAbbr)}</td><td>${esc(r.label||r.market)}</td><td>${esc(r.side)} ${fix(r.line,1)}<br><span class="signalchip ${censusSignalClass(r.signal)}">${esc(r.signal||'LAB')}</span></td><td>${pct(r.p)}</td><td>${Number.isFinite(+r.odds)?oddsBoth(+r.odds):'—'}</td><td class="${cls}">${esc(rt)}${r.actual!==null&&r.actual!==''&&Number.isFinite(Number(r.actual))?` · ${fix(Number(r.actual),1)}`:''}</td><td>${r.brier!==null&&r.brier!==''&&Number.isFinite(Number(r.brier))?fix(Number(r.brier),3):'—'}</td><td>${Number.isFinite(u)?`${u>0?'+':''}${fix(u,2)}u`:'—'}</td></tr>`}).join('')}</tbody></table></div></div>`:''}
  <div class="census-note">Las unidades usan 1u plana sólo cuando el Ranking tenía un momio real guardado. PASS permanece archivado, pero no entra al récord principal ni a las unidades. El Censo es observación histórica; no retroalimenta los pesos del motor.</div>`;
@@ -8204,6 +8944,7 @@ function renderCensus(){
 }
 
 /* V7.8 CENSUS CSV EXPORT */
+/* V7.8.4D2 AUDIT CSV EXPORT */
 function exportCensusCsvV78(){
 
   const rows=
@@ -8223,64 +8964,243 @@ function exportCensusCsvV78(){
   const head=[
     'date',
     'rank',
+
+    'game_id',
+    'game_pk',
+    'game_number',
+    'series_game_number',
+    'double_header',
+    'start_time',
+
     'away',
     'home',
+
     'market',
     'label',
     'side',
     'line',
+
     'probability',
-    'push_probability',
+    'decision_probability',
+
+    'prob_win',
+    'prob_push',
+    'prob_loss',
+
+    'raw_probability',
+
     'signal',
+    'signal_reason',
+    'gate_failed',
+
+    'dispersion',
+    'model_consensus',
+
+    'prob_threshold',
+    'dispersion_threshold',
+    'edge_threshold',
+
     'line_source',
+    'edge',
     'odds',
+
+    'snapshot_time',
+
     'status',
     'actual',
+
     'brier',
-    'units_1u'
+    'brier_wpl',
+
+    'units_1u',
+
+    'model_version'
   ];
 
 
   const body=
     rows.map(r=>{
 
+      const probs=
+        wplProbabilities(r);
+
       const data={
 
-        date:r.date,
+        date:
+          r.date,
 
-        rank:r.rank,
+        rank:
+          r.rank,
 
-        away:r.awayAbbr,
 
-        home:r.homeAbbr,
+        game_id:
+          r.gameId ||
+          r.gamePk ||
+          '',
 
-        market:r.market,
+        game_pk:
+          r.gamePk,
 
-        label:r.label,
+        game_number:
+          r.gameNumber,
 
-        side:r.side,
+        series_game_number:
+          r.seriesGameNumber,
 
-        line:r.line,
+        double_header:
+          r.doubleHeader,
 
-        probability:r.p,
+        start_time:
+          r.startTime ||
+          r.gameDate ||
+          '',
 
-        push_probability:r.pushProb,
 
-        signal:r.signal,
+        away:
+          r.awayAbbr,
 
-        line_source:r.lineSource,
+        home:
+          r.homeAbbr,
 
-        odds:r.odds,
+
+        market:
+          r.market,
+
+        label:
+          r.label,
+
+        side:
+          r.side,
+
+        line:
+          r.line,
+
+
+        probability:
+          r.p,
+
+        decision_probability:
+          Number.isFinite(
+            +r.decisionProbability
+          )
+            ?+r.decisionProbability
+            :r.p,
+
+
+        prob_win:
+          probs
+            ?probs.win
+            :'',
+
+        prob_push:
+          probs
+            ?probs.push
+            :'',
+
+        prob_loss:
+          probs
+            ?probs.loss
+            :'',
+
+
+        raw_probability:
+          Number.isFinite(
+            +r.rawProbability
+          )
+            ?+r.rawProbability
+            :'',
+
+
+        signal:
+          r.signal,
+
+        signal_reason:
+          r.signalReason ||
+          '',
+
+        gate_failed:
+          r.gateFailed ||
+          '',
+
+
+        dispersion:
+          Number.isFinite(
+            +r.dispersion
+          )
+            ?+r.dispersion
+            :'',
+
+        model_consensus:
+          r.modelConsensus ||
+          '',
+
+
+        prob_threshold:
+          Number.isFinite(
+            +r.probThreshold
+          )
+            ?+r.probThreshold
+            :'',
+
+        dispersion_threshold:
+          Number.isFinite(
+            +r.dispersionThreshold
+          )
+            ?+r.dispersionThreshold
+            :'',
+
+        edge_threshold:
+          Number.isFinite(
+            +r.edgeThreshold
+          )
+            ?+r.edgeThreshold
+            :'',
+
+
+        line_source:
+          r.lineSource,
+
+        edge:
+          Number.isFinite(+r.edge)
+            ?+r.edge
+            :'',
+
+        odds:
+          r.odds,
+
+
+        snapshot_time:
+          r.snapshotTime ||
+          r.decisionSnapshotAt ||
+          r.created ||
+          '',
+
 
         status:
           censusResultText(r),
 
-        actual:r.actual,
+        actual:
+          r.actual,
 
-        brier:r.brier,
+
+        brier:
+          r.brier,
+
+        brier_wpl:
+          Number.isFinite(
+            brierWPLRow(r)
+          )
+            ?brierWPLRow(r)
+            :'',
+
 
         units_1u:
-          censusUnit(r)
+          censusUnit(r),
+
+
+        model_version:
+          r.modelVersion ||
+          MODEL_VERSION
       };
 
 
@@ -8326,7 +9246,186 @@ function saveLegacyRankArchive(x){STORE.setItem('mlb_v58_rank_tracker',JSON.stri
 function rankDraftStore(){try{const x=JSON.parse(STORE.getItem('mlb_v59_rank_drafts')||'{}');return x&&typeof x==='object'?x:{}}catch{return{}}}
 function rankDraft(date){return rankDraftStore()[date]||null}
 function saveRankDraft(date,rows){if(!date||!Array.isArray(rows)||!rows.length)return 0;const d=rankDraftStore();d[date]={date,savedAt:new Date().toISOString(),modelVersion:MODEL_VERSION,rows};const keys=Object.keys(d).sort();while(keys.length>45){delete d[keys.shift()]}STORE.setItem('mlb_v59_rank_drafts',JSON.stringify(d));return rows.length}
-function currentRankViewRows(rows=currentRankingRows(),pregameOnly=false){const now=Date.now();return rows.filter(r=>{if(!pregameOnly)return true;const gm=gameMeta(r.g),start=Date.parse(r.g.gameDate||'');return!gm.live&&!gm.final&&(!Number.isFinite(start)||start>now)}).map((r,i)=>{const sig=signalLabel(r.pick,r.ev.source),raw=r.pick.side==='OVER'?r.ev.overOdds:r.ev.underOdds,o=parseOdds(raw);return{rank:i+1,gamePk:r.g.gamePk,gameDate:r.g.gameDate,awayAbbr:r.g.teams.away.team.abbreviation||r.g.teams.away.team.name,homeAbbr:r.g.teams.home.team.abbreviation||r.g.teams.home.team.name,label:r.ev.label,market:r.ev.market,side:r.pick.side,line:r.ev.line,p:r.pick.p,pushProb:r.ev.push,lineSource:r.ev.source,edge:r.pick.edge,odds:o.valid?o.decimal:null,signal:sig.txt,signalClass:sig.cls,pass:r.pick.pass}})}
+
+/* V7.8.4A DECISION REASON SNAPSHOT */
+/* V7.8.4B GAME IDENTITY SNAPSHOT */
+
+function decisionAuditRowFields(
+  pick={},
+  ev={}
+){
+
+  const c=cfg();
+
+  const source=
+    ev?.source || '';
+
+  const realLine=
+    isRealLineSource(source);
+
+  const failed=[];
+
+
+  /* Mismos gates que ya utiliza assessSide().
+     Esto NO modifica pick.pass. */
+
+  if(
+    Number.isFinite(+pick.p) &&
+    +pick.p < +c.prob
+  ){
+    failed.push('PROBABILITY');
+  }
+
+  if(
+    Number.isFinite(+pick.dis) &&
+    +pick.dis > +c.dis
+  ){
+    failed.push('DISPERSION');
+  }
+
+  if(
+    Number.isFinite(+pick.edge) &&
+    +pick.edge < +c.edge
+  ){
+    failed.push('EDGE');
+  }
+
+  if(!realLine){
+    failed.push('NO_REAL_LINE');
+  }
+
+
+  let consensus=null;
+
+  if(Number.isFinite(+pick.dis)){
+
+    if(+pick.dis <= +c.dis*.50){
+      consensus='FUERTE';
+
+    }else if(+pick.dis <= +c.dis){
+      consensus='ACEPTABLE';
+
+    }else{
+      consensus='DIVIDIDO';
+    }
+  }
+
+
+  return{
+
+    signalReason:
+      typeof pick.why==='string' &&
+      pick.why.trim()
+        ?pick.why.trim()
+        :(
+          failed.length
+            ?failed.join(' · ')
+            :'cumple filtros'
+        ),
+
+    gateFailed:
+      failed.length
+        ?failed.join('|')
+        :'NONE',
+
+
+    decisionProbability:
+      Number.isFinite(+pick.p)
+        ?+pick.p
+        :null,
+
+    probWin:
+      Number.isFinite(+pick.win)
+        ?+pick.win
+        :null,
+
+    probPush:
+      Number.isFinite(+ev?.push)
+        ?+ev.push
+        :null,
+
+    probLoss:
+      Number.isFinite(+pick.loss)
+        ?+pick.loss
+        :null,
+
+
+    rawProbability:
+      Number.isFinite(+pick.raw)
+        ?+pick.raw
+        :null,
+
+
+    dispersion:
+      Number.isFinite(+pick.dis)
+        ?+pick.dis
+        :null,
+
+    modelConsensus:
+      consensus,
+
+    modelProbabilities:
+      pick.models &&
+      typeof pick.models==='object'
+        ?{...pick.models}
+        :null,
+
+
+    probThreshold:
+      Number.isFinite(+c.prob)
+        ?+c.prob
+        :null,
+
+    dispersionThreshold:
+      Number.isFinite(+c.dis)
+        ?+c.dis
+        :null,
+
+    edgeThreshold:
+      Number.isFinite(+c.edge)
+        ?+c.edge
+        :null,
+
+
+    snapshotTime:
+      new Date().toISOString()
+
+  };
+}
+
+function currentRankViewRows(rows=currentRankingRows(),pregameOnly=false){const now=Date.now();return rows.filter(r=>{if(!pregameOnly)return true;const gm=gameMeta(r.g),start=Date.parse(r.g.gameDate||'');return!gm.live&&!gm.final&&(!Number.isFinite(start)||start>now)}).map((r,i)=>{const sig=signalLabel(r.pick,r.ev.source),raw=r.pick.side==='OVER'?r.ev.overOdds:r.ev.underOdds,o=parseOdds(raw);return{
+rank:i+1,
+
+gamePk:
+  r.g.gamePk,
+
+gameId:
+  String(r.g.gamePk??''),
+
+gameNumber:
+  r.g.gameNumber!=null &&
+  Number.isFinite(+r.g.gameNumber)
+    ?+r.g.gameNumber
+    :null,
+
+seriesGameNumber:
+  r.g.seriesGameNumber!=null &&
+  Number.isFinite(+r.g.seriesGameNumber)
+    ?+r.g.seriesGameNumber
+    :null,
+
+doubleHeader:
+  r.g.doubleHeader!=null
+    ?String(r.g.doubleHeader)
+    :null,
+
+startTime:
+  r.g.gameDate || null,
+
+gameDate:
+  r.g.gameDate,
+
+awayAbbr:r.g.teams.away.team.abbreviation||r.g.teams.away.team.name,homeAbbr:r.g.teams.home.team.abbreviation||r.g.teams.home.team.name,label:r.ev.label,market:r.ev.market,side:r.pick.side,line:r.ev.line,p:r.pick.p,pushProb:r.ev.push,lineSource:r.ev.source,edge:r.pick.edge,odds:o.valid?o.decimal:null,signal:sig.txt,signalClass:sig.cls,pass:r.pick.pass,...decisionAuditRowFields(r.pick,r.ev)}})}
 function persistRankingDraft(){const date=$('#date')?.value||'',rows=currentRankViewRows(currentRankingRows(),true);if(rows.length){saveRankDraft(date,rows);syncRankingCensus(date,rows);renderCensus()}return rows.length}
 function rankArchiveDates(){const a=new Set;for(const [d,x] of Object.entries(rankCensus().days||{}))if((x.rows||[]).some(r=>!r.market||r.market==='TOTAL'))a.add(d);for(const [d,x] of Object.entries(rankDraftStore()))if((x.rows||[]).some(r=>!r.market||r.market==='TOTAL'))a.add(d);return[...a].sort().reverse()}
 function rankViewForDate(date){const live=S.loadedDay===date?currentRankingRows():[];if(live.length){const rows=currentRankViewRows(live,false);const pre=currentRankViewRows(live,true);if(pre.length){saveRankDraft(date,pre);syncRankingCensus(date,pre)}const day=censusDay(date);return{kind:'LIVE',rows:day?.rows?.length?day.rows:rows,when:day?.updated||new Date().toISOString()}}const day=censusDay(date);if(day?.rows?.length)return{kind:'CENSUS',rows:day.rows.map((r,i)=>({...r,rank:r.rank||i+1,signalClass:r.signalClass||censusSignalClass(r.signal),pass:r.pass??r.signal==='PASS'})),when:day.updated||day.created};const draft=rankDraft(date);if(draft?.rows?.length){syncRankingCensus(date,draft.rows);const c=censusDay(date);return{kind:'CENSUS',rows:c?.rows||draft.rows,when:c?.updated||draft.savedAt}}return{kind:'EMPTY',rows:[],when:null}}
