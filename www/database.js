@@ -95,9 +95,18 @@ const MLBDB = {
         vaultIntegrity;
 
 
+      const nativeHealth =
+        await this.nativeReliabilityCheck();
+
+
+      this.lastNativeHealth =
+        nativeHealth;
+
+
       if (
         vaultHealth.ok &&
-        vaultIntegrity.ok
+        vaultIntegrity.ok &&
+        nativeHealth.ok
       ) {
 
         this.showStatus(
@@ -137,6 +146,320 @@ const MLBDB = {
       return false;
     }
   },
+
+
+  /* V7.8.5C2 NATIVE RELIABILITY CHECK */
+
+  async nativeReliabilityCheck() {
+
+    const report={
+
+      ok:false,
+
+      ranAt:
+        new Date().toISOString(),
+
+      plugin:
+        !!this.sqlite,
+
+      ready:
+        this.ready===true,
+
+      database:
+        this.dbName,
+
+      healthcheck:false,
+
+      tables:false,
+
+      schema:false,
+
+      kvWrite:false,
+
+      kvRead:false,
+
+      kvDelete:false,
+
+      vault:false,
+
+      details:{}
+
+    };
+
+
+    this.lastNativeHealth=
+      report;
+
+
+    if(
+      !this.sqlite ||
+      !this.ready
+    ){
+
+      report.details.error=
+        'SQLite no está listo';
+
+      return report;
+    }
+
+
+    const token=
+      '__mlb_native_test_'+
+      Date.now()+
+      '_'+
+      Math.random()
+        .toString(16)
+        .slice(2);
+
+
+    const value=
+      JSON.stringify({
+
+        test:'V7.8.5C2',
+
+        token,
+
+        created:
+          new Date()
+            .toISOString()
+
+      });
+
+
+    try{
+
+      /* -------------------------------
+         HEALTHCHECK NATIVO EXISTENTE
+         ------------------------------- */
+
+      report.healthcheck=
+        await this.healthCheck();
+
+
+      /* -------------------------------
+         TABLAS REQUERIDAS
+         ------------------------------- */
+
+      const tableResult=
+        await this.sqlite.query({
+
+          database:
+            this.dbName,
+
+          statement:
+            "SELECT name FROM sqlite_master "+
+            "WHERE type = 'table' "+
+            "AND name IN (?, ?)",
+
+          values:[
+            'app_kv',
+            '_sqlite_healthcheck'
+          ],
+
+          readonly:false
+
+        });
+
+
+      const tableNames=
+        Array.isArray(
+          tableResult?.values
+        )
+          ?tableResult.values
+            .map(r=>
+              String(
+                r?.name||''
+              )
+            )
+          :[];
+
+
+      report.details.tables=
+        tableNames;
+
+
+      report.tables=
+        tableNames.includes(
+          'app_kv'
+        ) &&
+        tableNames.includes(
+          '_sqlite_healthcheck'
+        );
+
+
+      /* -------------------------------
+         SCHEMA app_kv
+         ------------------------------- */
+
+      const schemaResult=
+        await this.sqlite.query({
+
+          database:
+            this.dbName,
+
+          statement:
+            'PRAGMA table_info(app_kv)',
+
+          values:[],
+
+          readonly:false
+
+        });
+
+
+      const columns=
+        Array.isArray(
+          schemaResult?.values
+        )
+          ?schemaResult.values
+            .map(r=>
+              String(
+                r?.name||''
+              )
+            )
+          :[];
+
+
+      report.details.columns=
+        columns;
+
+
+      report.schema=
+        [
+          'key',
+          'value',
+          'updated_at'
+        ].every(
+          c=>
+            columns.includes(c)
+        );
+
+
+      /* -------------------------------
+         ESCRITURA TEMPORAL
+         ------------------------------- */
+
+      report.kvWrite=
+        (
+          await this.setKV(
+            token,
+            value
+          )
+        )===true;
+
+
+      /* -------------------------------
+         LECTURA TEMPORAL
+         ------------------------------- */
+
+      const readBack=
+        await this.getKV(
+          token
+        );
+
+
+      report.kvRead=
+        readBack===value;
+
+
+      /* -------------------------------
+         BORRADO TEMPORAL
+         ------------------------------- */
+
+      const deleted=
+        await this.deleteKV(
+          token
+        );
+
+
+      const afterDelete=
+        await this.getKV(
+          token
+        );
+
+
+      report.kvDelete=
+        deleted===true &&
+        afterDelete===null;
+
+
+      /* -------------------------------
+         DATA VAULT FINGERPRINT
+         ------------------------------- */
+
+      const vault=
+        await this.vaultIntegrityCheck();
+
+
+      this.lastVaultIntegrity=
+        vault;
+
+
+      report.vault=
+        vault?.ok===true;
+
+
+      report.details.vaultAlgorithm=
+        vault?.algorithm||'—';
+
+
+      /* -------------------------------
+         RESULTADO GLOBAL
+         ------------------------------- */
+
+      report.ok=
+        report.plugin &&
+        report.ready &&
+        report.healthcheck &&
+        report.tables &&
+        report.schema &&
+        report.kvWrite &&
+        report.kvRead &&
+        report.kvDelete &&
+        report.vault;
+
+
+    }catch(e){
+
+      report.ok=false;
+
+      report.details.error=
+        String(
+          e?.message||e
+        );
+
+
+      console.error(
+        'Native Reliability Check:',
+        e
+      );
+
+    }finally{
+
+      /*
+       * Cleanup redundante.
+       * Aunque una prueba falle,
+       * nunca dejamos la clave temporal.
+       */
+
+      try{
+
+        await this.deleteKV(
+          token
+        );
+
+      }catch{}
+
+    }
+
+
+    this.lastNativeHealth=
+      report;
+
+
+    return report;
+  },
+
 
   async healthCheck() {
     const token = 'mlb-' + Date.now();

@@ -1,6 +1,6 @@
 {
   "appId": "com.totallabs.mlb",
-  "appName": "MLB Total Labs 7",
+  "appName": "MLB Totals Lab",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

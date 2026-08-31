@@ -1500,6 +1500,7 @@ tbody tr:active{
 <div class="section"><h3>Reglas del juego completo</h3><div class="grid2"><div class="field"><label>Juego completo</label><select id="cfgExtras"><option value="1">Incluye entradas extra</option><option value="0">Sólo 9 entradas</option></select></div><div class="field"><label>Corredor automático en extras</label><select id="cfgGhost"><option value="1">Activado</option><option value="0">Desactivado</option></select></div></div><div class="note">El laboratorio queda fijo en Sportsbook LAB y aprende únicamente del Total de juego completo con línea real.</div></div><div class="section"><h3>Bullpen Intelligence</h3><div class="grid3"><div class="field"><label>Carga automática</label><select id="cfgBullpenAuto"><option value="1">Activada</option><option value="0">Desactivada / usar proxy</option></select></div><div class="field"><label>Caché local (minutos)</label><input id="cfgBullpenCache" type="number" min="5" max="120" step="5" value="25"></div><div class="field"><label>Días de uso reciente</label><select id="cfgBullpenDays"><option value="3">3 días</option><option value="4">4 días</option></select></div></div><div class="note">No requiere API key. Consulta MLB StatsAPI al analizar cada encuentro, pondera relevistas disponibles y conserva una copia local temporal.</div></div><div class="section"><h3>V5.6 · Lineup, splits y manejo del pitcheo</h3><div class="grid4"><div class="field"><label>Lineups automáticos</label><select id="cfgLineups"><option value="1">Activados</option><option value="0">Usar ofensiva de equipo</option></select></div><div class="field"><label>Splits vs zurdo/derecho</label><select id="cfgSplits"><option value="1">Activados</option><option value="0">Sólo temporada</option></select></div><div class="field"><label>Statcast xwOBA / contacto</label><select id="cfgStatcast"><option value="1">Intentar automático</option><option value="0">Desactivado</option></select></div><div class="field"><label>Hook dinámico abridor</label><select id="cfgDynamicHook"><option value="1">Activado</option><option value="0">IP preasignadas</option></select></div><div class="field"><label>Bullpen situacional</label><select id="cfgSituationalPen"><option value="1">Por inning/marcador</option><option value="0">Bullpen agregado</option></select></div><div class="field"><label>Mínimo lineup válido</label><select id="cfgMinLineup"><option value="7">7 jugadores</option><option value="8" selected>8 jugadores</option><option value="9">9 jugadores</option></select></div><div class="field"><label>Suavizado splits (PA)</label><input id="cfgSplitPrior" type="number" min="30" max="180" step="10" value="80"></div><div class="field"><label>Caché lineup (min)</label><input id="cfgLineupCache" type="number" min="5" max="120" step="5" value="30"></div></div><div class="note">Statcast es una mejora de calidad de contacto. Si Baseball Savant bloquea CORS o no devuelve CSV, la app continúa con OPS/ISO/BABIP y lo muestra como respaldo; nunca inventa que Statcast cargó.</div></div><div class="section"><h3>Líneas automáticas · sin captura manual</h3><div class="grid4"><div class="field"><label>Fuente principal</label><select id="cfgOddsProvider"><option value="PUBLIC">ESPN / DraftKings + Covers respaldo (sin key)</option><option value="API">The Odds API (si tienes key)</option><option value="AUTO">Auto: API → ESPN → Covers</option></select></div><div class="field"><label>The Odds API key · opcional</label><input id="cfgOddsKey" type="password" autocomplete="off" placeholder="Vacío = no hace falta"></div><div class="field"><label>Región API</label><select id="cfgOddsRegion"><option value="us">Estados Unidos</option><option value="us2">Estados Unidos 2</option><option value="eu">Europa</option><option value="uk">Reino Unido</option><option value="au">Australia</option></select></div><div class="field"><label>Book API preferido</label><input id="cfgBook" placeholder="consensus"></div></div><div class="note">Por defecto intenta primero el proveedor interno de la app (Netlify Function → ESPN/DraftKings), sin API key y sin CORS. Si no está disponible, intenta ESPN desde el navegador y luego Covers. Después usa la última línea válida guardada. La app sólo utiliza el Total de juego completo; nunca inventa una línea de sportsbook.</div></div>
 
 <div id="selfTestPanel"></div>
+<div id="nativeHealthPanel"></div>
 <div class="actions"><button class="btn primary" id="saveCfg">Guardar ajustes</button><button class="btn" id="loadOddsNow">↻ Actualizar líneas</button><button class="btn red" id="resetAll">Restablecer modelo</button></div>
 <div class="warn" style="margin-top:12px"><b>Importante:</b> el aprendizaje es calibración estadística, no memoria mágica. Necesita decenas o cientos de juegos liquidados. El sistema limita la confianza cuando faltan abridores, lineup o datos fiables.</div>
 </section>
@@ -8903,6 +8904,345 @@ function renderSelfTestDashboard(){
 setTimeout(
   renderSelfTestDashboard,
   100
+);
+
+
+
+/* V7.8.5C2 NATIVE HEALTH DASHBOARD */
+
+function nativeHealthStatus(
+  ok
+){
+  return ok
+    ?'✓ PASS'
+    :'✕ FAIL';
+}
+
+
+function nativeHealthClass(
+  ok
+){
+  return ok
+    ?'bp-good'
+    :'bp-bad';
+}
+
+
+function nativeHealthDashboardHtml(
+  report
+){
+
+  if(!report){
+
+    return(
+      '<div class="section">'+
+
+        '<h3>'+
+          'Android · Native Health'+
+        '</h3>'+
+
+        '<div class="warn">'+
+          '<b>SQLite inicializando…</b><br>'+
+          'Esperando diagnóstico nativo.'+
+        '</div>'+
+
+      '</div>'
+    );
+  }
+
+
+  const tests=[
+
+    [
+      'Plugin SQLite',
+      report.plugin
+    ],
+
+    [
+      'Base abierta',
+      report.ready
+    ],
+
+    [
+      'Health Check',
+      report.healthcheck
+    ],
+
+    [
+      'Tablas nativas',
+      report.tables
+    ],
+
+    [
+      'Schema app_kv',
+      report.schema
+    ],
+
+    [
+      'Escritura',
+      report.kvWrite
+    ],
+
+    [
+      'Lectura',
+      report.kvRead
+    ],
+
+    [
+      'Borrado',
+      report.kvDelete
+    ],
+
+    [
+      'Data Vault',
+      report.vault
+    ]
+
+  ];
+
+
+  let time='—';
+
+  try{
+
+    time=
+      new Date(
+        report.ranAt
+      ).toLocaleString();
+
+  }catch{}
+
+
+  return(
+    '<div class="section">'+
+
+      '<h3>'+
+        'Android · Native Health'+
+      '</h3>'+
+
+
+      '<div class="'+
+        (
+          report.ok
+            ?'okbox'
+            :'danger'
+        )+
+        '" style="margin-bottom:12px">'+
+
+        '<b>'+
+          (
+            report.ok
+              ?'Capa nativa verificada'
+              :'ANOMALÍA NATIVA DETECTADA'
+          )+
+        '</b><br>'+
+
+        (
+          report.ok
+            ?'SQLite, schema, lectura/escritura y Data Vault funcionan correctamente.'
+            :'Una o más comprobaciones nativas necesitan revisión.'
+        )+
+
+      '</div>'+
+
+
+      '<div style="overflow:auto">'+
+
+        '<table>'+
+
+          '<thead>'+
+            '<tr>'+
+              '<th>Componente</th>'+
+              '<th>Estado</th>'+
+            '</tr>'+
+          '</thead>'+
+
+          '<tbody>'+
+
+            tests.map(
+              ([name,ok])=>
+                '<tr>'+
+                  '<td>'+
+                    esc(name)+
+                  '</td>'+
+                  '<td class="'+
+                    nativeHealthClass(ok)+
+                  '">'+
+                    nativeHealthStatus(ok)+
+                  '</td>'+
+                '</tr>'
+            ).join('')+
+
+          '</tbody>'+
+
+        '</table>'+
+
+      '</div>'+
+
+
+      '<div class="note">'+
+
+        '<b>Base:</b> '+
+        esc(
+          report.database||'—'
+        )+
+
+        ' · <b>Schema:</b> '+
+
+        esc(
+          (
+            report.details
+              ?.columns||[]
+          ).join(', ')||'—'
+        )+
+
+        '<br><b>Fingerprint:</b> '+
+
+        esc(
+          report.details
+            ?.vaultAlgorithm||'—'
+        )+
+
+        '<br><b>Última ejecución:</b> '+
+
+        esc(time)+
+
+      '</div>'+
+
+
+      '<div class="actions" '+
+        'style="margin-top:12px">'+
+
+        '<button '+
+          'class="btn" '+
+          'id="rerunNativeHealth">'+
+          '↻ Verificar Android / SQLite'+
+        '</button>'+
+
+      '</div>'+
+
+
+    '</div>'
+  );
+}
+
+
+async function renderNativeHealthDashboard(
+  force=false
+){
+
+  const root=
+    $('#nativeHealthPanel');
+
+
+  if(!root){
+    return;
+  }
+
+
+  const db=
+    window.MLBDB;
+
+
+  if(!db){
+
+    root.innerHTML=
+      nativeHealthDashboardHtml(
+        null
+      );
+
+    return;
+  }
+
+
+  let report=
+    db.lastNativeHealth;
+
+
+  if(
+    force ||
+    (
+      !report &&
+      db.ready===true
+    )
+  ){
+
+    report=
+      await db
+        .nativeReliabilityCheck();
+  }
+
+
+  root.innerHTML=
+    nativeHealthDashboardHtml(
+      report
+    );
+
+
+  const button=
+    $('#rerunNativeHealth');
+
+
+  if(button){
+
+    button.onclick=
+      async()=>{
+
+        button.disabled=true;
+
+        button.textContent=
+          'Verificando…';
+
+
+        try{
+
+          const next=
+            await db
+              .nativeReliabilityCheck();
+
+
+          renderNativeHealthDashboard(
+            false
+          );
+
+
+          status(
+            next.ok
+              ?'Native Health: PASS.'
+              :'Native Health: FAIL.',
+            next.ok
+              ?'ok'
+              :'err'
+          );
+
+        }catch(e){
+
+          status(
+            'Native Health error: '+
+            String(
+              e?.message||e
+            ),
+            'err'
+          );
+
+          button.disabled=false;
+
+          button.textContent=
+            '↻ Verificar Android / SQLite';
+        }
+      };
+  }
+}
+
+
+/*
+ * SQLite inicia de forma asíncrona.
+ * Esperamos antes de pintar el panel.
+ */
+
+setTimeout(
+  ()=>renderNativeHealthDashboard(false),
+  900
 );
 
 
