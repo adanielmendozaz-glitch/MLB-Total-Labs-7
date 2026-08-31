@@ -1498,6 +1498,8 @@ tbody tr:active{
 <div class="section"><h3>Filtro de selección</h3><div class="grid4"><div class="field"><label>Prior del mercado</label><input id="cfgPrior" type="number" min="0" max="0.45" step="0.01" value="0.12"></div><div class="field"><label>Edge mínimo</label><input id="cfgEdge" type="number" min="0" max="0.20" step="0.005" value="0.035"></div><div class="field"><label>Prob. mínima</label><input id="cfgProb" type="number" min="0.50" max="0.80" step="0.005" value="0.56"></div><div class="field"><label>Máx. desacuerdo</label><input id="cfgDis" type="number" min="0.03" max="0.30" step="0.01" value="0.14"></div></div></div>
 <div class="section"><h3>Pesos iniciales del ensamble</h3><div class="grid4"><div class="field"><label>PA Markov/RE24</label><input id="wStruct" type="number" min="0" max="1" step="0.01" value="0.30"></div><div class="field"><label>Negative Binomial</label><input id="wNB" type="number" min="0" max="1" step="0.01" value="0.25"></div><div class="field"><label>Poisson-Lognormal</label><input id="wPLN" type="number" min="0" max="1" step="0.01" value="0.25"></div><div class="field"><label>COM-Poisson</label><input id="wCOM" type="number" min="0" max="1" step="0.01" value="0.20"></div></div><div class="note">La app normaliza los pesos. Cuando existan suficientes pronósticos liquidados, ajusta lentamente según Brier Score sin permitir que una racha corta domine.</div></div>
 <div class="section"><h3>Reglas del juego completo</h3><div class="grid2"><div class="field"><label>Juego completo</label><select id="cfgExtras"><option value="1">Incluye entradas extra</option><option value="0">Sólo 9 entradas</option></select></div><div class="field"><label>Corredor automático en extras</label><select id="cfgGhost"><option value="1">Activado</option><option value="0">Desactivado</option></select></div></div><div class="note">El laboratorio queda fijo en Sportsbook LAB y aprende únicamente del Total de juego completo con línea real.</div></div><div class="section"><h3>Bullpen Intelligence</h3><div class="grid3"><div class="field"><label>Carga automática</label><select id="cfgBullpenAuto"><option value="1">Activada</option><option value="0">Desactivada / usar proxy</option></select></div><div class="field"><label>Caché local (minutos)</label><input id="cfgBullpenCache" type="number" min="5" max="120" step="5" value="25"></div><div class="field"><label>Días de uso reciente</label><select id="cfgBullpenDays"><option value="3">3 días</option><option value="4">4 días</option></select></div></div><div class="note">No requiere API key. Consulta MLB StatsAPI al analizar cada encuentro, pondera relevistas disponibles y conserva una copia local temporal.</div></div><div class="section"><h3>V5.6 · Lineup, splits y manejo del pitcheo</h3><div class="grid4"><div class="field"><label>Lineups automáticos</label><select id="cfgLineups"><option value="1">Activados</option><option value="0">Usar ofensiva de equipo</option></select></div><div class="field"><label>Splits vs zurdo/derecho</label><select id="cfgSplits"><option value="1">Activados</option><option value="0">Sólo temporada</option></select></div><div class="field"><label>Statcast xwOBA / contacto</label><select id="cfgStatcast"><option value="1">Intentar automático</option><option value="0">Desactivado</option></select></div><div class="field"><label>Hook dinámico abridor</label><select id="cfgDynamicHook"><option value="1">Activado</option><option value="0">IP preasignadas</option></select></div><div class="field"><label>Bullpen situacional</label><select id="cfgSituationalPen"><option value="1">Por inning/marcador</option><option value="0">Bullpen agregado</option></select></div><div class="field"><label>Mínimo lineup válido</label><select id="cfgMinLineup"><option value="7">7 jugadores</option><option value="8" selected>8 jugadores</option><option value="9">9 jugadores</option></select></div><div class="field"><label>Suavizado splits (PA)</label><input id="cfgSplitPrior" type="number" min="30" max="180" step="10" value="80"></div><div class="field"><label>Caché lineup (min)</label><input id="cfgLineupCache" type="number" min="5" max="120" step="5" value="30"></div></div><div class="note">Statcast es una mejora de calidad de contacto. Si Baseball Savant bloquea CORS o no devuelve CSV, la app continúa con OPS/ISO/BABIP y lo muestra como respaldo; nunca inventa que Statcast cargó.</div></div><div class="section"><h3>Líneas automáticas · sin captura manual</h3><div class="grid4"><div class="field"><label>Fuente principal</label><select id="cfgOddsProvider"><option value="PUBLIC">ESPN / DraftKings + Covers respaldo (sin key)</option><option value="API">The Odds API (si tienes key)</option><option value="AUTO">Auto: API → ESPN → Covers</option></select></div><div class="field"><label>The Odds API key · opcional</label><input id="cfgOddsKey" type="password" autocomplete="off" placeholder="Vacío = no hace falta"></div><div class="field"><label>Región API</label><select id="cfgOddsRegion"><option value="us">Estados Unidos</option><option value="us2">Estados Unidos 2</option><option value="eu">Europa</option><option value="uk">Reino Unido</option><option value="au">Australia</option></select></div><div class="field"><label>Book API preferido</label><input id="cfgBook" placeholder="consensus"></div></div><div class="note">Por defecto intenta primero el proveedor interno de la app (Netlify Function → ESPN/DraftKings), sin API key y sin CORS. Si no está disponible, intenta ESPN desde el navegador y luego Covers. Después usa la última línea válida guardada. La app sólo utiliza el Total de juego completo; nunca inventa una línea de sportsbook.</div></div>
+
+<div id="selfTestPanel"></div>
 <div class="actions"><button class="btn primary" id="saveCfg">Guardar ajustes</button><button class="btn" id="loadOddsNow">↻ Actualizar líneas</button><button class="btn red" id="resetAll">Restablecer modelo</button></div>
 <div class="warn" style="margin-top:12px"><b>Importante:</b> el aprendizaje es calibración estadística, no memoria mágica. Necesita decenas o cientos de juegos liquidados. El sistema limita la confianza cuando faltan abridores, lineup o datos fiables.</div>
 </section>
@@ -8544,6 +8546,1681 @@ function censusSummaryRows(rows){
  units=counted.map(censusUnit).filter(Number.isFinite),unitNet=units.length?units.reduce((z,x)=>z+x,0):NaN;
  return{counted:counted.length,wins,losses,push,pending,brier,hit:final.length?wins/final.length:NaN,unitNet,unitN:units.length,pass:(rows||[]).filter(r=>!censusCounted(r)).length}
 }
+
+
+
+/* V7.8.5B2 SELF TEST DASHBOARD */
+
+function selfTestResultClass(ok){
+  return ok
+    ?'bp-good'
+    :'bp-bad';
+}
+
+
+function selfTestResultIcon(ok){
+  return ok
+    ?'✓'
+    :'✕';
+}
+
+
+function selfTestDashboardHtml(
+  report
+){
+
+  if(!report){
+
+    return(
+      '<div class="section">'+
+
+        '<h3>'+
+          'Diagnóstico interno · Self Tests'+
+        '</h3>'+
+
+        '<div class="warn">'+
+          '<b>Esperando diagnóstico…</b><br>'+
+          'Las pruebas automáticas todavía no han terminado.'+
+        '</div>'+
+
+      '</div>'
+    );
+  }
+
+
+  const total=
+    Number(report.total)||0;
+
+  const passed=
+    Number(report.passed)||0;
+
+  const failed=
+    Number(report.failed)||0;
+
+  const ok=
+    report.ok===true;
+
+
+  let time='—';
+
+  try{
+
+    time=
+      new Date(
+        report.ranAt
+      ).toLocaleString();
+
+  }catch{}
+
+
+  const rows=
+    Array.isArray(report.results)
+      ?report.results
+      :[];
+
+
+  return(
+    '<div class="section">'+
+
+      '<h3>'+
+        'V7.8.5 · Diagnóstico interno'+
+      '</h3>'+
+
+
+      '<div class="'+
+        (ok?'okbox':'danger')+
+        '" style="margin-bottom:12px">'+
+
+        '<b>'+
+          (
+            ok
+              ?'Sistema matemático verificado'
+              :'ANOMALÍA DETECTADA'
+          )+
+        '</b><br>'+
+
+        (
+          ok
+            ?'Las pruebas de regresión del núcleo pasaron correctamente.'
+            :'Una o más pruebas internas no coinciden con el comportamiento esperado.'
+        )+
+
+      '</div>'+
+
+
+      '<div class="cards">'+
+
+        '<div class="card">'+
+          '<small>Estado</small>'+
+          '<div class="big '+
+            selfTestResultClass(ok)+
+          '">'+
+            (
+              ok
+                ?'PASS'
+                :'FAIL'
+            )+
+          '</div>'+
+        '</div>'+
+
+
+        '<div class="card">'+
+          '<small>Pruebas</small>'+
+          '<div class="big">'+
+            passed+
+            ' / '+
+            total+
+          '</div>'+
+          '<div class="smalltxt">'+
+            'superadas'+
+          '</div>'+
+        '</div>'+
+
+
+        '<div class="card">'+
+          '<small>Fallos</small>'+
+          '<div class="big '+
+            selfTestResultClass(
+              failed===0
+            )+
+          '">'+
+            failed+
+          '</div>'+
+        '</div>'+
+
+
+        '<div class="card">'+
+          '<small>Última ejecución</small>'+
+          '<div class="big" '+
+            'style="font-size:.82rem">'+
+            esc(time)+
+          '</div>'+
+        '</div>'+
+
+      '</div>'+
+
+
+      '<div style="'+
+        'overflow:auto;'+
+        'margin-top:12px'+
+      '">'+
+
+        '<table>'+
+          '<thead>'+
+            '<tr>'+
+              '<th>Test</th>'+
+              '<th>Estado</th>'+
+              '<th>Detalle</th>'+
+            '</tr>'+
+          '</thead>'+
+
+          '<tbody>'+
+
+            rows.map(
+              r=>
+                '<tr>'+
+                  '<td>'+
+                    esc(r.name||'Test')+
+                  '</td>'+
+
+                  '<td class="'+
+                    selfTestResultClass(
+                      r.ok===true
+                    )+
+                  '">'+
+                    selfTestResultIcon(
+                      r.ok===true
+                    )+
+                    ' '+
+                    (
+                      r.ok===true
+                        ?'PASS'
+                        :'FAIL'
+                    )+
+                  '</td>'+
+
+                  '<td>'+
+                    esc(
+                      String(
+                        r.detail??''
+                      )
+                    )+
+                  '</td>'+
+                '</tr>'
+            ).join('')+
+
+          '</tbody>'+
+        '</table>'+
+
+      '</div>'+
+
+
+      '<div class="actions" '+
+        'style="margin-top:12px">'+
+
+        '<button '+
+          'class="btn" '+
+          'id="rerunSelfTests">'+
+          '↻ Ejecutar diagnóstico'+
+        '</button>'+
+
+      '</div>'+
+
+
+      '<div class="note">'+
+
+        'Estas pruebas usan datos sintéticos y no modifican Ranking, '+
+        'Censo, apuestas, Data Vault ni predicciones. '+
+        'Sirven para detectar regresiones matemáticas después de futuras actualizaciones.'+
+
+      '</div>'+
+
+    '</div>'
+  );
+
+}
+
+
+function renderSelfTestDashboard(){
+
+  const root=
+    $('#selfTestPanel');
+
+  if(!root){
+    return;
+  }
+
+
+  let report=
+    window.MLB_SELF_TESTS;
+
+
+  /*
+   * Si el dashboard se abre antes
+   * que el auto-test termine,
+   * podemos ejecutarlo de forma segura.
+   */
+
+  if(
+    !report &&
+    typeof runCoreSelfTests==='function'
+  ){
+
+    report=
+      runCoreSelfTests();
+
+    window.MLB_SELF_TESTS=
+      report;
+  }
+
+
+  root.innerHTML=
+    selfTestDashboardHtml(
+      report
+    );
+
+
+  const button=
+    $('#rerunSelfTests');
+
+
+  if(button){
+
+    button.onclick=()=>{
+
+      button.disabled=true;
+
+      button.textContent=
+        'Ejecutando…';
+
+
+      try{
+
+        const next=
+          runCoreSelfTests();
+
+
+        window.MLB_SELF_TESTS=
+          next;
+
+
+        document.documentElement
+          .dataset
+          .mlbSelfTest=
+            next.ok
+              ?'ok'
+              :'fail';
+
+
+        renderSelfTestDashboard();
+
+
+        status(
+          next.ok
+            ?(
+              'Self Tests: '+
+              next.passed+
+              '/'+
+              next.total+
+              ' PASS.'
+            )
+            :(
+              'Self Tests: '+
+              next.failed+
+              ' fallo(s) detectado(s).'
+            ),
+          next.ok
+            ?'ok'
+            :'err'
+        );
+
+      }catch(e){
+
+        status(
+          'Error ejecutando Self Tests: '+
+          esc(
+            e?.message||e
+          ),
+          'err'
+        );
+
+        button.disabled=false;
+
+        button.textContent=
+          '↻ Ejecutar diagnóstico';
+      }
+    };
+  }
+}
+
+
+/*
+ * B1 corre a 0 ms.
+ * B2 espera un poco para mostrar
+ * el reporte ya terminado.
+ */
+
+setTimeout(
+  renderSelfTestDashboard,
+  100
+);
+
+
+/* V7.8.5B1 CORE MATH SELF TESTS */
+
+function mlbSelfTestNear(
+  actual,
+  expected,
+  tolerance=1e-9
+){
+  return(
+    Number.isFinite(actual) &&
+    Number.isFinite(expected) &&
+    Math.abs(actual-expected)<=tolerance
+  );
+}
+
+
+function runCoreSelfTests(){
+
+  const results=[];
+
+
+  function test(
+    name,
+    fn
+  ){
+
+    try{
+
+      const detail=
+        fn();
+
+      results.push({
+        name,
+        ok:true,
+        detail:
+          detail===undefined
+            ?'OK'
+            :detail
+      });
+
+    }catch(e){
+
+      results.push({
+        name,
+        ok:false,
+        detail:
+          String(
+            e?.message || e
+          )
+      });
+    }
+  }
+
+
+  function assert(
+    condition,
+    message
+  ){
+
+    if(!condition){
+      throw new Error(
+        message ||
+        'Assertion failed'
+      );
+    }
+  }
+
+
+  /* ---------------------------------
+     TEST 1 · CLAMP
+     --------------------------------- */
+
+  test(
+    'Clamp boundaries',
+    ()=>{
+
+      assert(
+        clamp(1.4,0,1)===1,
+        'Clamp superior falló'
+      );
+
+      assert(
+        clamp(-.4,0,1)===0,
+        'Clamp inferior falló'
+      );
+
+      assert(
+        clamp(.42,0,1)===.42,
+        'Clamp interno falló'
+      );
+
+      return '0 ≤ p ≤ 1';
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 2 · BRIER BINARIO
+     --------------------------------- */
+
+  test(
+    'Brier binario WIN',
+    ()=>{
+
+      const score=
+        labPickBrierRow({
+          status:'FINAL',
+          y:1,
+          ensembleP:.60
+        });
+
+      assert(
+        mlbSelfTestNear(
+          score,
+          .16,
+          1e-12
+        ),
+        'Esperado 0.160'
+      );
+
+      return score;
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 3 · PUSH EXCLUIDO
+     DEL BRIER BINARIO
+     --------------------------------- */
+
+  test(
+    'Brier binario excluye PUSH',
+    ()=>{
+
+      const score=
+        labPickBrierRow({
+          status:'PUSH',
+          ensembleP:.60
+        });
+
+      assert(
+        Number.isNaN(score),
+        'PUSH no fue excluido'
+      );
+
+      return 'NaN correcto';
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 4 · CONTABILIDAD 1U
+     --------------------------------- */
+
+  test(
+    'Contabilidad 1U',
+    ()=>{
+
+      const win=
+        censusUnit({
+          signal:'JUGABLE',
+          odds:1.91,
+          status:'FINAL',
+          y:1
+        });
+
+      const loss=
+        censusUnit({
+          signal:'JUGABLE',
+          odds:1.91,
+          status:'FINAL',
+          y:0
+        });
+
+      const push=
+        censusUnit({
+          signal:'JUGABLE',
+          odds:1.91,
+          status:'PUSH'
+        });
+
+      const pass=
+        censusUnit({
+          signal:'PASS',
+          odds:1.91,
+          status:'FINAL',
+          y:1
+        });
+
+
+      assert(
+        mlbSelfTestNear(
+          win,
+          .91,
+          1e-12
+        ),
+        'WIN 1U incorrecto'
+      );
+
+      assert(
+        loss===-1,
+        'LOSS 1U incorrecto'
+      );
+
+      assert(
+        push===0,
+        'PUSH no quedó en 0U'
+      );
+
+      assert(
+        Number.isNaN(pass),
+        'PASS fue contabilizado'
+      );
+
+      return(
+        'WIN +0.91 · LOSS -1 · PUSH 0 · PASS excluido'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 5 · W/P/L DIRECTO
+     --------------------------------- */
+
+  test(
+    'W/P/L normalización',
+    ()=>{
+
+      const p=
+        wplProbabilities({
+          winProb:.55,
+          pushProb:.10,
+          lossProb:.35
+        });
+
+      assert(
+        !!p,
+        'No devolvió probabilidades'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.win,
+          .55,
+          1e-12
+        ),
+        'P(WIN) incorrecta'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.push,
+          .10,
+          1e-12
+        ),
+        'P(PUSH) incorrecta'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.loss,
+          .35,
+          1e-12
+        ),
+        'P(LOSS) incorrecta'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.win+
+          p.push+
+          p.loss,
+          1,
+          1e-12
+        ),
+        'W/P/L no suma 1'
+      );
+
+      return '55% / 10% / 35%';
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 6 · W/P/L LEGACY
+     --------------------------------- */
+
+  test(
+    'W/P/L condicional con PUSH',
+    ()=>{
+
+      const p=
+        wplProbabilities({
+          decisionProbability:.60,
+          pushProb:.10
+        });
+
+      assert(
+        !!p,
+        'Reconstrucción falló'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.win,
+          .54,
+          1e-12
+        ),
+        'P(WIN) esperada 54%'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.push,
+          .10,
+          1e-12
+        ),
+        'P(PUSH) esperada 10%'
+      );
+
+      assert(
+        mlbSelfTestNear(
+          p.loss,
+          .36,
+          1e-12
+        ),
+        'P(LOSS) esperada 36%'
+      );
+
+      return '54% / 10% / 36%';
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 7 · OUTCOMES
+     --------------------------------- */
+
+  test(
+    'Outcome WIN/PUSH/LOSS',
+    ()=>{
+
+      assert(
+        wplOutcome({
+          status:'FINAL',
+          y:1
+        })==='WIN',
+        'WIN incorrecto'
+      );
+
+      assert(
+        wplOutcome({
+          status:'PUSH'
+        })==='PUSH',
+        'PUSH incorrecto'
+      );
+
+      assert(
+        wplOutcome({
+          status:'FINAL',
+          y:0
+        })==='LOSS',
+        'LOSS incorrecto'
+      );
+
+      return 'WIN · PUSH · LOSS';
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 8 · BRIER W/P/L PERFECTO
+     --------------------------------- */
+
+  test(
+    'Brier W/P/L perfecto',
+    ()=>{
+
+      const score=
+        brierWPLRow({
+          status:'FINAL',
+          y:1,
+          winProb:1,
+          pushProb:0,
+          lossProb:0
+        });
+
+      assert(
+        mlbSelfTestNear(
+          score,
+          0,
+          1e-12
+        ),
+        'Predicción perfecta no dio 0'
+      );
+
+      return score;
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 9 · BRIER W/P/L CONOCIDO
+     --------------------------------- */
+
+  test(
+    'Brier W/P/L conocido',
+    ()=>{
+
+      const score=
+        brierWPLRow({
+          status:'FINAL',
+          y:1,
+          winProb:.55,
+          pushProb:.10,
+          lossProb:.35
+        });
+
+      /*
+       * (.55-1)^2
+       * +(.10-0)^2
+       * +(.35-0)^2
+       * = 0.335
+       */
+
+      assert(
+        mlbSelfTestNear(
+          score,
+          .335,
+          1e-12
+        ),
+        'Esperado 0.335'
+      );
+
+      return score;
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 10 · WILSON 5/5
+     --------------------------------- */
+
+  test(
+    'Wilson 95% · 5/5',
+    ()=>{
+
+      const ci=
+        wilsonInterval(
+          5,
+          5
+        );
+
+      assert(
+        ci &&
+        Number.isFinite(ci.low) &&
+        Number.isFinite(ci.high),
+        'Wilson no devolvió IC'
+      );
+
+      assert(
+        Math.abs(
+          ci.low-.5655
+        )<.001,
+        'Piso Wilson 5/5 incorrecto'
+      );
+
+      assert(
+        Math.abs(
+          ci.high-1
+        )<.001,
+        'Techo Wilson 5/5 incorrecto'
+      );
+
+      return(
+        ci.low.toFixed(4)+
+        ' – '+
+        ci.high.toFixed(4)
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 11 · WILSON 0/5
+     --------------------------------- */
+
+  test(
+    'Wilson 95% · 0/5',
+    ()=>{
+
+      const ci=
+        wilsonInterval(
+          0,
+          5
+        );
+
+      assert(
+        ci &&
+        Number.isFinite(ci.low) &&
+        Number.isFinite(ci.high),
+        'Wilson no devolvió IC'
+      );
+
+      assert(
+        Math.abs(
+          ci.low
+        )<.001,
+        'Piso Wilson 0/5 incorrecto'
+      );
+
+      assert(
+        Math.abs(
+          ci.high-.4345
+        )<.001,
+        'Techo Wilson 0/5 incorrecto'
+      );
+
+      return(
+        ci.low.toFixed(4)+
+        ' – '+
+        ci.high.toFixed(4)
+      );
+    }
+  );
+
+
+
+
+  /* =====================================
+     V7.8.5B3 DATA INTEGRITY SELF TESTS
+     ===================================== */
+
+
+  /* ---------------------------------
+     TEST 12 · JSON DEL CENSO
+     --------------------------------- */
+
+  test(
+    'Censo JSON válido',
+    ()=>{
+
+      const raw=
+        STORE.getItem(
+          'mlb_v60_rank_census'
+        );
+
+
+      if(raw===null){
+
+        return(
+          'Sin Censo todavía'
+        );
+      }
+
+
+      let parsed;
+
+
+      try{
+
+        parsed=
+          JSON.parse(raw);
+
+      }catch(e){
+
+        throw new Error(
+          'JSON del Censo corrupto'
+        );
+      }
+
+
+      assert(
+        parsed &&
+        typeof parsed==='object',
+        'Censo no es un objeto'
+      );
+
+
+      return(
+        'JSON estructuralmente válido'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 13 · ESTRUCTURA DE DÍAS
+     --------------------------------- */
+
+  test(
+    'Estructura interna del Censo',
+    ()=>{
+
+      const data=
+        rankCensus();
+
+
+      assert(
+        data &&
+        typeof data==='object',
+        'rankCensus inválido'
+      );
+
+
+      assert(
+        data.days &&
+        typeof data.days==='object' &&
+        !Array.isArray(data.days),
+        'days inválido'
+      );
+
+
+      const entries=
+        Object.entries(
+          data.days
+        );
+
+
+      let bad=0;
+
+
+      for(
+        const [date,day]
+        of entries
+      ){
+
+        if(
+          !day ||
+          typeof day!=='object' ||
+          !Array.isArray(day.rows)
+        ){
+          bad++;
+        }
+      }
+
+
+      assert(
+        bad===0,
+        bad+
+        ' día(s) con estructura inválida'
+      );
+
+
+      return(
+        entries.length+
+        ' fecha(s) válidas'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 14 · IDENTIDAD ÚNICA
+     --------------------------------- */
+
+  test(
+    'Identidad única de partidos',
+    ()=>{
+
+      const rows=
+        censusAllRows(
+          rankCensus()
+        );
+
+
+      const seen=
+        new Map();
+
+      const duplicates=[];
+
+      let checked=0;
+
+
+      for(const r of rows){
+
+        const gameId=
+          String(
+            r.gameId ??
+            r.gamePk ??
+            ''
+          ).trim();
+
+
+        if(!gameId){
+          continue;
+        }
+
+
+        const date=
+          String(
+            r.censusDate ??
+            r.date ??
+            ''
+          );
+
+
+        const key=
+          date+
+          '|'+
+          gameId;
+
+
+        checked++;
+
+
+        if(seen.has(key)){
+
+          duplicates.push(
+            key
+          );
+
+        }else{
+
+          seen.set(
+            key,
+            r
+          );
+        }
+      }
+
+
+      assert(
+        duplicates.length===0,
+        (
+          duplicates.length+
+          ' identidad(es) repetida(s): '+
+          duplicates
+            .slice(0,3)
+            .join(', ')
+        )
+      );
+
+
+      return(
+        checked+
+        ' identidades únicas'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 15 · DOUBLEHEADERS
+     --------------------------------- */
+
+  test(
+    'Doubleheaders diferenciados',
+    ()=>{
+
+      const rows=
+        censusAllRows(
+          rankCensus()
+        );
+
+
+      const groups=
+        new Map();
+
+
+      for(const r of rows){
+
+        const away=
+          String(
+            r.awayAbbr ??
+            r.away ??
+            ''
+          );
+
+        const home=
+          String(
+            r.homeAbbr ??
+            r.home ??
+            ''
+          );
+
+        const date=
+          String(
+            r.censusDate ??
+            r.date ??
+            ''
+          );
+
+
+        if(
+          !away ||
+          !home ||
+          !date
+        ){
+          continue;
+        }
+
+
+        const key=
+          date+
+          '|'+
+          away+
+          '|'+
+          home;
+
+
+        if(!groups.has(key)){
+          groups.set(
+            key,
+            []
+          );
+        }
+
+
+        groups
+          .get(key)
+          .push(r);
+      }
+
+
+      let dh=0;
+
+      const bad=[];
+
+
+      for(
+        const [key,list]
+        of groups
+      ){
+
+        if(list.length<2){
+          continue;
+        }
+
+
+        dh++;
+
+
+        const ids=
+          new Set(
+            list
+              .map(r=>
+                String(
+                  r.gameId ??
+                  r.gamePk ??
+                  ''
+                )
+              )
+              .filter(Boolean)
+          );
+
+
+        if(
+          ids.size!==
+          list.length
+        ){
+
+          bad.push(
+            key
+          );
+        }
+      }
+
+
+      assert(
+        bad.length===0,
+        (
+          'Doubleheader sin identidad única: '+
+          bad
+            .slice(0,3)
+            .join(', ')
+        )
+      );
+
+
+      return(
+        dh
+          ?dh+
+            ' doubleheader(s) verificados'
+          :'Sin doubleheaders en muestra'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 16 · RESULTADOS FINAL
+     --------------------------------- */
+
+  test(
+    'Coherencia FINAL / resultado',
+    ()=>{
+
+      const rows=
+        censusAllRows(
+          rankCensus()
+        );
+
+
+      const final=
+        rows.filter(
+          r=>
+            String(
+              r.status||''
+            ).toUpperCase()==='FINAL'
+        );
+
+
+      const bad=
+        final.filter(
+          r=>
+            +r.y!==0 &&
+            +r.y!==1
+        );
+
+
+      assert(
+        bad.length===0,
+        (
+          bad.length+
+          ' FINAL sin y=0/1'
+        )
+      );
+
+
+      return(
+        final.length+
+        ' resultados finales coherentes'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 17 · PROBABILIDADES
+     --------------------------------- */
+
+  test(
+    'Probabilidades dentro de rango',
+    ()=>{
+
+      const rows=[
+        ...censusAllRows(
+          rankCensus()
+        ),
+        ...lab(),
+        ...bets()
+      ];
+
+
+      const fields=[
+
+        'p',
+
+        'ensembleP',
+
+        'decisionProbability',
+
+        'probWin',
+
+        'probPush',
+
+        'probLoss',
+
+        'winProb',
+
+        'pushProb',
+
+        'lossProb'
+
+      ];
+
+
+      let checked=0;
+
+      const bad=[];
+
+
+      rows.forEach(
+        (r,index)=>{
+
+          for(
+            const field
+            of fields
+          ){
+
+            const raw=
+              r?.[field];
+
+
+            if(
+              raw===null ||
+              raw===undefined ||
+              raw===''
+            ){
+              continue;
+            }
+
+
+            const value=
+              Number(raw);
+
+
+            if(
+              !Number.isFinite(value)
+            ){
+              continue;
+            }
+
+
+            checked++;
+
+
+            if(
+              value<0 ||
+              value>1
+            ){
+
+              bad.push(
+                field+
+                '='+
+                value+
+                ' @'+
+                index
+              );
+            }
+          }
+        }
+      );
+
+
+      assert(
+        bad.length===0,
+        (
+          bad.length+
+          ' probabilidad(es) fuera de rango: '+
+          bad
+            .slice(0,3)
+            .join(', ')
+        )
+      );
+
+
+      return(
+        checked+
+        ' probabilidades verificadas'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 18 · SUMA W/P/L
+     --------------------------------- */
+
+  test(
+    'Consistencia P(W/P/L)',
+    ()=>{
+
+      const rows=[
+        ...censusAllRows(
+          rankCensus()
+        ),
+        ...lab(),
+        ...bets()
+      ];
+
+
+      let checked=0;
+
+      const bad=[];
+
+
+      for(
+        let i=0;
+        i<rows.length;
+        i++
+      ){
+
+        const r=
+          rows[i]||{};
+
+
+        const winRaw=
+          r.probWin ??
+          r.winProb;
+
+        const pushRaw=
+          r.probPush ??
+          r.pushProb;
+
+        const lossRaw=
+          r.probLoss ??
+          r.lossProb;
+
+
+        if(
+          winRaw===null ||
+          winRaw===undefined ||
+          pushRaw===null ||
+          pushRaw===undefined ||
+          lossRaw===null ||
+          lossRaw===undefined
+        ){
+          continue;
+        }
+
+
+        const win=
+          Number(winRaw);
+
+        const push=
+          Number(pushRaw);
+
+        const loss=
+          Number(lossRaw);
+
+
+        if(
+          !Number.isFinite(win) ||
+          !Number.isFinite(push) ||
+          !Number.isFinite(loss)
+        ){
+          continue;
+        }
+
+
+        checked++;
+
+
+        const sum=
+          win+
+          push+
+          loss;
+
+
+        if(
+          Math.abs(
+            sum-1
+          )>.005
+        ){
+
+          bad.push(
+            'row '+
+            i+
+            ' = '+
+            sum.toFixed(4)
+          );
+        }
+      }
+
+
+      assert(
+        bad.length===0,
+        (
+          bad.length+
+          ' W/P/L no suma 100%: '+
+          bad
+            .slice(0,3)
+            .join(', ')
+        )
+      );
+
+
+      return(
+        checked
+          ?checked+
+            ' vectores W/P/L correctos'
+          :'Sin vectores W/P/L completos todavía'
+      );
+    }
+  );
+
+
+  /* ---------------------------------
+     TEST 19 · DATA VAULT FINGERPRINT
+     --------------------------------- */
+
+  test(
+    'Data Vault fingerprint',
+    ()=>{
+
+      const report=
+        window.MLBDB
+          ?.lastVaultIntegrity;
+
+
+      /*
+       * Al arrancar, los tests pueden
+       * terminar antes que SQLite.
+       * En ese caso no declaramos error.
+       *
+       * Al pulsar "Ejecutar diagnóstico"
+       * desde Ajustes sí tendremos normalmente
+       * el estado definitivo.
+       */
+
+      if(!report){
+
+        return(
+          'SQLite todavía inicializando'
+        );
+      }
+
+
+      assert(
+        report.ok===true,
+        'Data Vault desincronizado'
+      );
+
+
+      const details=
+        report.details||{};
+
+
+      const checked=
+        Object.keys(
+          details
+        ).length;
+
+
+      return(
+        checked+
+        ' almacenes con fingerprint OK'
+      );
+    }
+  );
+
+
+  const passed=
+    results.filter(
+      x=>x.ok
+    ).length;
+
+  const failed=
+    results.length-passed;
+
+
+  return{
+
+    version:
+      'V7.8.5B1',
+
+    ok:
+      failed===0,
+
+    total:
+      results.length,
+
+    passed,
+
+    failed,
+
+    ranAt:
+      new Date().toISOString(),
+
+    results
+
+  };
+}
+
+
+/*
+ * Ejecución automática.
+ *
+ * setTimeout permite que todo
+ * el script termine de inicializar
+ * antes de correr los tests.
+ */
+
+setTimeout(
+  ()=>{
+
+    const report=
+      runCoreSelfTests();
+
+
+    window.MLB_SELF_TESTS=
+      report;
+
+
+    document.documentElement
+      .dataset
+      .mlbSelfTest=
+        report.ok
+          ?'ok'
+          :'fail';
+
+
+    if(report.ok){
+
+      console.info(
+        'MLB Self Tests:',
+        report.passed+
+        '/'+
+        report.total+
+        ' OK'
+      );
+
+    }else{
+
+      console.error(
+        'MLB SELF TEST FAILURE',
+        report
+      );
+    }
+
+
+    try{
+
+      console.table(
+        report.results
+      );
+
+    }catch{}
+
+  },
+  0
+);
+
 
 /* V7.8.4D1 DECISION AUDIT PANEL */
 
