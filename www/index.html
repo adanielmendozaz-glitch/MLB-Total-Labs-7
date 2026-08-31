@@ -14084,7 +14084,239 @@ function gameScoreCard(g){const x=gameMeta(g),q=S.odds.get(g.gamePk),away=g.team
 function renderGames(){const e=$('#games');if(!S.games.length){e.innerHTML='<div class="empty">No hay partidos para esta fecha o no se pudieron cargar.</div>';return}const order=[['LIVE','En vivo'],['UPCOMING','Próximos'],['FINAL','Finalizados']],groups=new Map(order.map(([k])=>[k,[]]));for(const g of S.games)groups.get(gameGroupKey(g)).push(g);e.innerHTML=order.map(([key,label])=>{const rows=groups.get(key);if(!rows.length)return'';return `<section class="game-group"><div class="game-group-title">${label}<span class="tag">${rows.length}</span></div><div class="game-grid">${rows.map(gameScoreCard).join('')}</div></section>`}).join('');$$('[data-open]').forEach(card=>{const open=()=>openGame(+card.dataset.open);card.onclick=open;card.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open()}}})}
 async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.loadedDay='';status('<span class="loader"></span> Cargando jornada, abridores y líneas…');try{const u=`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`;const d=await fetchJ(u,force?0:30000);S.games=(d.dates||[]).flatMap(x=>x.games||[]);S.loadedDay=day;if(!skipOdds)await loadAutoOdds(day,false).catch(e=>status(`Jornada cargada; líneas automáticas no disponibles: ${esc(e.message)}`));renderGames();renderRanking();renderCensus();$('#statusRight').textContent=`${S.games.length} juegos${S.odds.size?` · ${S.odds.size} líneas`:''}${S.oddsRemaining?` · API ${S.oddsRemaining}`:''}`;status(`${longDate(day)} · ${S.games.length} juegos cargados.`,'ok');startLive()}catch(e){const saved=rankViewForDate(day).rows.length;status(saved?`Sin conexión para cargar la jornada. Ranking guardado disponible offline: ${saved} picks.`:`No pude cargar la jornada: ${esc(e.message)}. No hay ranking guardado para esta fecha.` ,saved?'ok':'err');renderGames();renderRanking();renderCensus()}}
 async function refreshLive(){if(!S.liveOn||!S.games.length)return;try{const d=await fetchJ(`${API}/schedule?sportId=1&date=${$('#date').value}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`,0),fresh=(d.dates||[]).flatMap(x=>x.games||[]),map=new Map(fresh.map(x=>[x.gamePk,x]));S.games=S.games.map(x=>map.get(x.gamePk)||x);renderGames()}catch{}}
-function startLive(){clearInterval(S.liveTimer);if(S.liveOn)S.liveTimer=setInterval(refreshLive,n($('#liveEvery').value,60)*1000)}
+
+/* V7.8.6C4 AUTOMATIC PREGAME LINE WATCHER */
+
+function closingLineWatchEligible(){
+
+  if(
+    document.hidden ||
+    !S.games?.length
+  ){
+    return false;
+  }
+
+
+  const rows=
+    lab();
+
+
+  if(!Array.isArray(rows)){
+    return false;
+  }
+
+
+  const now=
+    Date.now();
+
+
+  const games=
+    new Map(
+      S.games.map(
+        g=>[
+          String(g.gamePk),
+          g
+        ]
+      )
+    );
+
+
+  return rows.some(r=>{
+
+    if(
+      !r ||
+      !r.analysisLineAt ||
+      r.analysisLineReal!==true ||
+      String(r.status||'').toUpperCase()!=='PENDING'
+    ){
+      return false;
+    }
+
+
+    const g=
+      games.get(
+        String(r.gamePk)
+      );
+
+
+    if(!g){
+      return false;
+    }
+
+
+    const start=
+      Date.parse(
+        r.scheduledStart ||
+        g.gameDate ||
+        ''
+      );
+
+
+    if(!Number.isFinite(start)){
+      return false;
+    }
+
+
+    const minutes=
+      (start-now)/60000;
+
+
+    /*
+     * Sólo vigilamos juegos que todavía
+     * no inician y están a <=75 minutos.
+     */
+
+    return(
+      minutes>0 &&
+      minutes<=75
+    );
+
+  });
+
+}
+
+
+async function closingLineWatchTick(){
+
+  if(
+    S.closingLineRefreshing ||
+    S.refreshingAll ||
+    document.hidden
+  ){
+    return;
+  }
+
+
+  if(
+    !closingLineWatchEligible()
+  ){
+    return;
+  }
+
+
+  const day=
+    $('#date')?.value || '';
+
+
+  if(
+    !day ||
+    S.loadedDay!==day
+  ){
+    return;
+  }
+
+
+  S.closingLineRefreshing=true;
+
+
+  try{
+
+    await loadAutoOdds(
+      day,
+      true
+    );
+
+
+    renderGames();
+
+
+    /*
+     * Sólo refresca la presentación.
+     * No ejecuta simulaciones.
+     */
+
+    const labPanel=
+      document.getElementById('lab');
+
+
+    if(
+      labPanel &&
+      !labPanel.classList.contains('hidden')
+    ){
+      renderLab();
+    }
+
+
+  }catch(e){
+
+    console.warn(
+      'Closing Line Watch:',
+      e?.message || e
+    );
+
+
+  }finally{
+
+    S.closingLineRefreshing=false;
+
+  }
+
+}
+
+
+function startClosingLineWatcher(){
+
+  clearInterval(
+    S.closingLineTimer
+  );
+
+
+  /*
+   * 5 minutos:
+   * suficiente granularidad sin golpear
+   * innecesariamente a los proveedores.
+   */
+
+  S.closingLineTimer=
+    setInterval(
+      closingLineWatchTick,
+      5*60*1000
+    );
+
+
+  /*
+   * Primera revisión poco después
+   * de abrir/cargar la jornada.
+   */
+
+  clearTimeout(
+    S.closingLineKickTimer
+  );
+
+
+  S.closingLineKickTimer=
+    setTimeout(
+      closingLineWatchTick,
+      20000
+    );
+
+}
+
+
+document.addEventListener(
+  'visibilitychange',
+  ()=>{
+
+    if(!document.hidden){
+
+      clearTimeout(
+        S.closingLineResumeTimer
+      );
+
+
+      S.closingLineResumeTimer=
+        setTimeout(
+          closingLineWatchTick,
+          5000
+        );
+
+    }
+
+  }
+);
+
+
+function startLive(){clearInterval(S.liveTimer);if(S.liveOn)S.liveTimer=setInterval(refreshLive,n($('#liveEvery').value,60)*1000);startClosingLineWatcher()}
 async function scanDay(mode='preview'){const isLab=mode==='lab',N=isLab?Math.max(3000,n($('#sims').value,8000)):2000,btn=isLab?$('#scanLab'):$('#scanDay');if(btn)btn.disabled=true;status(`<span class="loader"></span> ${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} · ${N.toLocaleString()} simulaciones…`);let done=0,labSaved=0,modelSkipped=0;for(const g of S.games){try{const d=await hydrateGame(g),ctx=autoContext(g,d),pre=meanProjection(ctx),def=defaultLines(g,pre),built=await buildModels(ctx,N,()=>{},JSON.stringify(def));built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',def.line,def.oo,def.uo,'TOTAL',def.lineSource),key:'total',label:'Total juego completo'}],best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs:def});if(isLab){const r=addLabForecast(g,ev,built,{realOnly:true});labSaved+=r.saved+r.updated;modelSkipped+=r.skippedModel||0}done++;status(`${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} ${done}/${S.games.length}…`)}catch(e){console.warn('scan',g.gamePk,e)}}renderGames();renderRanking();persistRankingDraft();renderLab();renderCensus();renderTeams();if(btn)btn.disabled=false;status(isLab?`Escaneo LAB terminado: ${done} juegos · ${labSaved} Totales reales actualizados · ${modelSkipped} juegos sin línea real excluidos.`:`Vista rápida terminada: ${done} juegos Full Game. No modificó aprendizaje ni Brier.`,'ok')}
 /* V7.8 NATIVE EXPORT FIX */
 async function download(
