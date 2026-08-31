@@ -88,11 +88,38 @@ const MLBDB = {
       const labMode = await this.initLabPersistence();
       const vaultHealth = await this.vaultHealth();
 
-      if (vaultHealth.ok) {
+      const vaultIntegrity =
+        await this.vaultIntegrityCheck();
+
+      this.lastVaultIntegrity =
+        vaultIntegrity;
+
+
+      if (
+        vaultHealth.ok &&
+        vaultIntegrity.ok
+      ) {
+
         this.showStatus(
           'SQLite OK · Data Vault protegido',
           true
         );
+
+      } else if (
+        vaultHealth.ok &&
+        !vaultIntegrity.ok
+      ) {
+
+        console.warn(
+          'Data Vault fingerprint mismatch:',
+          vaultIntegrity
+        );
+
+        this.showStatus(
+          'SQLite ALERTA · Vault desincronizado',
+          false
+        );
+
       } else if (censusMode === 'restored') {
         this.showStatus('SQLite OK · Censo restaurado', true);
       } else if (censusMode === 'backed-up') {
@@ -152,6 +179,114 @@ const MLBDB = {
       return false;
     }
   },
+
+
+  /* V7.8.5A2 SAFE DATA VAULT RESET */
+
+  async deleteKV(key) {
+
+    if(
+      !this.sqlite ||
+      !this.ready
+    ){
+      return false;
+    }
+
+
+    await this.sqlite.run({
+
+      database:
+        this.dbName,
+
+      statement:
+        'DELETE FROM app_kv WHERE key = ?',
+
+      values:
+        [key],
+
+      transaction:
+        true,
+
+      readonly:
+        false
+
+    });
+
+
+    return true;
+  },
+
+
+  async clearDataVaultSnapshots() {
+
+    if(
+      !this.sqlite ||
+      !this.ready
+    ){
+      return false;
+    }
+
+
+    const keys=[
+
+      this.betsSqlKey,
+
+      this.labSqlKey,
+
+      this.censusSqlKey,
+
+      this.bankSqlKey
+
+    ];
+
+
+    /*
+     * Borrado secuencial:
+     * si una operación falla,
+     * abortamos y NO declaramos
+     * el reset como exitoso.
+     */
+
+    for(const key of keys){
+
+      const ok=
+        await this.deleteKV(key);
+
+      if(!ok){
+        return false;
+      }
+    }
+
+
+    /*
+     * Verificación posterior.
+     * No confiamos solamente en
+     * que DELETE no arrojó error.
+     */
+
+    for(const key of keys){
+
+      const value=
+        await this.getKV(key);
+
+      if(value!==null){
+
+        console.error(
+          'SQLite reset verification failed:',
+          key
+        );
+
+        return false;
+      }
+    }
+
+
+    this.lastVaultIntegrity=null;
+
+
+    return true;
+  },
+
 
   async setKV(key, value) {
     if (!this.ready && !this.sqlite) return false;
@@ -1101,6 +1236,379 @@ const MLBDB = {
           :0
     };
   },
+
+
+  /* V7.8.5A1 DATA VAULT FINGERPRINT */
+
+  stableVaultString(value){
+
+    if(value===null){
+      return 'null';
+    }
+
+    if(Array.isArray(value)){
+
+      return '['+
+        value
+          .map(v=>
+            this.stableVaultString(v)
+          )
+          .join(',')+
+        ']';
+    }
+
+    if(
+      typeof value==='object'
+    ){
+
+      const keys=
+        Object.keys(value)
+          .sort();
+
+      return '{'+
+        keys
+          .map(k=>
+            JSON.stringify(k)+
+            ':'+
+            this.stableVaultString(
+              value[k]
+            )
+          )
+          .join(',')+
+        '}';
+    }
+
+    return JSON.stringify(value);
+  },
+
+
+  parseVaultValue(raw){
+
+    if(raw===null){
+      return{
+        present:false,
+        valid:true,
+        value:null
+      };
+    }
+
+    try{
+
+      return{
+        present:true,
+        valid:true,
+        value:JSON.parse(raw)
+      };
+
+    }catch(e){
+
+      return{
+        present:true,
+        valid:false,
+        value:String(raw)
+      };
+    }
+  },
+
+
+  async vaultFingerprint(value){
+
+    const text=
+      this.stableVaultString(value);
+
+
+    try{
+
+      if(
+        globalThis.crypto?.subtle &&
+        typeof TextEncoder!=='undefined'
+      ){
+
+        const bytes=
+          new TextEncoder()
+            .encode(text);
+
+        const digest=
+          await globalThis.crypto
+            .subtle
+            .digest(
+              'SHA-256',
+              bytes
+            );
+
+        return Array
+          .from(
+            new Uint8Array(digest)
+          )
+          .map(x=>
+            x.toString(16)
+              .padStart(2,'0')
+          )
+          .join('');
+      }
+
+    }catch(e){
+
+      console.warn(
+        'SHA-256 no disponible; usando fallback',
+        e
+      );
+    }
+
+
+    let h1=2166136261;
+    let h2=2246822507;
+
+    for(
+      let i=0;
+      i<text.length;
+      i++
+    ){
+
+      const c=
+        text.charCodeAt(i);
+
+      h1^=c;
+      h1=Math.imul(
+        h1,
+        16777619
+      );
+
+      h2^=c;
+      h2=Math.imul(
+        h2,
+        3266489917
+      );
+    }
+
+    return(
+      'fallback-'+
+      (h1>>>0)
+        .toString(16)
+        .padStart(8,'0')+
+      (h2>>>0)
+        .toString(16)
+        .padStart(8,'0')
+    );
+  },
+
+
+  async vaultIntegrityCheck(){
+
+    const localRaw={
+      bets:null,
+      lab:null,
+      census:null,
+      bank:null
+    };
+
+
+    try{
+      localRaw.bets=
+        localStorage.getItem(
+          this.betsStorageKey
+        );
+    }catch{}
+
+    try{
+      localRaw.lab=
+        localStorage.getItem(
+          this.labStorageKey
+        );
+    }catch{}
+
+    try{
+      localRaw.census=
+        localStorage.getItem(
+          this.censusStorageKey
+        );
+    }catch{}
+
+    try{
+      localRaw.bank=
+        localStorage.getItem(
+          this.bankStorageKey
+        );
+    }catch{}
+
+
+    const nativeRaw={
+      bets:null,
+      lab:null,
+      census:null,
+      bank:null
+    };
+
+
+    try{
+
+      const values=
+        await Promise.all([
+
+          this.getKV(
+            this.betsSqlKey
+          ),
+
+          this.getKV(
+            this.labSqlKey
+          ),
+
+          this.getKV(
+            this.censusSqlKey
+          ),
+
+          this.getKV(
+            this.bankSqlKey
+          )
+
+        ]);
+
+      nativeRaw.bets=
+        values[0];
+
+      nativeRaw.lab=
+        values[1];
+
+      nativeRaw.census=
+        values[2];
+
+      nativeRaw.bank=
+        values[3];
+
+    }catch(e){
+
+      console.error(
+        'Data Vault integrity read:',
+        e
+      );
+
+      return{
+        ok:false,
+        checkedAt:
+          new Date().toISOString(),
+        error:
+          String(
+            e?.message || e
+          ),
+        details:{}
+      };
+    }
+
+
+    const details={};
+    let ok=true;
+
+
+    for(
+      const name
+      of[
+        'bets',
+        'lab',
+        'census',
+        'bank'
+      ]
+    ){
+
+      const local=
+        this.parseVaultValue(
+          localRaw[name]
+        );
+
+      const native=
+        this.parseVaultValue(
+          nativeRaw[name]
+        );
+
+
+      const localHash=
+        local.present
+          ?await this.vaultFingerprint(
+              local.value
+            )
+          :null;
+
+      const nativeHash=
+        native.present
+          ?await this.vaultFingerprint(
+              native.value
+            )
+          :null;
+
+
+      let match=false;
+
+
+      if(
+        !local.present &&
+        !native.present
+      ){
+
+        match=true;
+
+      }else if(
+        local.present &&
+        native.present &&
+        local.valid &&
+        native.valid &&
+        localHash===nativeHash
+      ){
+
+        match=true;
+      }
+
+
+      if(!match){
+        ok=false;
+      }
+
+
+      details[name]={
+
+        match,
+
+        localPresent:
+          local.present,
+
+        nativePresent:
+          native.present,
+
+        localValid:
+          local.valid,
+
+        nativeValid:
+          native.valid,
+
+        localHash:
+          localHash
+            ?localHash.slice(0,16)
+            :null,
+
+        nativeHash:
+          nativeHash
+            ?nativeHash.slice(0,16)
+            :null
+
+      };
+    }
+
+
+    return{
+
+      ok,
+
+      checkedAt:
+        new Date().toISOString(),
+
+      algorithm:
+        globalThis.crypto?.subtle
+          ?'SHA-256'
+          :'FALLBACK',
+
+      details
+
+    };
+  },
+
 
   async vaultHealth(){
 

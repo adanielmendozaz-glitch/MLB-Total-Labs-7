@@ -9782,7 +9782,144 @@ async function exportJson(){
 function exportLab(){download('mlb_v70_calibracion_full_game.json',JSON.stringify(lab(),null,2),'application/json')}
 function importJson(file){const r=new FileReader;r.onload=()=>{try{const x=JSON.parse(r.result);let added=0;if(Array.isArray(x))added=mergeBetRows(x,'V4 JSON');else{if(Array.isArray(x.bets))added=mergeBetRows(x.bets,'v5');if(Array.isArray(x.lab))saveLab(dedupeLabRows(x.lab));if(x.cfg)STORE.setItem('mlb_v5_cfg',JSON.stringify(x.cfg));if(x.bank&&typeof x.bank==='object')saveBankCfg(x.bank);if(x.markets)STORE.setItem('mlb_v5_markets',JSON.stringify(x.markets));if(x.rankCensus&&typeof x.rankCensus==='object')saveRankCensus(x.rankCensus);else if(x.rankTracker&&typeof x.rankTracker==='object'){saveLegacyRankArchive(x.rankTracker);const c=rankCensus();c.migrated=false;saveRankCensus(c);migrateRankingToCensus()}if(x.rankDrafts&&typeof x.rankDrafts==='object')STORE.setItem('mlb_v59_rank_drafts',JSON.stringify(x.rankDrafts))}loadCfg();renderHistory();renderBank();renderLab();renderTeams();renderCensus();renderRanking();status(`Respaldo importado${added?`: ${added} apuestas agregadas`:''}.`,'ok')}catch(e){alert(`JSON inválido: ${e.message}`)}};r.readAsText(file)}
 $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab')renderLab();if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
-$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=settleBets;$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=settleLab;$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=settleLab;$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#resetAll').onclick=()=>{if(confirm('¿Restablecer ajustes, mercados, apuestas y calibración?')){STORE.clearPrefix('mlb_v5_');STORE.removeItem('mlb_v60_rank_census');STORE.removeItem('mlb_v71_bank');STORE.removeItem('mlb_v61_public_odds_cache');location.reload()}};
+$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=settleBets;$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=settleLab;$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=settleLab;$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;
+/* V7.8.5A2 SAFE RESET HANDLER */
+
+$('#resetAll').onclick=async()=>{
+
+  const first=
+    confirm(
+      '⚠️ RESTABLECIMIENTO TOTAL\n\n'+
+      'Esto eliminará:\n'+
+      '• ajustes y mercados\n'+
+      '• historial de apuestas\n'+
+      '• LAB y calibración\n'+
+      '• Censo y Ranking guardado\n'+
+      '• Bank\n\n'+
+      'También eliminará las copias de SQLite.\n\n'+
+      '¿Deseas continuar?'
+    );
+
+
+  if(!first){
+    return;
+  }
+
+
+  const second=
+    confirm(
+      'ÚLTIMA CONFIRMACIÓN\n\n'+
+      'El Data Vault completo será eliminado.\n'+
+      'Esta acción no se puede deshacer desde la app.\n\n'+
+      '¿Confirmas el borrado TOTAL?'
+    );
+
+
+  if(!second){
+    return;
+  }
+
+
+  try{
+
+    /*
+     * Regla de seguridad:
+     * primero SQLite.
+     *
+     * Si SQLite falla,
+     * NO tocamos almacenamiento local.
+     */
+
+    if(
+      !window.MLBDB ||
+      window.MLBDB.ready!==true
+    ){
+
+      throw new Error(
+        'SQLite no está disponible. Reset cancelado.'
+      );
+    }
+
+
+    const nativeCleared=
+      await window.MLBDB
+        .clearDataVaultSnapshots();
+
+
+    if(!nativeCleared){
+
+      throw new Error(
+        'SQLite no confirmó el borrado. Reset cancelado.'
+      );
+    }
+
+
+    /*
+     * Sólo después de confirmar
+     * SQLite eliminamos la copia web.
+     */
+
+    STORE.clearPrefix(
+      'mlb_v5_'
+    );
+
+
+    const exactKeys=[
+
+      'mlb_v58_rank_tracker',
+
+      'mlb_v59_rank_drafts',
+
+      'mlb_v60_rank_census',
+
+      'mlb_v61_public_odds_cache',
+
+      'mlb_v71_bank'
+
+    ];
+
+
+    for(const key of exactKeys){
+
+      STORE.removeItem(
+        key
+      );
+    }
+
+
+    location.reload();
+
+
+  }catch(e){
+
+    console.error(
+      'Safe Reset:',
+      e
+    );
+
+
+    try{
+
+      status(
+        'Reset cancelado: '+
+        String(
+          e?.message || e
+        ),
+        'err'
+      );
+
+    }catch{}
+
+
+    alert(
+      'No se borró el Data Vault.\n\n'+
+      String(
+        e?.message || e
+      )
+    );
+  }
+};
+
 async function boot(){renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
