@@ -11733,7 +11733,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -12631,6 +12631,1479 @@ function rankAuditRunInvariantSelfTest(){
 }
 
 
+
+/* V7.8.6H1 FIRST LAST DECISION TRACE */
+
+function decisionTraceSnapshot(
+  row={},
+  at=new Date().toISOString()
+){
+
+  const probability=
+    Number.isFinite(
+      Number(row.decisionProbability)
+    )
+      ?Number(row.decisionProbability)
+      :Number.isFinite(
+          Number(row.p)
+        )
+        ?Number(row.p)
+        :null;
+
+
+  return{
+
+    signal:
+      String(
+        row.signal || 'LAB'
+      ).toUpperCase(),
+
+    probability,
+
+    side:
+      String(
+        row.side || ''
+      ).toUpperCase() || null,
+
+    line:
+      Number.isFinite(
+        Number(row.line)
+      )
+        ?Number(row.line)
+        :null,
+
+    lineSource:
+      row.lineSource
+        ?String(row.lineSource)
+        :null,
+
+    edge:
+      Number.isFinite(
+        Number(row.edge)
+      )
+        ?Number(row.edge)
+        :null,
+
+    rank:
+      Number.isFinite(
+        Number(row.rank)
+      )
+        ?Number(row.rank)
+        :null,
+
+    activeRank:
+      Number.isFinite(
+        Number(row.activeRank)
+      )
+        ?Number(row.activeRank)
+        :null,
+
+    at
+
+  };
+
+}
+
+
+function decisionTraceApply(
+  old,
+  fresh,
+  capturedAt=new Date().toISOString()
+){
+
+  if(
+    !fresh ||
+    typeof fresh!=='object'
+  ){
+    return fresh;
+  }
+
+
+  const current=
+    decisionTraceSnapshot(
+      fresh,
+      capturedAt
+    );
+
+
+  const traced=
+    !!(
+      old &&
+      old.decisionTraceVersion==='V7.8.6H1' &&
+      old.decisionCohortId==='DECISION_TRACE_V1'
+    );
+
+
+  if(!traced){
+
+    /*
+     * Si el juego ya existía antes de H1,
+     * esta lectura es únicamente un baseline
+     * prospectivo. No fingimos conocer su
+     * verdadera primera lectura histórica.
+     */
+
+    const base=
+      old ||
+      fresh;
+
+
+    const first=
+      decisionTraceSnapshot(
+        base,
+        capturedAt
+      );
+
+
+    fresh.firstSignal=
+      first.signal;
+
+    fresh.firstProbability=
+      first.probability;
+
+    fresh.firstSide=
+      first.side;
+
+    fresh.firstLine=
+      first.line;
+
+    fresh.firstLineSource=
+      first.lineSource;
+
+    fresh.firstEdge=
+      first.edge;
+
+    fresh.firstRank=
+      first.rank;
+
+    fresh.firstActiveRank=
+      first.activeRank;
+
+    fresh.firstSnapshotAt=
+      capturedAt;
+
+
+    fresh.signalFlipCount=0;
+
+    fresh.sideFlipCount=0;
+
+    fresh.lineChangeCount=0;
+
+    fresh.signalTransitions=[];
+
+
+    fresh.decisionTraceOrigin=
+      old
+        ?'H1_BASELINE'
+        :'NEW_ROW';
+
+
+  }else{
+
+    /*
+     * FIRST queda congelado.
+     */
+
+    fresh.firstSignal=
+      old.firstSignal ?? null;
+
+    fresh.firstProbability=
+      old.firstProbability ?? null;
+
+    fresh.firstSide=
+      old.firstSide ?? null;
+
+    fresh.firstLine=
+      old.firstLine ?? null;
+
+    fresh.firstLineSource=
+      old.firstLineSource ?? null;
+
+    fresh.firstEdge=
+      old.firstEdge ?? null;
+
+    fresh.firstRank=
+      old.firstRank ?? null;
+
+    fresh.firstActiveRank=
+      old.firstActiveRank ?? null;
+
+    fresh.firstSnapshotAt=
+      old.firstSnapshotAt ?? null;
+
+
+    fresh.decisionTraceOrigin=
+      old.decisionTraceOrigin ||
+      'NEW_ROW';
+
+
+    fresh.signalFlipCount=
+      Number(
+        old.signalFlipCount
+      ) || 0;
+
+
+    fresh.sideFlipCount=
+      Number(
+        old.sideFlipCount
+      ) || 0;
+
+
+    fresh.lineChangeCount=
+      Number(
+        old.lineChangeCount
+      ) || 0;
+
+
+    fresh.signalTransitions=
+      Array.isArray(
+        old.signalTransitions
+      )
+        ?[
+            ...old.signalTransitions
+          ]
+        :[];
+
+
+    const previousSignal=
+      String(
+        old.lastSignal ||
+        old.signal ||
+        ''
+      ).toUpperCase();
+
+
+    if(
+      previousSignal &&
+      current.signal &&
+      previousSignal!==current.signal
+    ){
+
+      fresh.signalFlipCount++;
+
+
+      fresh.signalTransitions.push({
+
+        at:
+          capturedAt,
+
+        from:
+          previousSignal,
+
+        to:
+          current.signal,
+
+        probability:
+          current.probability,
+
+        side:
+          current.side,
+
+        line:
+          current.line,
+
+        rank:
+          current.rank,
+
+        activeRank:
+          current.activeRank
+
+      });
+
+
+      /*
+       * Evitamos crecimiento infinito.
+       */
+
+      fresh.signalTransitions=
+        fresh.signalTransitions
+          .slice(-20);
+
+    }
+
+
+    const previousSide=
+      String(
+        old.lastSide ||
+        old.side ||
+        ''
+      ).toUpperCase();
+
+
+    if(
+      previousSide &&
+      current.side &&
+      previousSide!==current.side
+    ){
+      fresh.sideFlipCount++;
+    }
+
+
+    const previousLine=
+      Number(
+        old.lastLine
+      );
+
+
+    if(
+      Number.isFinite(previousLine) &&
+      Number.isFinite(current.line) &&
+      Math.abs(
+        previousLine-current.line
+      )>.0001
+    ){
+      fresh.lineChangeCount++;
+    }
+
+  }
+
+
+  /*
+   * LAST siempre puede avanzar mientras
+   * el juego permanezca pregame.
+   */
+
+  fresh.lastSignal=
+    current.signal;
+
+  fresh.lastProbability=
+    current.probability;
+
+  fresh.lastSide=
+    current.side;
+
+  fresh.lastLine=
+    current.line;
+
+  fresh.lastLineSource=
+    current.lineSource;
+
+  fresh.lastEdge=
+    current.edge;
+
+  fresh.lastRank=
+    current.rank;
+
+  fresh.lastActiveRank=
+    current.activeRank;
+
+  fresh.lastSnapshotAt=
+    capturedAt;
+
+
+  fresh.probabilityDrift=
+    Number.isFinite(
+      Number(fresh.firstProbability)
+    ) &&
+    Number.isFinite(
+      Number(fresh.lastProbability)
+    )
+      ?(
+          Number(fresh.lastProbability)-
+          Number(fresh.firstProbability)
+        )
+      :null;
+
+
+  fresh.decisionTraceVersion=
+    'V7.8.6H1';
+
+
+  fresh.decisionCohortId=
+    'DECISION_TRACE_V1';
+
+
+  return fresh;
+}
+
+
+
+
+/* V7.8.6H3 DECISION TRACE INTEGRITY TEST */
+
+function decisionTraceIntegritySelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  const clone=x=>
+    JSON.parse(
+      JSON.stringify(x)
+    );
+
+
+  const t1=
+    '2026-09-01T12:00:00.000Z';
+
+  const t2=
+    '2026-09-01T12:15:00.000Z';
+
+  const t3=
+    '2026-09-01T12:30:00.000Z';
+
+  const t4=
+    '2026-09-01T12:40:00.000Z';
+
+
+  /*
+   * 1 · Primera captura real
+   */
+
+  const r1={
+
+    gamePk:1001,
+
+    signal:'LEAN',
+
+    p:.55,
+
+    side:'OVER',
+
+    line:8.5,
+
+    lineSource:'ESPN',
+
+    edge:.02,
+
+    rank:5,
+
+    activeRank:2
+
+  };
+
+
+  decisionTraceApply(
+    null,
+    r1,
+    t1
+  );
+
+
+  test(
+    'NEW_ROW crea First y Last idénticos',
+    r1.decisionTraceOrigin==='NEW_ROW' &&
+    r1.firstSignal==='LEAN' &&
+    r1.lastSignal==='LEAN' &&
+    r1.firstProbability===.55 &&
+    r1.lastProbability===.55 &&
+    r1.firstRank===5 &&
+    r1.lastRank===5 &&
+    r1.firstActiveRank===2 &&
+    r1.lastActiveRank===2 &&
+    r1.firstSnapshotAt===t1 &&
+    r1.lastSnapshotAt===t1
+  );
+
+
+  /*
+   * 2 · LEAN → JUGABLE
+   */
+
+  const r2={
+    ...clone(r1),
+
+    signal:'JUGABLE',
+
+    p:.59,
+
+    edge:.06,
+
+    rank:3,
+
+    activeRank:1
+  };
+
+
+  decisionTraceApply(
+    r1,
+    r2,
+    t2
+  );
+
+
+  test(
+    'FIRST permanece congelado',
+    r2.firstSignal==='LEAN' &&
+    r2.firstProbability===.55 &&
+    r2.firstSide==='OVER' &&
+    r2.firstLine===8.5 &&
+    r2.firstRank===5 &&
+    r2.firstActiveRank===2 &&
+    r2.firstSnapshotAt===t1
+  );
+
+
+  test(
+    'LEAN a JUGABLE cuenta un flip',
+    r2.lastSignal==='JUGABLE' &&
+    r2.signalFlipCount===1 &&
+    r2.signalTransitions.length===1 &&
+    r2.signalTransitions[0].from==='LEAN' &&
+    r2.signalTransitions[0].to==='JUGABLE'
+  );
+
+
+  /*
+   * 3 · JUGABLE → LEAN
+   *     OVER → UNDER
+   *     8.5 → 9.0
+   */
+
+  const r3={
+    ...clone(r2),
+
+    signal:'LEAN',
+
+    p:.56,
+
+    side:'UNDER',
+
+    line:9,
+
+    edge:.03,
+
+    rank:4,
+
+    activeRank:2
+  };
+
+
+  decisionTraceApply(
+    r2,
+    r3,
+    t3
+  );
+
+
+  test(
+    'segundo cambio cuenta exactamente',
+    r3.signalFlipCount===2 &&
+    r3.sideFlipCount===1 &&
+    r3.lineChangeCount===1 &&
+    r3.lastSignal==='LEAN' &&
+    r3.lastSide==='UNDER' &&
+    r3.lastLine===9
+  );
+
+
+  /*
+   * 4 · Repetir exactamente la misma
+   * lectura NO debe duplicar cambios.
+   */
+
+  const r4=
+    clone(r3);
+
+
+  decisionTraceApply(
+    r3,
+    r4,
+    t4
+  );
+
+
+  test(
+    'snapshot repetido no duplica flips',
+    r4.signalFlipCount===2 &&
+    r4.sideFlipCount===1 &&
+    r4.lineChangeCount===1
+  );
+
+
+  /*
+   * 5 · Drift correcto y FIRST intacto.
+   */
+
+  test(
+    'drift y timestamp First permanecen correctos',
+    Math.abs(
+      r4.probabilityDrift-.01
+    )<1e-12 &&
+    r4.firstProbability===.55 &&
+    r4.lastProbability===.56 &&
+    r4.firstSnapshotAt===t1 &&
+    r4.lastSnapshotAt===t4
+  );
+
+
+  /*
+   * 6 · Timeline exacta.
+   */
+
+  test(
+    'timeline conserva ambas transiciones',
+    r4.signalTransitions.length===2 &&
+    r4.signalTransitions[0].from==='LEAN' &&
+    r4.signalTransitions[0].to==='JUGABLE' &&
+    r4.signalTransitions[1].from==='JUGABLE' &&
+    r4.signalTransitions[1].to==='LEAN'
+  );
+
+
+  /*
+   * 7 · Registro previo a H1.
+   *
+   * No fingimos que PASS → LEAN fue
+   * realmente observado como flip.
+   */
+
+  const legacyOld={
+
+    gamePk:2002,
+
+    signal:'PASS',
+
+    p:.51,
+
+    side:'UNDER',
+
+    line:8.5,
+
+    rank:7,
+
+    activeRank:null
+
+  };
+
+
+  const legacyFresh={
+
+    gamePk:2002,
+
+    signal:'LEAN',
+
+    p:.55,
+
+    side:'UNDER',
+
+    line:8.5,
+
+    rank:6,
+
+    activeRank:4
+
+  };
+
+
+  decisionTraceApply(
+    legacyOld,
+    legacyFresh,
+    t2
+  );
+
+
+  test(
+    'H1_BASELINE no inventa flips históricos',
+    legacyFresh.decisionTraceOrigin==='H1_BASELINE' &&
+    legacyFresh.firstSignal==='PASS' &&
+    legacyFresh.lastSignal==='LEAN' &&
+    legacyFresh.signalFlipCount===0 &&
+    legacyFresh.sideFlipCount===0 &&
+    legacyFresh.lineChangeCount===0 &&
+    legacyFresh.signalTransitions.length===0
+  );
+
+
+  /*
+   * 8 · Identidad del cohort.
+   */
+
+  test(
+    'Decision Trace mantiene versión y cohort',
+    r4.decisionTraceVersion==='V7.8.6H1' &&
+    r4.decisionCohortId==='DECISION_TRACE_V1' &&
+    legacyFresh.decisionTraceVersion==='V7.8.6H1' &&
+    legacyFresh.decisionCohortId==='DECISION_TRACE_V1'
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function decisionTraceRunIntegritySelfTest(){
+
+  const report=
+    decisionTraceIntegritySelfTest();
+
+
+  window.__MLB_DECISION_TRACE_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'DECISION TRACE INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+  }else{
+
+    console.error(
+      'DECISION TRACE INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+}
+
+
+/* V7.8.6H2 DECISION TRACE DASHBOARD */
+
+function decisionTraceStats(
+  rows=censusAllRows()
+){
+
+  const traced=
+    (
+      Array.isArray(rows)
+        ?rows
+        :[]
+    ).filter(r=>
+      r?.decisionTraceVersion==='V7.8.6H1' &&
+      r?.decisionCohortId==='DECISION_TRACE_V1'
+    );
+
+
+  /*
+   * NEW_ROW sí tiene una primera lectura
+   * genuina capturada después de H1.
+   *
+   * H1_BASELINE sólo empieza a observar
+   * desde el momento en que instalamos H1.
+   */
+
+  const clean=
+    traced.filter(r=>
+      r.decisionTraceOrigin==='NEW_ROW'
+    );
+
+
+  const baseline=
+    traced.filter(r=>
+      r.decisionTraceOrigin==='H1_BASELINE'
+    );
+
+
+  const settled=
+    clean.filter(r=>
+      (
+        String(r.status||'').toUpperCase()==='FINAL' ||
+        String(r.status||'').toUpperCase()==='PUSH'
+      )
+    );
+
+
+  const signalChanged=
+    clean.filter(r=>
+      Number(r.signalFlipCount)>0
+    );
+
+
+  const sideChanged=
+    clean.filter(r=>
+      Number(r.sideFlipCount)>0
+    );
+
+
+  const lineChanged=
+    clean.filter(r=>
+      Number(r.lineChangeCount)>0
+    );
+
+
+  const probDrifts=
+    clean
+      .map(r=>
+        Number(r.probabilityDrift)
+      )
+      .filter(Number.isFinite);
+
+
+  const avgProbDrift=
+    probDrifts.length
+      ?probDrifts.reduce(
+          (a,b)=>a+b,
+          0
+        )/probDrifts.length
+      :NaN;
+
+
+  const avgAbsProbDrift=
+    probDrifts.length
+      ?probDrifts.reduce(
+          (a,b)=>a+Math.abs(b),
+          0
+        )/probDrifts.length
+      :NaN;
+
+
+  const transitionMap=
+    new Map();
+
+
+  for(const r of clean){
+
+    for(
+      const t
+      of (
+        Array.isArray(r.signalTransitions)
+          ?r.signalTransitions
+          :[]
+      )
+    ){
+
+      const from=
+        String(
+          t?.from||''
+        ).toUpperCase();
+
+
+      const to=
+        String(
+          t?.to||''
+        ).toUpperCase();
+
+
+      if(
+        !from ||
+        !to ||
+        from===to
+      ){
+        continue;
+      }
+
+
+      const key=
+        from+' → '+to;
+
+
+      transitionMap.set(
+        key,
+        (
+          transitionMap.get(key)||
+          0
+        )+1
+      );
+
+    }
+
+  }
+
+
+  const transitions=
+    [...transitionMap.entries()]
+      .map(([label,n])=>({
+        label,
+        n
+      }))
+      .sort(
+        (a,b)=>
+          b.n-a.n ||
+          a.label.localeCompare(b.label)
+      );
+
+
+  const signals=[
+    'JUGABLE',
+    'LEAN',
+    'PASS'
+  ];
+
+
+  const signalTable=
+    signals.map(signal=>{
+
+      const first=
+        clean.filter(r=>
+          String(
+            r.firstSignal||''
+          ).toUpperCase()===signal
+        ).length;
+
+
+      const last=
+        clean.filter(r=>
+          String(
+            r.lastSignal||''
+          ).toUpperCase()===signal
+        ).length;
+
+
+      const stable=
+        clean.filter(r=>
+          String(
+            r.firstSignal||''
+          ).toUpperCase()===signal &&
+          String(
+            r.lastSignal||''
+          ).toUpperCase()===signal
+        ).length;
+
+
+      return{
+        signal,
+        first,
+        last,
+        stable
+      };
+
+    });
+
+
+  return{
+
+    totalCensus:
+      Array.isArray(rows)
+        ?rows.length
+        :0,
+
+    traced:
+      traced.length,
+
+    clean:
+      clean.length,
+
+    baseline:
+      baseline.length,
+
+    settled:
+      settled.length,
+
+    signalChanged:
+      signalChanged.length,
+
+    sideChanged:
+      sideChanged.length,
+
+    lineChanged:
+      lineChanged.length,
+
+    totalSignalFlips:
+      clean.reduce(
+        (a,r)=>
+          a+
+          (
+            Number(r.signalFlipCount)||
+            0
+          ),
+        0
+      ),
+
+    totalSideFlips:
+      clean.reduce(
+        (a,r)=>
+          a+
+          (
+            Number(r.sideFlipCount)||
+            0
+          ),
+        0
+      ),
+
+    totalLineChanges:
+      clean.reduce(
+        (a,r)=>
+          a+
+          (
+            Number(r.lineChangeCount)||
+            0
+          ),
+        0
+      ),
+
+    avgProbDrift,
+
+    avgAbsProbDrift,
+
+    transitions,
+
+    signalTable,
+
+    cleanRows:
+      clean
+
+  };
+
+}
+
+
+function decisionTraceDashboardHtml(){
+
+  const d=
+    decisionTraceStats();
+
+
+  const integrity=
+    decisionTraceIntegritySelfTest();
+
+
+  const pctSigned=v=>
+    Number.isFinite(v)
+      ?(
+          v>=0
+            ?'+'
+            :''
+        )+
+        (v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const pctAbs=v=>
+    Number.isFinite(v)
+      ?(
+          Math.abs(v)*100
+        ).toFixed(1)+'%'
+      :'—';
+
+
+  const transitionRows=
+    d.transitions.length
+      ?d.transitions
+        .slice(0,10)
+        .map(x=>`
+
+          <tr>
+
+            <td>
+              <b>
+                ${x.label}
+              </b>
+            </td>
+
+            <td>
+              ${x.n}
+            </td>
+
+          </tr>
+
+        `)
+        .join('')
+
+      :`
+
+        <tr>
+
+          <td colspan="2">
+
+            <div class="smalltxt">
+              Todavía no se han observado
+              cambios de señal en el cohort
+              prospectivo.
+            </div>
+
+          </td>
+
+        </tr>
+
+      `;
+
+
+  const signalRows=
+    d.signalTable
+      .map(x=>`
+
+        <tr>
+
+          <td>
+            <b>
+              ${x.signal}
+            </b>
+          </td>
+
+          <td>
+            ${x.first}
+          </td>
+
+          <td>
+            ${x.last}
+          </td>
+
+          <td>
+            ${x.stable}
+          </td>
+
+        </tr>
+
+      `)
+      .join('');
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Decision Trace · First vs Last
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Sigue cómo evoluciona una predicción
+        desde su primera captura hasta la
+        última lectura pregame.
+
+        Las comparaciones First vs Last sólo
+        usan NEW_ROW. Los juegos anteriores a
+        H1 permanecen como H1_BASELINE.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Decision Trace Integrity
+          </small>
+
+          <div class="big ${integrity.ok?'bp-good':'bp-bad'}">
+            ${integrity.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            ${integrity.passed}/${integrity.total} pruebas
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Con Decision Trace
+          </small>
+
+          <div class="big">
+            ${d.traced}
+          </div>
+
+          <div class="smalltxt">
+            cobertura total desde H1
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            First real · NEW_ROW
+          </small>
+
+          <div class="big">
+            ${d.clean}
+          </div>
+
+          <div class="smalltxt">
+            cohort prospectivo limpio
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Baseline
+          </small>
+
+          <div class="big">
+            ${d.baseline}
+          </div>
+
+          <div class="smalltxt">
+            existentes antes de H1
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados clean
+          </small>
+
+          <div class="big">
+            ${d.settled}
+          </div>
+
+          <div class="smalltxt">
+            FINAL + PUSH
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Juegos con cambio de señal
+          </small>
+
+          <div class="big">
+            ${d.signalChanged}
+          </div>
+
+          <div class="smalltxt">
+            ${d.totalSignalFlips} flips totales
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Juegos con cambio de lado
+          </small>
+
+          <div class="big">
+            ${d.sideChanged}
+          </div>
+
+          <div class="smalltxt">
+            ${d.totalSideFlips} flips OVER/UNDER
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Juegos con cambio de línea
+          </small>
+
+          <div class="big">
+            ${d.lineChanged}
+          </div>
+
+          <div class="smalltxt">
+            ${d.totalLineChanges} cambios totales
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Drift probabilidad medio
+          </small>
+
+          <div class="big">
+            ${pctSigned(
+              d.avgProbDrift
+            )}
+          </div>
+
+          <div class="smalltxt">
+            Last − First
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Drift absoluto medio
+          </small>
+
+          <div class="big">
+            ${pctAbs(
+              d.avgAbsProbDrift
+            )}
+          </div>
+
+          <div class="smalltxt">
+            magnitud del cambio
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          Distribución First → Last
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Señal
+                </th>
+
+                <th>
+                  First
+                </th>
+
+                <th>
+                  Last
+                </th>
+
+                <th>
+                  Sin cambio
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${signalRows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="section">
+
+        <h3>
+          Transiciones de señal
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Transición
+                </th>
+
+                <th>
+                  N
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${transitionRows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        Ejemplos:
+
+        LEAN → JUGABLE significa que la señal
+        ganó fuerza antes del inicio.
+
+        JUGABLE → LEAN significa que perdió
+        fuerza.
+
+        OVER → UNDER cuenta como cambio de lado
+        y se mide por separado.
+
+        Drift de probabilidad = última
+        probabilidad − primera probabilidad.
+
+        H1_BASELINE NO se utiliza para afirmar
+        cuál fue la verdadera primera lectura
+        histórica.
+
+        Este panel sólo observa comportamiento.
+        No modifica el Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
 function syncRankingCensus(date,viewRows){
  if(!date||!Array.isArray(viewRows)||!viewRows.length)return 0;
  const data=rankCensus(),now=Date.now(),existing=data.days[date]||{date,created:new Date().toISOString(),updated:null,rows:[]};
@@ -12645,6 +14118,12 @@ function syncRankingCensus(date,viewRows){
     old,
     fresh
   );
+
+  decisionTraceApply(
+    old,
+    fresh
+  );
+
   byGame.set(key,fresh);changed++;
  }
  existing.rows=[...byGame.values()].sort((a,b)=>(n(a.rank,999)-n(b.rank,999))||String(a.gameDate||'').localeCompare(String(b.gameDate||'')));
@@ -20248,7 +21727,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();settleAllUnified(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
