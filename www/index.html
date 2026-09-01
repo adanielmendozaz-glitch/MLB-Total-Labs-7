@@ -10703,7 +10703,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -14084,6 +14084,1197 @@ function gameScoreCard(g){const x=gameMeta(g),q=S.odds.get(g.gamePk),away=g.team
 function renderGames(){const e=$('#games');if(!S.games.length){e.innerHTML='<div class="empty">No hay partidos para esta fecha o no se pudieron cargar.</div>';return}const order=[['LIVE','En vivo'],['UPCOMING','Próximos'],['FINAL','Finalizados']],groups=new Map(order.map(([k])=>[k,[]]));for(const g of S.games)groups.get(gameGroupKey(g)).push(g);e.innerHTML=order.map(([key,label])=>{const rows=groups.get(key);if(!rows.length)return'';return `<section class="game-group"><div class="game-group-title">${label}<span class="tag">${rows.length}</span></div><div class="game-grid">${rows.map(gameScoreCard).join('')}</div></section>`}).join('');$$('[data-open]').forEach(card=>{const open=()=>openGame(+card.dataset.open);card.onclick=open;card.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open()}}})}
 async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.loadedDay='';status('<span class="loader"></span> Cargando jornada, abridores y líneas…');try{const u=`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`;const d=await fetchJ(u,force?0:30000);S.games=(d.dates||[]).flatMap(x=>x.games||[]);S.loadedDay=day;if(!skipOdds)await loadAutoOdds(day,false).catch(e=>status(`Jornada cargada; líneas automáticas no disponibles: ${esc(e.message)}`));renderGames();renderRanking();renderCensus();$('#statusRight').textContent=`${S.games.length} juegos${S.odds.size?` · ${S.odds.size} líneas`:''}${S.oddsRemaining?` · API ${S.oddsRemaining}`:''}`;status(`${longDate(day)} · ${S.games.length} juegos cargados.`,'ok');startLive()}catch(e){const saved=rankViewForDate(day).rows.length;status(saved?`Sin conexión para cargar la jornada. Ranking guardado disponible offline: ${saved} picks.`:`No pude cargar la jornada: ${esc(e.message)}. No hay ranking guardado para esta fecha.` ,saved?'ok':'err');renderGames();renderRanking();renderCensus()}}
 async function refreshLive(){if(!S.liveOn||!S.games.length)return;try{const d=await fetchJ(`${API}/schedule?sportId=1&date=${$('#date').value}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`,0),fresh=(d.dates||[]).flatMap(x=>x.games||[]),map=new Map(fresh.map(x=>[x.gamePk,x]));S.games=S.games.map(x=>map.get(x.gamePk)||x);renderGames()}catch{}}
+
+
+
+
+/* V7.8.6D3 SEGMENT WATCHLIST ALERTS */
+
+function segmentAlertState(
+  x={}
+){
+
+  /*
+   * No hacemos conclusiones fuertes
+   * con menos de 25 resultados.
+   */
+
+  if(
+    !Number.isFinite(+x.n) ||
+    +x.n<=0
+  ){
+    return{
+      state:'SIN_MUESTRA',
+      label:'SIN MUESTRA',
+      level:0
+    };
+  }
+
+
+  if(+x.n<10){
+
+    return{
+      state:'MUESTRA_BAJA',
+      label:'MUESTRA BAJA',
+      level:1
+    };
+
+  }
+
+
+  if(+x.n<25){
+
+    return{
+      state:'WATCH',
+      label:'VIGILAR',
+      level:2
+    };
+
+  }
+
+
+  /*
+   * Wilson:
+   * si incluso el límite inferior supera 50%,
+   * tenemos evidencia provisional favorable.
+   */
+
+  if(
+    Number.isFinite(+x.ciLow) &&
+    +x.ciLow>.50
+  ){
+
+    return{
+      state:'STRONG',
+      label:'FORTALEZA PROVISIONAL',
+      level:4
+    };
+
+  }
+
+
+  /*
+   * Si incluso el límite superior queda
+   * por debajo de 50%, sí merece alerta.
+   */
+
+  if(
+    Number.isFinite(+x.ciHigh) &&
+    +x.ciHigh<.50
+  ){
+
+    return{
+      state:'WEAK',
+      label:'SEGMENTO DÉBIL',
+      level:5
+    };
+
+  }
+
+
+  /*
+   * Calibración:
+   * diferencia >=7 puntos porcentuales
+   * ya merece observación.
+   */
+
+  if(
+    Number.isFinite(+x.gap) &&
+    Math.abs(+x.gap)>=.07
+  ){
+
+    return{
+      state:'CALIBRATION',
+      label:'REVISAR CALIBRACIÓN',
+      level:3
+    };
+
+  }
+
+
+  return{
+    state:'NORMAL',
+    label:'SIN ALERTA',
+    level:0
+  };
+
+}
+
+
+function segmentWatchlistStats(){
+
+  const d=
+    segmentPerformanceStats(
+      censusAllRows()
+    );
+
+
+  const groups=
+    Array.isArray(d.groups)
+      ?d.groups
+      :[];
+
+
+  const enriched=
+    groups.map(x=>({
+
+      ...x,
+
+      alert:
+        segmentAlertState(x)
+
+    }));
+
+
+  const notable=
+    enriched
+      .filter(x=>
+        x.alert.level>=3
+      )
+      .sort((a,b)=>
+        b.alert.level-a.alert.level ||
+        b.n-a.n
+      );
+
+
+  /*
+   * Watch específico solicitado por auditoría:
+   * UNDER JUGABLE separado por tipo de línea.
+   */
+
+  const underJugable=
+    enriched.filter(x=>
+      x.side==='UNDER' &&
+      x.signal==='JUGABLE'
+    );
+
+
+  return{
+
+    all:
+      enriched,
+
+    notable,
+
+    underJugable
+
+  };
+
+}
+
+
+function segmentWatchlistDashboardHtml(){
+
+  const d=
+    segmentWatchlistStats();
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const numFmt=(v,digits=3)=>
+    Number.isFinite(v)
+      ?Number(v).toFixed(digits)
+      :'—';
+
+
+  const lineLabel=x=>
+    x==='INTEGER'
+      ?'Entera'
+      :x==='HALF'
+        ?'.5'
+        :x;
+
+
+  const alertClass=x=>
+    x==='STRONG'
+      ?'bp-good'
+      :(
+        x==='WEAK'
+        ?'bp-bad'
+        :(
+          x==='CALIBRATION'
+          ?'bp-mid'
+          :''
+        )
+      );
+
+
+  const underRows=
+    d.underJugable.map(x=>{
+
+      const a=
+        x.alert;
+
+
+      return`
+
+        <tr>
+
+          <td>
+            <b>
+              UNDER ·
+              ${lineLabel(x.lineType)}
+            </b>
+          </td>
+
+          <td>
+            ${x.n}
+          </td>
+
+          <td>
+            ${x.n
+              ?x.wins+'-'+x.losses
+              :'—'}
+          </td>
+
+          <td>
+            ${pctFmt(x.hit)}
+          </td>
+
+          <td>
+            ${x.pushes}
+          </td>
+
+          <td>
+            ${numFmt(x.brier)}
+          </td>
+
+          <td>
+            ${pctFmt(x.gap)}
+          </td>
+
+          <td class="${alertClass(a.state)}">
+            ${a.label}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join('');
+
+
+  const notableRows=
+    d.notable.length
+      ?d.notable.map(x=>{
+
+        const a=
+          x.alert;
+
+        return`
+
+          <tr>
+
+            <td>
+              <b>
+                ${x.side}
+                ·
+                ${lineLabel(x.lineType)}
+              </b>
+
+              <div class="smalltxt">
+                ${x.signal}
+              </div>
+            </td>
+
+            <td>
+              ${x.n}
+            </td>
+
+            <td>
+              ${pctFmt(x.hit)}
+            </td>
+
+            <td>
+              ${pctFmt(x.gap)}
+            </td>
+
+            <td>
+              ${numFmt(x.brier)}
+            </td>
+
+            <td class="${alertClass(a.state)}">
+              ${a.label}
+            </td>
+
+          </tr>
+
+        `;
+
+      }).join('')
+      :`
+
+        <tr>
+
+          <td colspan="6">
+            <div class="smalltxt">
+              Todavía no hay segmentos con
+              evidencia suficiente para una alerta fuerte.
+            </div>
+          </td>
+
+        </tr>
+
+      `;
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Segment Watchlist · auditoría
+      </h3>
+
+
+      <div class="smalltxt"
+           style="margin-bottom:10px">
+
+        Lectura automática de segmentos.
+        No cambia señales, thresholds,
+        ranking ni pesos.
+
+      </div>
+
+
+      <div class="section"
+           style="margin-bottom:12px">
+
+        <h3>
+          UNDER JUGABLE · vigilancia dedicada
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Segmento</th>
+                <th>N</th>
+                <th>Récord</th>
+                <th>Hit</th>
+                <th>Push</th>
+                <th>Brier</th>
+                <th>Gap</th>
+                <th>Estado</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${underRows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="section">
+
+        <h3>
+          Alertas estadísticas
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Segmento</th>
+                <th>N</th>
+                <th>Hit</th>
+                <th>Gap</th>
+                <th>Brier</th>
+                <th>Lectura</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${notableRows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        Reglas conservadoras:
+
+        n&lt;10 = muestra baja.
+
+        n=10–24 = vigilancia.
+
+        Con n≥25:
+        si el límite inferior Wilson supera 50%,
+        se marca fortaleza provisional.
+
+        Si el límite superior Wilson queda debajo
+        de 50%, se marca segmento débil.
+
+        Un gap absoluto ≥7 puntos porcentuales
+        activa revisión de calibración.
+
+        Ninguna de estas alertas modifica
+        automáticamente el Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* V7.8.6D2 SEGMENT PERFORMANCE DASHBOARD */
+
+function segmentPerformanceDashboardHtml(){
+
+  const d=
+    segmentPerformanceStats(
+      censusAllRows()
+    );
+
+
+  const groups=
+    Array.isArray(d.groups)
+      ?d.groups
+      :[];
+
+
+  const settled=
+    groups.reduce(
+      (a,x)=>a+(x.n||0),
+      0
+    );
+
+
+  const pushes=
+    groups.reduce(
+      (a,x)=>a+(x.pushes||0),
+      0
+    );
+
+
+  const pending=
+    groups.reduce(
+      (a,x)=>a+(x.pending||0),
+      0
+    );
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const numFmt=(v,digits=3)=>
+    Number.isFinite(v)
+      ?Number(v).toFixed(digits)
+      :'—';
+
+
+  const lineLabel=x=>
+    x==='INTEGER'
+      ?'Entera'
+      :x==='HALF'
+        ?'.5'
+        :x;
+
+
+  const maturity=x=>{
+
+    if(
+      !x.n
+    ){
+      return{
+        txt:'SIN MUESTRA',
+        cls:''
+      };
+    }
+
+
+    if(
+      x.n<10
+    ){
+      return{
+        txt:'MUESTRA BAJA',
+        cls:'bp-bad'
+      };
+    }
+
+
+    if(
+      x.n<25
+    ){
+      return{
+        txt:'TEMPRANO',
+        cls:'bp-mid'
+      };
+    }
+
+
+    return{
+      txt:'UTILIZABLE',
+      cls:'bp-good'
+    };
+
+  };
+
+
+  const rows=
+    groups.map(x=>{
+
+      const m=
+        maturity(x);
+
+
+      const rec=
+        x.n
+          ?x.wins+'-'+x.losses
+          :'—';
+
+
+      const ci=
+        Number.isFinite(x.ciLow) &&
+        Number.isFinite(x.ciHigh)
+          ?pctFmt(x.ciLow)+
+           ' – '+
+           pctFmt(x.ciHigh)
+          :'—';
+
+
+      const gap=
+        Number.isFinite(x.gap)
+          ?(
+              x.gap>=0
+                ?'+'
+                :''
+            )+
+            pctFmt(x.gap)
+          :'—';
+
+
+      return`
+
+        <tr>
+
+          <td>
+
+            <b>
+              ${x.side}
+              ·
+              ${lineLabel(x.lineType)}
+            </b>
+
+            <div class="smalltxt">
+              ${x.signal}
+            </div>
+
+          </td>
+
+
+          <td>
+            ${x.n}
+          </td>
+
+
+          <td>
+            ${rec}
+          </td>
+
+
+          <td>
+            ${x.pushes}
+          </td>
+
+
+          <td>
+            ${pctFmt(x.hit)}
+          </td>
+
+
+          <td>
+            ${pctFmt(x.avgProb)}
+          </td>
+
+
+          <td>
+            ${gap}
+          </td>
+
+
+          <td>
+            ${numFmt(x.brier)}
+          </td>
+
+
+          <td>
+            ${ci}
+          </td>
+
+
+          <td class="${m.cls}">
+            ${m.txt}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join('');
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Segment Performance · O/U
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+        Separa dirección, tipo de línea y señal
+        original del Censo. No reconstruye
+        señales históricas y no modifica el motor.
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Segmentables
+          </small>
+
+          <div class="big">
+            ${d.eligible}
+          </div>
+
+          <div class="smalltxt">
+            de ${d.total} filas del Censo
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados
+          </small>
+
+          <div class="big">
+            ${settled}
+          </div>
+
+          <div class="smalltxt">
+            W/L disponibles
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Push
+          </small>
+
+          <div class="big">
+            ${pushes}
+          </div>
+
+          <div class="smalltxt">
+            especialmente relevantes en enteras
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Pendientes
+          </small>
+
+          <div class="big">
+            ${pending}
+          </div>
+
+          <div class="smalltxt">
+            todavía sin resultado
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Excluidos
+          </small>
+
+          <div class="big">
+            ${d.excluded}
+          </div>
+
+          <div class="smalltxt">
+            LAB / línea rara / sin categoría válida
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="overflow:auto;
+               margin-top:12px"
+      >
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Segmento
+              </th>
+
+              <th>
+                N
+              </th>
+
+              <th>
+                Récord
+              </th>
+
+              <th>
+                Push
+              </th>
+
+              <th>
+                Hit
+              </th>
+
+              <th>
+                Prob. media
+              </th>
+
+              <th>
+                Gap
+              </th>
+
+              <th>
+                Brier
+              </th>
+
+              <th>
+                IC95
+              </th>
+
+              <th>
+                Muestra
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${rows}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="note">
+
+        Gap = acierto real − probabilidad media
+        pronosticada.
+
+        Un gap positivo indica que el segmento
+        rindió por encima de la probabilidad
+        estimada; negativo indica que quedó por
+        debajo.
+
+        En líneas enteras, PUSH se muestra aparte
+        y no se mezcla artificialmente con WIN
+        o LOSS.
+
+        IC95 es Wilson 95%.
+
+        MUESTRA BAJA: n&lt;10.
+        TEMPRANO: n=10–24.
+        UTILIZABLE: n≥25.
+
+        "Utilizable" significa suficiente para
+        empezar a observar patrones, no que el
+        segmento esté demostrado como superior.
+
+        Este panel es exclusivamente diagnóstico.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* V7.8.6D1 SEGMENT PERFORMANCE ENGINE */
+
+function segmentLineType(
+  line
+){
+
+  const x=
+    Number(line);
+
+
+  if(
+    !Number.isFinite(x)
+  ){
+    return 'INVALID';
+  }
+
+
+  const frac=
+    Math.abs(
+      x-Math.floor(x)
+    );
+
+
+  if(
+    Math.abs(frac)<0.001 ||
+    Math.abs(frac-1)<0.001
+  ){
+    return 'INTEGER';
+  }
+
+
+  if(
+    Math.abs(frac-.5)<0.001
+  ){
+    return 'HALF';
+  }
+
+
+  /*
+   * Por seguridad no forzamos
+   * líneas raras (.25/.75/etc.)
+   * dentro de entero o medio.
+   */
+
+  return 'OTHER';
+
+}
+
+
+function segmentSignal(
+  signal
+){
+
+  const x=
+    String(
+      signal || ''
+    )
+    .trim()
+    .toUpperCase();
+
+
+  if(
+    x==='JUGABLE' ||
+    x==='LEAN' ||
+    x==='PASS'
+  ){
+    return x;
+  }
+
+
+  return 'OTHER';
+
+}
+
+
+function segmentPerformanceSummary(
+  rows=[]
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  const final=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='FINAL' &&
+      Number.isFinite(+r?.y)
+    );
+
+
+  const pushes=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='PUSH'
+    ).length;
+
+
+  const pending=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='PENDING'
+    ).length;
+
+
+  const wins=
+    final.filter(r=>
+      +r.y===1
+    ).length;
+
+
+  const losses=
+    final.length-wins;
+
+
+  const hit=
+    final.length
+      ?wins/final.length
+      :NaN;
+
+
+  const ci=
+    wilsonInterval(
+      wins,
+      final.length
+    );
+
+
+  const probs=
+    final
+      .map(r=>Number(r?.p))
+      .filter(Number.isFinite);
+
+
+  const avgProb=
+    probs.length
+      ?probs.reduce(
+          (a,b)=>a+b,
+          0
+        )/probs.length
+      :NaN;
+
+
+  const briers=
+    final
+      .map(r=>Number(r?.brier))
+      .filter(Number.isFinite);
+
+
+  const brier=
+    briers.length
+      ?briers.reduce(
+          (a,b)=>a+b,
+          0
+        )/briers.length
+      :NaN;
+
+
+  return{
+
+    total:
+      all.length,
+
+    n:
+      final.length,
+
+    wins,
+
+    losses,
+
+    pushes,
+
+    pending,
+
+    hit,
+
+    ciLow:
+      ci?.low,
+
+    ciHigh:
+      ci?.high,
+
+    avgProb,
+
+    gap:
+      Number.isFinite(hit) &&
+      Number.isFinite(avgProb)
+        ?hit-avgProb
+        :NaN,
+
+    brier
+
+  };
+
+}
+
+
+function segmentPerformanceStats(
+  rows=censusAllRows()
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows.filter(r=>
+          !r?.market ||
+          String(r.market).toUpperCase()==='TOTAL'
+        )
+      :[];
+
+
+  const eligible=
+    all.filter(r=>
+      (
+        String(r?.side||'').toUpperCase()==='OVER' ||
+        String(r?.side||'').toUpperCase()==='UNDER'
+      ) &&
+      (
+        segmentLineType(r?.line)==='INTEGER' ||
+        segmentLineType(r?.line)==='HALF'
+      ) &&
+      (
+        segmentSignal(r?.signal)==='JUGABLE' ||
+        segmentSignal(r?.signal)==='LEAN' ||
+        segmentSignal(r?.signal)==='PASS'
+      )
+    );
+
+
+  const excluded=
+    all.length-eligible.length;
+
+
+  const sides=[
+    'OVER',
+    'UNDER'
+  ];
+
+
+  const lineTypes=[
+    'INTEGER',
+    'HALF'
+  ];
+
+
+  const signals=[
+    'JUGABLE',
+    'LEAN',
+    'PASS'
+  ];
+
+
+  const groups=[];
+
+
+  for(const side of sides){
+
+    for(const lineType of lineTypes){
+
+      for(const signal of signals){
+
+        const subset=
+          eligible.filter(r=>
+            String(r.side).toUpperCase()===side &&
+            segmentLineType(r.line)===lineType &&
+            segmentSignal(r.signal)===signal
+          );
+
+
+        groups.push({
+
+          key:
+            side+
+            '_'+
+            lineType+
+            '_'+
+            signal,
+
+          side,
+
+          lineType,
+
+          signal,
+
+          ...segmentPerformanceSummary(
+            subset
+          )
+
+        });
+
+      }
+
+    }
+
+  }
+
+
+  return{
+
+    total:
+      all.length,
+
+    eligible:
+      eligible.length,
+
+    excluded,
+
+    groups
+
+  };
+
+}
+
 
 /* V7.8.6C4 AUTOMATIC PREGAME LINE WATCHER */
 
