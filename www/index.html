@@ -10703,7 +10703,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankingValidationDashboardHtml()}${rankingVerdictDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -10922,6 +10922,45 @@ date:
 rank:
   r.rank,
 
+activeRank:
+  Number.isFinite(+r.activeRank)
+    ?+r.activeRank
+    :null,
+
+initialRank:
+  Number.isFinite(+r.rank)
+    ?+r.rank
+    :null,
+
+lastPregameRank:
+  Number.isFinite(+r.rank)
+    ?+r.rank
+    :null,
+
+initialActiveRank:
+  Number.isFinite(+r.activeRank)
+    ?+r.activeRank
+    :null,
+
+lastPregameActiveRank:
+  Number.isFinite(+r.activeRank)
+    ?+r.activeRank
+    :null,
+
+rankAuditVersion:
+  'V7.8.6F1',
+
+rankCohortId:
+  'RANK_FREEZE_V1',
+
+rankFirstCapturedAt:
+  r.rankAuditObservedAt ||
+  new Date().toISOString(),
+
+rankLastCapturedAt:
+  r.rankAuditObservedAt ||
+  new Date().toISOString(),
+
 gamePk:
   r.gamePk,
 
@@ -11043,6 +11082,525 @@ edge:
   pass:r.pass??String(r.signal).toUpperCase()==='PASS',status:'PENDING',actual:null,y:null,brier:null,
   includeExtras:cfg().gameRules?.extras!==false,created:new Date().toISOString(),updated:new Date().toISOString(),modelVersion:MODEL_VERSION
  }}
+
+/* V7.8.6F3 RANK INVARIANT SELF TEST */
+
+function rankAuditApplyIdentity(
+  old,
+  fresh,
+  capturedAt=new Date().toISOString()
+){
+
+  if(
+    !fresh ||
+    typeof fresh!=='object'
+  ){
+    return fresh;
+  }
+
+
+  /*
+   * Datos de resultado nunca deben
+   * degradarse durante un refresh.
+   */
+
+  if(old){
+
+    fresh.created=
+      old.created ||
+      fresh.created;
+
+    fresh.status=
+      old.status ||
+      'PENDING';
+
+    fresh.actual=
+      old.actual ?? null;
+
+    fresh.y=
+      old.y ?? null;
+
+    fresh.brier=
+      old.brier ?? null;
+
+
+    /*
+     * Cohort limpio:
+     * FIRST permanece congelado.
+     */
+
+    if(
+      old.rankAuditVersion==='V7.8.6F1' &&
+      old.rankCohortId==='RANK_FREEZE_V1'
+    ){
+
+      fresh.initialRank=
+        Number.isFinite(
+          Number(old.initialRank)
+        )
+          ?Number(old.initialRank)
+          :fresh.initialRank;
+
+
+      fresh.initialActiveRank=
+        Number.isFinite(
+          Number(old.initialActiveRank)
+        )
+          ?Number(old.initialActiveRank)
+          :null;
+
+
+      fresh.rankFirstCapturedAt=
+        old.rankFirstCapturedAt ||
+        fresh.rankFirstCapturedAt;
+
+
+      fresh.rankAuditVersion=
+        'V7.8.6F1';
+
+
+      fresh.rankCohortId=
+        'RANK_FREEZE_V1';
+
+
+    }else{
+
+      /*
+       * Histórico anterior a F1.
+       * Nunca inventamos su Rank inicial.
+       */
+
+      fresh.initialRank=null;
+
+      fresh.initialActiveRank=null;
+
+      fresh.rankFirstCapturedAt=null;
+
+      fresh.rankAuditVersion=
+        'LEGACY_RANK';
+
+      fresh.rankCohortId=
+        'LEGACY_RANK';
+
+    }
+
+  }
+
+
+  /*
+   * LAST sí representa la última
+   * observación pregame disponible.
+   */
+
+  fresh.lastPregameRank=
+    Number.isFinite(
+      Number(fresh.rank)
+    )
+      ?Number(fresh.rank)
+      :null;
+
+
+  fresh.lastPregameActiveRank=
+    Number.isFinite(
+      Number(fresh.activeRank)
+    )
+      ?Number(fresh.activeRank)
+      :null;
+
+
+  fresh.rankLastCapturedAt=
+    capturedAt;
+
+
+  return fresh;
+}
+
+
+function rankAuditInvariantSelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  const firstTime=
+    '2026-09-01T12:00:00.000Z';
+
+
+  const secondTime=
+    '2026-09-01T12:30:00.000Z';
+
+
+  const thirdTime=
+    '2026-09-01T12:45:00.000Z';
+
+
+  /*
+   * Snapshot original:
+   * juego #5 del día,
+   * #2 entre ACTIVE.
+   */
+
+  const original={
+
+    gamePk:123,
+
+    rank:5,
+
+    activeRank:2,
+
+    initialRank:5,
+
+    initialActiveRank:2,
+
+    lastPregameRank:5,
+
+    lastPregameActiveRank:2,
+
+    rankAuditVersion:
+      'V7.8.6F1',
+
+    rankCohortId:
+      'RANK_FREEZE_V1',
+
+    rankFirstCapturedAt:
+      firstTime,
+
+    rankLastCapturedAt:
+      firstTime,
+
+    status:'PENDING',
+
+    actual:null,
+
+    y:null,
+
+    brier:null,
+
+    created:firstTime
+
+  };
+
+
+  /*
+   * Más tarde la posición cambia.
+   */
+
+  const update1={
+
+    gamePk:123,
+
+    rank:4,
+
+    activeRank:1,
+
+    initialRank:4,
+
+    initialActiveRank:1,
+
+    rankAuditVersion:
+      'V7.8.6F1',
+
+    rankCohortId:
+      'RANK_FREEZE_V1',
+
+    rankFirstCapturedAt:
+      secondTime,
+
+    status:'PENDING',
+
+    created:secondTime
+
+  };
+
+
+  rankAuditApplyIdentity(
+    original,
+    update1,
+    secondTime
+  );
+
+
+  test(
+    'initialRank permanece congelado',
+    update1.initialRank===5
+  );
+
+
+  test(
+    'initialActiveRank permanece congelado',
+    update1.initialActiveRank===2
+  );
+
+
+  test(
+    'lastPregameRank se actualiza',
+    update1.lastPregameRank===4
+  );
+
+
+  test(
+    'lastPregameActiveRank se actualiza',
+    update1.lastPregameActiveRank===1
+  );
+
+
+  /*
+   * Tercera observación:
+   * FIRST debe seguir siendo 5 / 2.
+   */
+
+  const update2={
+
+    gamePk:123,
+
+    rank:3,
+
+    activeRank:1,
+
+    initialRank:3,
+
+    initialActiveRank:1,
+
+    rankAuditVersion:
+      'V7.8.6F1',
+
+    rankCohortId:
+      'RANK_FREEZE_V1',
+
+    rankFirstCapturedAt:
+      thirdTime,
+
+    status:'PENDING',
+
+    created:thirdTime
+
+  };
+
+
+  rankAuditApplyIdentity(
+    update1,
+    update2,
+    thirdTime
+  );
+
+
+  test(
+    'actualizaciones repetidas no cambian FIRST',
+    update2.initialRank===5 &&
+    update2.initialActiveRank===2 &&
+    update2.rankFirstCapturedAt===firstTime
+  );
+
+
+  /*
+   * LEGACY:
+   * no se reconstruye un Rank inicial.
+   */
+
+  const legacyOld={
+
+    gamePk:999,
+
+    rank:4,
+
+    status:'PENDING',
+
+    created:firstTime
+
+  };
+
+
+  const legacyFresh={
+
+    gamePk:999,
+
+    rank:2,
+
+    activeRank:1,
+
+    initialRank:2,
+
+    initialActiveRank:1,
+
+    rankAuditVersion:
+      'V7.8.6F1',
+
+    rankCohortId:
+      'RANK_FREEZE_V1',
+
+    status:'PENDING'
+
+  };
+
+
+  rankAuditApplyIdentity(
+    legacyOld,
+    legacyFresh,
+    secondTime
+  );
+
+
+  test(
+    'LEGACY no recibe Rank inicial inventado',
+    legacyFresh.initialRank===null &&
+    legacyFresh.initialActiveRank===null &&
+    legacyFresh.rankCohortId==='LEGACY_RANK'
+  );
+
+
+  /*
+   * Verificación estructural:
+   * currentRankViewRows debe usar
+   * absoluteIndex y NO i+1.
+   */
+
+  const viewSource=
+    String(
+      currentRankViewRows
+    );
+
+
+  test(
+    'pregame filter conserva Rank absoluto',
+    viewSource.includes(
+      'rank:absoluteIndex+1'
+    ) &&
+    !viewSource.includes(
+      'rank:i+1'
+    )
+  );
+
+
+  /*
+   * Active Rank:
+   *
+   * #1 JUGABLE
+   * #2 PASS
+   * #3 LEAN
+   *
+   * el tercero debe ser Active #2.
+   */
+
+  const synthetic=[
+
+    {
+      pick:{
+        pass:false,
+        p:.60
+      },
+      ev:{
+        source:'MANUAL'
+      }
+    },
+
+    {
+      pick:{
+        pass:true,
+        p:.51
+      },
+      ev:{
+        source:'MANUAL'
+      }
+    },
+
+    {
+      pick:{
+        pass:true,
+        p:.54
+      },
+      ev:{
+        source:'MANUAL'
+      }
+    }
+
+  ];
+
+
+  test(
+    'activeRank ignora PASS correctamente',
+    rankAuditActivePosition(
+      synthetic,
+      2
+    )===2
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date().toISOString()
+
+  };
+
+}
+
+
+function rankAuditRunInvariantSelfTest(){
+
+  const report=
+    rankAuditInvariantSelfTest();
+
+
+  window.__MLB_RANK_INVARIANT__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'RANK INVARIANT PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+  }else{
+
+    console.error(
+      'RANK INVARIANT FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+}
+
+
 function syncRankingCensus(date,viewRows){
  if(!date||!Array.isArray(viewRows)||!viewRows.length)return 0;
  const data=rankCensus(),now=Date.now(),existing=data.days[date]||{date,created:new Date().toISOString(),updated:null,rows:[]};
@@ -11053,7 +11611,10 @@ function syncRankingCensus(date,viewRows){
   const locked=old&&(old.status!=='PENDING'||(Number.isFinite(start)&&start<=now));
   if(locked)continue;
   const fresh=censusFromViewRow(vr,date);
-  if(old){fresh.created=old.created||fresh.created;fresh.status=old.status||'PENDING';fresh.actual=old.actual??null;fresh.y=old.y??null;fresh.brier=old.brier??null}
+  rankAuditApplyIdentity(
+    old,
+    fresh
+  );
   byGame.set(key,fresh);changed++;
  }
  existing.rows=[...byGame.values()].sort((a,b)=>(n(a.rank,999)-n(b.rank,999))||String(a.gameDate||'').localeCompare(String(b.gameDate||'')));
@@ -14034,8 +14595,80 @@ function decisionAuditRowFields(
   };
 }
 
-function currentRankViewRows(rows=currentRankingRows(),pregameOnly=false){const now=Date.now();return rows.filter(r=>{if(!pregameOnly)return true;const gm=gameMeta(r.g),start=Date.parse(r.g.gameDate||'');return!gm.live&&!gm.final&&(!Number.isFinite(start)||start>now)}).map((r,i)=>{const sig=signalLabel(r.pick,r.ev.source),raw=r.pick.side==='OVER'?r.ev.overOdds:r.ev.underOdds,o=parseOdds(raw);return{
-rank:i+1,
+
+/* V7.8.6F1 RANK IDENTITY FREEZE */
+
+function rankAuditIsActive(
+  row={}
+){
+
+  const sig=
+    signalLabel(
+      row?.pick,
+      row?.ev?.source
+    )?.txt;
+
+
+  return(
+    sig==='JUGABLE' ||
+    sig==='LEAN'
+  );
+
+}
+
+
+function rankAuditActivePosition(
+  rows=[],
+  absoluteIndex=-1
+){
+
+  if(
+    !Array.isArray(rows) ||
+    absoluteIndex<0 ||
+    absoluteIndex>=rows.length ||
+    !rankAuditIsActive(
+      rows[absoluteIndex]
+    )
+  ){
+    return null;
+  }
+
+
+  let pos=0;
+
+
+  for(
+    let i=0;
+    i<=absoluteIndex;
+    i++
+  ){
+
+    if(
+      rankAuditIsActive(
+        rows[i]
+      )
+    ){
+      pos++;
+    }
+
+  }
+
+
+  return pos;
+}
+
+
+function currentRankViewRows(rows=currentRankingRows(),pregameOnly=false){const now=Date.now();return rows.map((r,absoluteIndex)=>({r,absoluteIndex})).filter(z=>{const r=z.r;if(!pregameOnly)return true;const gm=gameMeta(r.g),start=Date.parse(r.g.gameDate||'');return!gm.live&&!gm.final&&(!Number.isFinite(start)||start>now)}).map((z,i)=>{const r=z.r,absoluteIndex=z.absoluteIndex,sig=signalLabel(r.pick,r.ev.source),raw=r.pick.side==='OVER'?r.ev.overOdds:r.ev.underOdds,o=parseOdds(raw);return{
+rank:absoluteIndex+1,
+
+activeRank:
+  rankAuditActivePosition(
+    rows,
+    absoluteIndex
+  ),
+
+rankAuditObservedAt:
+  new Date().toISOString(),
 
 gamePk:
   r.g.gamePk,
@@ -14759,6 +15392,661 @@ function rankingVerdictDashboardHtml(){
         automáticamente el algoritmo.
 
         El Motor V7.0 permanece intacto.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+
+/* V7.8.6F2 CLEAN RANKING COHORT */
+
+function rankAuditCleanRows(
+  rows=censusAllRows()
+){
+
+  return(
+    Array.isArray(rows)
+      ?rows
+      :[]
+  ).filter(r=>
+    r?.rankCohortId==='RANK_FREEZE_V1' &&
+    r?.rankAuditVersion==='V7.8.6F1'
+  );
+
+}
+
+
+function rankAuditLegacyRows(
+  rows=censusAllRows()
+){
+
+  return(
+    Array.isArray(rows)
+      ?rows
+      :[]
+  ).filter(r=>
+    r?.rankCohortId!=='RANK_FREEZE_V1'
+  );
+
+}
+
+
+function rankAuditProjectedRows(
+  rows=[],
+  field='initialRank'
+){
+
+  return(
+    Array.isArray(rows)
+      ?rows
+      :[]
+  )
+  .filter(r=>
+    Number.isFinite(
+      Number(r?.[field])
+    )
+  )
+  .map(r=>({
+    ...r,
+    rank:
+      Number(r[field])
+  }));
+
+}
+
+
+function rankAuditModeStats(
+  rows=[],
+  field='initialRank',
+  label='Initial Daily'
+){
+
+  const projected=
+    rankAuditProjectedRows(
+      rows,
+      field
+    );
+
+
+  const stats=
+    rankingValidationStats(
+      projected
+    );
+
+
+  const active=
+    (
+      stats.slices || []
+    ).find(
+      x=>x.name==='ACTIVE'
+    ) || {
+      name:'ACTIVE',
+      settled:0,
+      bands:[]
+    };
+
+
+  const verdict=
+    rankingValidationVerdict(
+      active
+    );
+
+
+  return{
+
+    field,
+
+    label,
+
+    rows:
+      projected.length,
+
+    stats,
+
+    active,
+
+    verdict
+
+  };
+
+}
+
+
+function rankAuditDriftStats(
+  rows=[]
+){
+
+  const pairs=
+    (
+      Array.isArray(rows)
+        ?rows
+        :[]
+    )
+    .filter(r=>
+      Number.isFinite(+r?.initialRank) &&
+      Number.isFinite(+r?.lastPregameRank)
+    );
+
+
+  const deltas=
+    pairs.map(r=>
+      Number(r.lastPregameRank)-
+      Number(r.initialRank)
+    );
+
+
+  const changed=
+    deltas.filter(x=>
+      Math.abs(x)>0.0001
+    ).length;
+
+
+  const abs=
+    deltas.map(
+      Math.abs
+    );
+
+
+  const avgAbs=
+    abs.length
+      ?abs.reduce(
+          (a,b)=>a+b,
+          0
+        )/abs.length
+      :NaN;
+
+
+  const maxAbs=
+    abs.length
+      ?Math.max(...abs)
+      :NaN;
+
+
+  return{
+
+    paired:
+      pairs.length,
+
+    changed,
+
+    unchanged:
+      pairs.length-changed,
+
+    avgAbs,
+
+    maxAbs
+
+  };
+
+}
+
+
+function rankAuditCleanStats(){
+
+  const all=
+    censusAllRows();
+
+
+  const clean=
+    rankAuditCleanRows(
+      all
+    );
+
+
+  const legacy=
+    rankAuditLegacyRows(
+      all
+    );
+
+
+  const modes=[
+
+    rankAuditModeStats(
+      clean,
+      'initialRank',
+      'Initial Daily'
+    ),
+
+    rankAuditModeStats(
+      clean,
+      'lastPregameRank',
+      'Last Pregame Daily'
+    ),
+
+    rankAuditModeStats(
+      clean,
+      'initialActiveRank',
+      'Initial Active'
+    ),
+
+    rankAuditModeStats(
+      clean,
+      'lastPregameActiveRank',
+      'Last Pregame Active'
+    )
+
+  ];
+
+
+  return{
+
+    total:
+      all.length,
+
+    clean:
+      clean.length,
+
+    legacy:
+      legacy.length,
+
+    modes,
+
+    drift:
+      rankAuditDriftStats(
+        clean
+      )
+
+  };
+
+}
+
+
+function rankAuditCleanDashboardHtml(){
+
+  const d=
+    rankAuditCleanStats();
+
+
+  const invariant=
+    rankAuditInvariantSelfTest();
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(
+          v>=0
+            ?'+'
+            :''
+        )+
+        (v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const hitFmt=v=>
+    Number.isFinite(v)
+      ?(v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const corrFmt=v=>
+    Number.isFinite(v)
+      ?(
+          v>=0
+            ?'+'
+            :''
+        )+
+        Number(v).toFixed(3)
+      :'—';
+
+
+  const numFmt=(v,digits=2)=>
+    Number.isFinite(v)
+      ?Number(v).toFixed(digits)
+      :'—';
+
+
+  const settledClean=
+    d.modes[0]?.stats?.slices
+      ?.find(x=>x.name==='ALL')
+      ?.settled || 0;
+
+
+  const rows=
+    d.modes.map(m=>{
+
+      const v=
+        m.verdict;
+
+
+      const a=
+        m.active;
+
+
+      return`
+
+        <tr>
+
+          <td>
+            <b>
+              ${m.label}
+            </b>
+          </td>
+
+          <td>
+            ${m.rows}
+          </td>
+
+          <td>
+            ${a.settled || 0}
+          </td>
+
+          <td>
+            ${v.top?.n || 0}
+          </td>
+
+          <td>
+            ${hitFmt(
+              v.top?.hit
+            )}
+          </td>
+
+          <td>
+            ${v.lower?.n || 0}
+          </td>
+
+          <td>
+            ${hitFmt(
+              v.lower?.hit
+            )}
+          </td>
+
+          <td>
+            ${pctFmt(
+              v.hitDelta
+            )}
+          </td>
+
+          <td>
+            ${corrFmt(
+              a.normalizedOutcomeCorr
+            )}
+          </td>
+
+          <td>
+            ${corrFmt(
+              a.normalizedProbCorr
+            )}
+          </td>
+
+          <td class="${v.cls || ''}">
+            ${v.label}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join('');
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Ranking Validation · Clean Cohort
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Desde V7.8.6F1 sólo se evalúan posiciones
+        capturadas con identidad de Rank congelada.
+        Los históricos anteriores permanecen
+        archivados como LEGACY_RANK y NO participan
+        en el nuevo veredicto.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Rank invariant
+          </small>
+
+          <div class="big ${invariant.ok?'bp-good':'bp-bad'}">
+            ${invariant.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            ${invariant.passed}/${invariant.total} pruebas
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cohort limpio
+          </small>
+
+          <div class="big">
+            ${d.clean}
+          </div>
+
+          <div class="smalltxt">
+            RANK_FREEZE_V1
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Legacy excluidos
+          </small>
+
+          <div class="big">
+            ${d.legacy}
+          </div>
+
+          <div class="smalltxt">
+            conservados, no reconstruidos
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados clean
+          </small>
+
+          <div class="big">
+            ${settledClean}
+          </div>
+
+          <div class="smalltxt">
+            nueva evidencia W/L
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Rank cambió pregame
+          </small>
+
+          <div class="big">
+            ${d.drift.changed}
+          </div>
+
+          <div class="smalltxt">
+            de ${d.drift.paired} comparables
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="cards"
+        style="margin-top:10px"
+      >
+
+        <div class="card">
+
+          <small>
+            Drift absoluto medio
+          </small>
+
+          <div class="big">
+            ${numFmt(
+              d.drift.avgAbs
+            )}
+          </div>
+
+          <div class="smalltxt">
+            posiciones
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Drift máximo
+          </small>
+
+          <div class="big">
+            ${numFmt(
+              d.drift.maxAbs
+            )}
+          </div>
+
+          <div class="smalltxt">
+            posiciones
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          Comparación de identidad del Ranking
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Rank
+                </th>
+
+                <th>
+                  Filas
+                </th>
+
+                <th>
+                  Active W/L
+                </th>
+
+                <th>
+                  Top N
+                </th>
+
+                <th>
+                  Top Hit
+                </th>
+
+                <th>
+                  Lower N
+                </th>
+
+                <th>
+                  Lower Hit
+                </th>
+
+                <th>
+                  Δ Hit
+                </th>
+
+                <th>
+                  Corr. resultado
+                </th>
+
+                <th>
+                  Corr. prob.
+                </th>
+
+                <th>
+                  Veredicto
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${rows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        Initial Daily = posición del juego cuando
+        apareció por primera vez en el Ranking
+        completo de la jornada.
+
+        Last Pregame Daily = última posición diaria
+        observada antes del inicio.
+
+        Initial Active = primera posición contando
+        únicamente JUGABLE + LEAN.
+
+        Last Pregame Active = última posición entre
+        JUGABLE + LEAN antes del inicio.
+
+        Los 117 históricos anteriores no se
+        reinterpretan ni se borran.
+
+        El nuevo veredicto sólo crecerá con partidos
+        creados bajo RANK_FREEZE_V1.
+
+        Con poca muestra aparecerá correctamente
+        MUESTRA AÚN INSUFICIENTE.
+
+        Este módulo NO modifica el orden del Ranking
+        ni el Motor V7.0.
 
       </div>
 
@@ -17809,7 +19097,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderTeams();renderCensus();renderRanking();await loadDay();settleRankingCensus(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
