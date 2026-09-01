@@ -2425,7 +2425,1521 @@ function recordLastPregameLines(
 }
 
 
-async function loadAutoOdds(day,force=false){const C=cfg().odds||{},provider=C.provider||'PUBLIC';S.odds.clear();const errors=[];if((provider==='API'||provider==='AUTO')&&C.key){try{const n=await loadBookOdds(day,force);if(n){S.publicOddsStatus={source:'The Odds API',at:Date.now(),error:''};savePublicOddsCache(day);recordLastPregameLines(day,'API');return n}}catch(e){errors.push(`API: ${e.message||e}`)}}if(provider!=='API'||!C.key){try{const count=await loadPublicOdds(day,force);recordLastPregameLines(day,'PUBLIC');return count}catch(e){errors.push(e.message||String(e))}}if(provider==='API'&&!C.key)errors.push('The Odds API requiere key; cambia a fuente pública o Auto');throw Error(errors.filter(Boolean).join(' · ')||'No fue posible obtener líneas automáticas')}
+
+/* V7.8.6I1 SAFE ODDS REFRESH CORE */
+
+function safeOddsSnapshot(
+  day=''
+){
+
+  const gamePks=
+    new Set(
+      (S.games||[])
+        .map(g=>
+          String(g.gamePk)
+        )
+    );
+
+
+  const rows=[];
+
+
+  for(
+    const [pk,q]
+    of (
+      S.odds instanceof Map
+        ?S.odds
+        :new Map()
+    )
+  ){
+
+    if(
+      !gamePks.has(
+        String(pk)
+      )
+    ){
+      continue;
+    }
+
+
+    if(
+      !q ||
+      !Number.isFinite(
+        Number(q.line)
+      )
+    ){
+      continue;
+    }
+
+
+    rows.push([
+      pk,
+      {
+        ...q
+      }
+    ]);
+
+  }
+
+
+  return{
+
+    day:
+      String(day||''),
+
+    capturedAt:
+      new Date()
+        .toISOString(),
+
+    rows,
+
+    count:
+      rows.length,
+
+    publicOddsStatus:
+      S.publicOddsStatus
+        ?{
+            ...S.publicOddsStatus
+          }
+        :null,
+
+    lastOddsAt:
+      S.lastOddsAt,
+
+    lastOddsDay:
+      S.lastOddsDay
+
+  };
+
+}
+
+
+function safeOddsRestore(
+  snapshot={}
+){
+
+  if(!(S.odds instanceof Map)){
+    S.odds=new Map();
+  }
+
+
+  S.odds.clear();
+
+
+  for(
+    const pair
+    of (
+      Array.isArray(snapshot.rows)
+        ?snapshot.rows
+        :[]
+    )
+  ){
+
+    if(
+      !Array.isArray(pair) ||
+      pair.length<2
+    ){
+      continue;
+    }
+
+
+    const [pk,q]=pair;
+
+
+    if(
+      q &&
+      Number.isFinite(
+        Number(q.line)
+      )
+    ){
+      S.odds.set(
+        pk,
+        {
+          ...q
+        }
+      );
+    }
+
+  }
+
+
+  S.lastOddsAt=
+    snapshot.lastOddsAt;
+
+
+  S.lastOddsDay=
+    snapshot.lastOddsDay;
+
+
+  if(snapshot.publicOddsStatus){
+
+    S.publicOddsStatus={
+      ...snapshot.publicOddsStatus
+    };
+
+  }
+
+
+  return S.odds.size;
+}
+
+
+function safeOddsMergeMissing(
+  snapshot={}
+){
+
+  if(!(S.odds instanceof Map)){
+    S.odds=new Map();
+  }
+
+
+  let preserved=0;
+
+
+  for(
+    const pair
+    of (
+      Array.isArray(snapshot.rows)
+        ?snapshot.rows
+        :[]
+    )
+  ){
+
+    if(
+      !Array.isArray(pair) ||
+      pair.length<2
+    ){
+      continue;
+    }
+
+
+    const [pk,q]=pair;
+
+
+    if(
+      S.odds.has(pk)
+    ){
+      continue;
+    }
+
+
+    if(
+      !q ||
+      !Number.isFinite(
+        Number(q.line)
+      )
+    ){
+      continue;
+    }
+
+
+    S.odds.set(
+      pk,
+      {
+        ...q
+      }
+    );
+
+
+    preserved++;
+
+  }
+
+
+  return preserved;
+}
+
+
+function safeOddsRefreshReport(
+  data={}
+){
+
+  const report={
+
+    version:
+      'V7.8.6I1',
+
+    attemptAt:
+      data.attemptAt ||
+      new Date().toISOString(),
+
+    finishedAt:
+      new Date().toISOString(),
+
+    success:
+      data.success===true,
+
+    provider:
+      data.provider ||
+      null,
+
+    freshCount:
+      Number(data.freshCount)||
+      0,
+
+    preservedCount:
+      Number(data.preservedCount)||
+      0,
+
+    restoredCount:
+      Number(data.restoredCount)||
+      0,
+
+    total:
+      S.odds instanceof Map
+        ?S.odds.size
+        :0,
+
+    source:
+      data.source ||
+      S.publicOddsStatus?.source ||
+      '',
+
+    usedCache:
+      data.usedCache===true,
+
+    error:
+      String(
+        data.error||''
+      )
+
+  };
+
+
+  S.safeOddsRefresh=
+    report;
+
+
+  return report;
+}
+
+
+
+
+/* V7.8.6I3 SAFE ODDS INTEGRITY TEST */
+
+function safeOddsIntegritySelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  /*
+   * Conservamos referencias/estado reales.
+   * Al terminar se restaura TODO.
+   */
+
+  const original={
+
+    games:
+      S.games,
+
+    odds:
+      S.odds,
+
+    publicOddsStatus:
+      S.publicOddsStatus,
+
+    lastOddsAt:
+      S.lastOddsAt,
+
+    lastOddsDay:
+      S.lastOddsDay,
+
+    safeOddsRefresh:
+      S.safeOddsRefresh
+
+  };
+
+
+  try{
+
+    /*
+     * Jornada sintética:
+     * gamePk 101 y 202 pertenecen al día.
+     */
+
+    S.games=[
+
+      {
+        gamePk:101
+      },
+
+      {
+        gamePk:202
+      }
+
+    ];
+
+
+    S.odds=
+      new Map([
+
+        [
+          101,
+          {
+            line:8.5,
+            source:'ESPN',
+            lineSource:'ESPN',
+            over:1.91,
+            under:1.91
+          }
+        ],
+
+        [
+          202,
+          {
+            line:9.5,
+            source:'COVERS',
+            lineSource:'COVERS',
+            over:1.90,
+            under:1.92
+          }
+        ],
+
+        /*
+         * Juego ajeno a la jornada.
+         * No debe entrar al snapshot.
+         */
+        [
+          999,
+          {
+            line:10.5,
+            source:'ESPN',
+            lineSource:'ESPN'
+          }
+        ]
+
+      ]);
+
+
+    S.publicOddsStatus={
+
+      source:'ESPN + Covers',
+
+      at:111,
+
+      error:''
+
+    };
+
+
+    S.lastOddsAt=111;
+    S.lastOddsDay='2026-09-01';
+
+
+    const snap=
+      safeOddsSnapshot(
+        '2026-09-01'
+      );
+
+
+    /*
+     * 1 · Snapshot sólo contiene
+     * los dos juegos de la jornada.
+     */
+
+    test(
+      'snapshot conserva sólo juegos de la jornada',
+      snap.count===2 &&
+      snap.rows.some(
+        x=>Number(x[0])===101
+      ) &&
+      snap.rows.some(
+        x=>Number(x[0])===202
+      ) &&
+      !snap.rows.some(
+        x=>Number(x[0])===999
+      )
+    );
+
+
+    /*
+     * 2 · Nueva actualización parcial.
+     *
+     * El proveedor sólo devuelve 101
+     * y lo mueve 8.5 → 9.0.
+     */
+
+    S.odds=
+      new Map([
+
+        [
+          101,
+          {
+            line:9,
+            source:'ESPN',
+            lineSource:'ESPN',
+            over:1.95,
+            under:1.87
+          }
+        ]
+
+      ]);
+
+
+    const preserved=
+      safeOddsMergeMissing(
+        snap
+      );
+
+
+    /*
+     * La línea nueva 9.0 debe sobrevivir.
+     */
+
+    test(
+      'merge no sobrescribe línea nueva',
+      Number(
+        S.odds.get(101)?.line
+      )===9
+    );
+
+
+    /*
+     * La línea faltante del juego 202
+     * debe recuperarse desde el snapshot.
+     */
+
+    test(
+      'merge preserva línea faltante',
+      preserved===1 &&
+      Number(
+        S.odds.get(202)?.line
+      )===9.5 &&
+      S.odds.size===2
+    );
+
+
+    /*
+     * 3 · Simulamos fallo total.
+     */
+
+    S.odds=
+      new Map([
+
+        [
+          101,
+          {
+            line:7,
+            source:'BROKEN'
+          }
+        ]
+
+      ]);
+
+
+    S.publicOddsStatus={
+
+      source:'BROKEN',
+
+      at:999,
+
+      error:'simulado'
+
+    };
+
+
+    S.lastOddsAt=999;
+    S.lastOddsDay='BROKEN';
+
+
+    const restored=
+      safeOddsRestore(
+        snap
+      );
+
+
+    /*
+     * Deben volver exactamente
+     * las dos líneas originales.
+     */
+
+    test(
+      'restore recupera todas las líneas',
+      restored===2 &&
+      S.odds.size===2 &&
+      Number(
+        S.odds.get(101)?.line
+      )===8.5 &&
+      Number(
+        S.odds.get(202)?.line
+      )===9.5
+    );
+
+
+    /*
+     * También debe recuperar la metadata.
+     */
+
+    test(
+      'restore recupera metadata',
+      S.lastOddsAt===111 &&
+      S.lastOddsDay==='2026-09-01' &&
+      S.publicOddsStatus?.source===
+        'ESPN + Covers'
+    );
+
+
+    /*
+     * 4 · Reporte de actualización parcial.
+     */
+
+    const partialReport=
+      safeOddsRefreshReport({
+
+        attemptAt:
+          '2026-09-01T12:00:00.000Z',
+
+        success:true,
+
+        provider:'PUBLIC',
+
+        freshCount:1,
+
+        preservedCount:1,
+
+        restoredCount:0,
+
+        source:'ESPN',
+
+        usedCache:false
+
+      });
+
+
+    test(
+      'reporte parcial distingue preservadas',
+      partialReport.success===true &&
+      partialReport.freshCount===1 &&
+      partialReport.preservedCount===1 &&
+      partialReport.restoredCount===0
+    );
+
+
+    /*
+     * 5 · Reporte de fallo total.
+     */
+
+    const failReport=
+      safeOddsRefreshReport({
+
+        attemptAt:
+          '2026-09-01T12:05:00.000Z',
+
+        success:false,
+
+        provider:'PUBLIC',
+
+        freshCount:0,
+
+        preservedCount:0,
+
+        restoredCount:2,
+
+        source:'ESPN + Covers',
+
+        error:'fallo sintético'
+
+      });
+
+
+    test(
+      'reporte de fallo distingue restauradas',
+      failReport.success===false &&
+      failReport.freshCount===0 &&
+      failReport.restoredCount===2 &&
+      failReport.error==='fallo sintético'
+    );
+
+
+    /*
+     * 6 · El snapshot es una copia.
+     *
+     * Modificar S.odds después no debe
+     * alterar el snapshot capturado.
+     */
+
+    S.odds.get(101).line=12;
+
+
+    const snap101=
+      snap.rows.find(
+        x=>Number(x[0])===101
+      );
+
+
+    test(
+      'snapshot no muta con mapa posterior',
+      Number(
+        snap101?.[1]?.line
+      )===8.5
+    );
+
+
+  }finally{
+
+    /*
+     * RESTAURAR ESTADO REAL DE LA APP.
+     */
+
+    S.games=
+      original.games;
+
+
+    S.odds=
+      original.odds;
+
+
+    S.publicOddsStatus=
+      original.publicOddsStatus;
+
+
+    S.lastOddsAt=
+      original.lastOddsAt;
+
+
+    S.lastOddsDay=
+      original.lastOddsDay;
+
+
+    S.safeOddsRefresh=
+      original.safeOddsRefresh;
+
+  }
+
+
+  /*
+   * 7 · Confirmamos que las referencias
+   * reales regresaron intactas.
+   */
+
+  test(
+    'self-test restaura estado real',
+    S.games===original.games &&
+    S.odds===original.odds &&
+    S.publicOddsStatus===
+      original.publicOddsStatus &&
+    S.lastOddsAt===
+      original.lastOddsAt &&
+    S.lastOddsDay===
+      original.lastOddsDay &&
+    S.safeOddsRefresh===
+      original.safeOddsRefresh
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function safeOddsRunIntegritySelfTest(){
+
+  const report=
+    safeOddsIntegritySelfTest();
+
+
+  window.__MLB_SAFE_ODDS_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'SAFE ODDS INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+  }else{
+
+    console.error(
+      'SAFE ODDS INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+}
+
+
+/* V7.8.6I2 SAFE ODDS REFRESH DASHBOARD */
+
+function safeOddsCurrentStats(){
+
+  const valid=[];
+
+
+  if(S.odds instanceof Map){
+
+    for(
+      const [pk,q]
+      of S.odds
+    ){
+
+      if(
+        q &&
+        Number.isFinite(
+          Number(q.line)
+        )
+      ){
+
+        valid.push({
+          pk,
+          q
+        });
+
+      }
+
+    }
+
+  }
+
+
+  const real=
+    valid.filter(x=>
+      isRealLineSource(
+        x.q?.lineSource ||
+        x.q?.source ||
+        ''
+      )
+    );
+
+
+  return{
+
+    games:
+      Array.isArray(S.games)
+        ?S.games.length
+        :0,
+
+    valid:
+      valid.length,
+
+    real:
+      real.length,
+
+    coverage:
+      Array.isArray(S.games) &&
+      S.games.length
+        ?valid.length/S.games.length
+        :NaN
+
+  };
+
+}
+
+
+function safeOddsRefreshDashboardHtml(){
+
+  const current=
+    safeOddsCurrentStats();
+
+
+  const integrity=
+    safeOddsIntegritySelfTest();
+
+
+  const r=
+    S.safeOddsRefresh ||
+    null;
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(
+          v*100
+        ).toFixed(1)+'%'
+      :'—';
+
+
+  const timeFmt=v=>{
+
+    if(!v){
+      return '—';
+    }
+
+
+    try{
+
+      return new Date(v)
+        .toLocaleString(
+          'es-MX'
+        );
+
+    }catch{
+
+      return '—';
+    }
+
+  };
+
+
+  const state=
+    !r
+      ?{
+          label:'SIN INTENTO',
+          cls:'',
+          note:
+            'Todavía no se ha ejecutado Safe Odds Refresh en esta sesión.'
+        }
+
+      :r.success
+        ?{
+            label:
+              r.usedCache
+                ?'CACHÉ RECUPERADO'
+                :r.preservedCount>0
+                  ?'ÉXITO PARCIAL PROTEGIDO'
+                  :'ÉXITO',
+
+            cls:'bp-good',
+
+            note:
+              r.preservedCount>0
+                ?'Las nuevas líneas se combinaron con líneas válidas anteriores que el proveedor no devolvió.'
+                :r.usedCache
+                  ?'No hubo suficientes líneas nuevas y se utilizó el caché persistente.'
+                  :'La actualización terminó correctamente.'
+          }
+
+        :r.restoredCount>0
+          ?{
+              label:'FALLO · LÍNEAS RESTAURADAS',
+              cls:'bp-mid',
+              note:
+                'La actualización falló, pero las líneas válidas anteriores fueron restauradas.'
+            }
+
+          :{
+              label:'FALLO SIN RESPALDO',
+              cls:'bp-bad',
+              note:
+                'La actualización falló y no había líneas anteriores válidas que restaurar.'
+            };
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Safe Odds Refresh · estado
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Una actualización de momios no puede
+        borrar silenciosamente las últimas
+        líneas válidas conocidas.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Safe Odds Integrity
+          </small>
+
+          <div class="big ${integrity.ok?'bp-good':'bp-bad'}">
+            ${integrity.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            ${integrity.passed}/${integrity.total} pruebas
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Estado último intento
+          </small>
+
+          <div class="big ${state.cls}">
+            ${state.label}
+          </div>
+
+          <div class="smalltxt">
+            ${state.note}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Líneas actuales
+          </small>
+
+          <div class="big">
+            ${current.valid}
+          </div>
+
+          <div class="smalltxt">
+            ${current.games} juegos MLB
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cobertura actual
+          </small>
+
+          <div class="big">
+            ${pctFmt(
+              current.coverage
+            )}
+          </div>
+
+          <div class="smalltxt">
+            líneas válidas / juegos
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Líneas reales
+          </small>
+
+          <div class="big">
+            ${current.real}
+          </div>
+
+          <div class="smalltxt">
+            fuente reconocida
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="cards"
+        style="margin-top:10px"
+      >
+
+        <div class="card">
+
+          <small>
+            Nuevas recibidas
+          </small>
+
+          <div class="big">
+            ${r?.freshCount ?? 0}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Preservadas
+          </small>
+
+          <div class="big">
+            ${r?.preservedCount ?? 0}
+          </div>
+
+          <div class="smalltxt">
+            faltantes del proveedor
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Restauradas
+          </small>
+
+          <div class="big">
+            ${r?.restoredCount ?? 0}
+          </div>
+
+          <div class="smalltxt">
+            después de fallo total
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Total post-refresh
+          </small>
+
+          <div class="big">
+            ${r?.total ?? current.valid}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="section"
+           style="margin-top:12px">
+
+        <h3>
+          Última actualización
+        </h3>
+
+
+        <div class="smalltxt">
+
+          <b>Intento:</b>
+          ${timeFmt(r?.attemptAt)}
+
+          <br>
+
+          <b>Final:</b>
+          ${timeFmt(r?.finishedAt)}
+
+          <br>
+
+          <b>Proveedor configurado:</b>
+          ${esc(
+            r?.provider ||
+            '—'
+          )}
+
+          <br>
+
+          <b>Fuente utilizada:</b>
+          ${esc(
+            r?.source ||
+            S.publicOddsStatus?.source ||
+            '—'
+          )}
+
+          <br>
+
+          <b>Usó caché:</b>
+          ${r?.usedCache
+            ?'Sí'
+            :'No'}
+
+          ${r?.error
+            ?`
+              <br>
+              <b>Incidencia:</b>
+              ${esc(r.error)}
+            `
+            :''
+          }
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        "Preservada" significa que el proveedor
+        sí respondió, pero omitió uno o más juegos
+        para los que ya existía una línea válida.
+
+        "Restaurada" significa que el intento
+        completo falló y se recuperó el snapshot
+        anterior.
+
+        Ninguna de estas acciones modifica el
+        Motor V7.0 ni inventa nuevas líneas.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+async function loadAutoOdds(
+  day,
+  force=false
+){
+
+  const attemptAt=
+    new Date()
+      .toISOString();
+
+
+  /*
+   * Guardamos únicamente líneas pertenecientes
+   * a los gamePk de la jornada actualmente
+   * cargada. Así nunca arrastramos otra fecha.
+   */
+
+  const before=
+    safeOddsSnapshot(day);
+
+
+  const C=
+    cfg().odds || {};
+
+
+  const provider=
+    C.provider ||
+    'PUBLIC';
+
+
+  const errors=[];
+
+
+  try{
+
+    /*
+     * The Odds API
+     */
+
+    if(
+      (
+        provider==='API' ||
+        provider==='AUTO'
+      ) &&
+      C.key
+    ){
+
+      try{
+
+        const fresh=
+          await loadBookOdds(
+            day,
+            force
+          );
+
+
+        if(fresh){
+
+          S.publicOddsStatus={
+
+            source:
+              'The Odds API',
+
+            at:
+              Date.now(),
+
+            error:''
+
+          };
+
+
+          const preserved=
+            safeOddsMergeMissing(
+              before
+            );
+
+
+          savePublicOddsCache(day);
+
+
+          recordLastPregameLines(
+            day,
+            'API'
+          );
+
+
+          safeOddsRefreshReport({
+
+            attemptAt,
+
+            success:true,
+
+            provider,
+
+            freshCount:
+              fresh,
+
+            preservedCount:
+              preserved,
+
+            source:
+              'The Odds API',
+
+            usedCache:false
+
+          });
+
+
+          return S.odds.size;
+
+        }
+
+
+      }catch(e){
+
+        errors.push(
+          'API: '+
+          (
+            e?.message ||
+            e
+          )
+        );
+
+      }
+
+    }
+
+
+    /*
+     * Fuentes públicas
+     */
+
+    if(
+      provider!=='API' ||
+      !C.key
+    ){
+
+      try{
+
+        const fresh=
+          await loadPublicOdds(
+            day,
+            force
+          );
+
+
+        const source=
+          String(
+            S.publicOddsStatus?.source ||
+            'PUBLIC'
+          );
+
+
+        const usedCache=
+          /cach/i.test(
+            source
+          );
+
+
+        const preserved=
+          safeOddsMergeMissing(
+            before
+          );
+
+
+        /*
+         * Tras mezclar líneas anteriores que
+         * siguen siendo válidas, persistimos
+         * nuevamente el mapa completo.
+         */
+
+        savePublicOddsCache(day);
+
+
+        recordLastPregameLines(
+          day,
+          'PUBLIC'
+        );
+
+
+        safeOddsRefreshReport({
+
+          attemptAt,
+
+          success:true,
+
+          provider,
+
+          freshCount:
+            fresh,
+
+          preservedCount:
+            preserved,
+
+          source,
+
+          usedCache,
+
+          error:
+            S.publicOddsStatus?.error ||
+            ''
+
+        });
+
+
+        return S.odds.size;
+
+
+      }catch(e){
+
+        errors.push(
+          e?.message ||
+          String(e)
+        );
+
+      }
+
+    }
+
+
+    if(
+      provider==='API' &&
+      !C.key
+    ){
+
+      errors.push(
+        'The Odds API requiere key; cambia a fuente pública o Auto'
+      );
+
+    }
+
+
+    throw Error(
+      errors
+        .filter(Boolean)
+        .join(' · ') ||
+      'No fue posible obtener líneas automáticas'
+    );
+
+
+  }catch(e){
+
+    /*
+     * CLAVE DE I1:
+     *
+     * si toda la actualización falla,
+     * restauramos exactamente el snapshot
+     * anterior.
+     */
+
+    const restored=
+      safeOddsRestore(
+        before
+      );
+
+
+    const message=
+      e?.message ||
+      String(e);
+
+
+    /*
+     * Conservamos la fuente anterior pero
+     * dejamos constancia del error nuevo.
+     */
+
+    S.publicOddsStatus={
+
+      ...(
+        before.publicOddsStatus ||
+        {}
+      ),
+
+      source:
+        before.publicOddsStatus?.source ||
+        (
+          restored
+            ?'Líneas preservadas'
+            :''
+        ),
+
+      error:
+        message,
+
+      safePreserved:
+        restored>0
+
+    };
+
+
+    safeOddsRefreshReport({
+
+      attemptAt,
+
+      success:false,
+
+      provider,
+
+      freshCount:0,
+
+      preservedCount:0,
+
+      restoredCount:
+        restored,
+
+      source:
+        S.publicOddsStatus.source ||
+        '',
+
+      usedCache:false,
+
+      error:
+        message
+
+    });
+
+
+    throw e;
+
+  }
+
+}
 async function requestPersistentStorage(){try{if(navigator.storage?.persist){const ok=await navigator.storage.persist();return ok}}catch{}return false}
 function unstableLocalOrigin(){return location.protocol==='file:'||location.protocol==='content:'||location.origin==='null'||String(location.href).startsWith('content:')}
 function renderOriginWarning(){const e=$('#originWarning');if(!e)return;if(unstableLocalOrigin()){e.className='origin-warning';e.innerHTML='<b>Modo archivo local de Android:</b> Chrome puede asignar un origen temporal a content:// y borrar/aislar localStorage e IndexedDB al cerrar por completo. El Censo no puede garantizar permanencia en este modo. Para historial realmente persistente usa la versión PWA instalada desde HTTPS.'}else{e.className='origin-warning ok';e.innerHTML='<b>Origen estable:</b> historial, Censo y caché de líneas usan almacenamiento del mismo sitio. La app solicitará almacenamiento persistente cuando pulses Actualizar todo.'}}
@@ -11733,7 +13247,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -21727,7 +23241,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();settleAllUnified(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
