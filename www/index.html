@@ -10703,7 +10703,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankingValidationDashboardHtml()}${rankingVerdictDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -14086,6 +14086,1831 @@ async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.
 async function refreshLive(){if(!S.liveOn||!S.games.length)return;try{const d=await fetchJ(`${API}/schedule?sportId=1&date=${$('#date').value}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`,0),fresh=(d.dates||[]).flatMap(x=>x.games||[]),map=new Map(fresh.map(x=>[x.gamePk,x]));S.games=S.games.map(x=>map.get(x.gamePk)||x);renderGames()}catch{}}
 
 
+
+
+
+
+
+/* V7.8.6E3 RANKING VERDICT WATCH */
+
+function rankingBandAggregate(
+  bands=[],
+  keys=[]
+){
+
+  const use=
+    (Array.isArray(bands)?bands:[])
+      .filter(x=>
+        keys.includes(x.key)
+      );
+
+
+  const n=
+    use.reduce(
+      (a,x)=>a+(Number(x.n)||0),
+      0
+    );
+
+
+  const wins=
+    use.reduce(
+      (a,x)=>a+(Number(x.wins)||0),
+      0
+    );
+
+
+  const losses=
+    use.reduce(
+      (a,x)=>a+(Number(x.losses)||0),
+      0
+    );
+
+
+  const pushes=
+    use.reduce(
+      (a,x)=>a+(Number(x.pushes)||0),
+      0
+    );
+
+
+  const hit=
+    n
+      ?wins/n
+      :NaN;
+
+
+  const avgProbNumerator=
+    use.reduce(
+      (a,x)=>
+        a+
+        (
+          Number.isFinite(x.avgProb)
+            ?x.avgProb*(Number(x.n)||0)
+            :0
+        ),
+      0
+    );
+
+
+  const avgProbN=
+    use.reduce(
+      (a,x)=>
+        a+
+        (
+          Number.isFinite(x.avgProb)
+            ?Number(x.n)||0
+            :0
+        ),
+      0
+    );
+
+
+  const brierNumerator=
+    use.reduce(
+      (a,x)=>
+        a+
+        (
+          Number.isFinite(x.brier)
+            ?x.brier*(Number(x.n)||0)
+            :0
+        ),
+      0
+    );
+
+
+  const brierN=
+    use.reduce(
+      (a,x)=>
+        a+
+        (
+          Number.isFinite(x.brier)
+            ?Number(x.n)||0
+            :0
+        ),
+      0
+    );
+
+
+  return{
+
+    n,
+
+    wins,
+
+    losses,
+
+    pushes,
+
+    hit,
+
+    avgProb:
+      avgProbN
+        ?avgProbNumerator/avgProbN
+        :NaN,
+
+    brier:
+      brierN
+        ?brierNumerator/brierN
+        :NaN
+
+  };
+
+}
+
+
+function rankingValidationVerdict(
+  slice={}
+){
+
+  const bands=
+    Array.isArray(slice.bands)
+      ?slice.bands
+      :[];
+
+
+  const top=
+    rankingBandAggregate(
+      bands,
+      [
+        'R1',
+        'R2_3'
+      ]
+    );
+
+
+  const lower=
+    rankingBandAggregate(
+      bands,
+      [
+        'R4_6',
+        'R7_PLUS'
+      ]
+    );
+
+
+  const outcomeCorr=
+    Number(
+      slice.normalizedOutcomeCorr
+    );
+
+
+  const probCorr=
+    Number(
+      slice.normalizedProbCorr
+    );
+
+
+  const mono=
+    Number(
+      slice.monotonicRate
+    );
+
+
+  const hitDelta=
+    Number.isFinite(top.hit) &&
+    Number.isFinite(lower.hit)
+      ?top.hit-lower.hit
+      :NaN;
+
+
+  const probDelta=
+    Number.isFinite(top.avgProb) &&
+    Number.isFinite(lower.avgProb)
+      ?top.avgProb-lower.avgProb
+      :NaN;
+
+
+  /*
+   * No emitimos un veredicto estructural
+   * con poca muestra.
+   */
+
+  if(
+    Number(slice.settled||0)<30 ||
+    top.n<10 ||
+    lower.n<10
+  ){
+
+    return{
+
+      state:'SAMPLE_LOW',
+
+      label:'MUESTRA AÚN INSUFICIENTE',
+
+      cls:'bp-mid',
+
+      top,
+
+      lower,
+
+      hitDelta,
+
+      probDelta,
+
+      note:
+        'Todavía no hay volumen suficiente entre posiciones altas y bajas.'
+
+    };
+
+  }
+
+
+  /*
+   * Caso ideal:
+   * - resultado cae al bajar posiciones
+   * - probabilidad también cae
+   * - bandas razonablemente monotónicas
+   */
+
+  if(
+    Number.isFinite(outcomeCorr) &&
+    outcomeCorr<=-.10 &&
+    Number.isFinite(probCorr) &&
+    probCorr<=-.10 &&
+    Number.isFinite(hitDelta) &&
+    hitDelta>0 &&
+    (
+      !Number.isFinite(mono) ||
+      mono>=.66
+    )
+  ){
+
+    return{
+
+      state:'VALIDATING',
+
+      label:'ORDEN ÚTIL PROVISIONAL',
+
+      cls:'bp-good',
+
+      top,
+
+      lower,
+
+      hitDelta,
+
+      probDelta,
+
+      note:
+        'Las posiciones superiores están mostrando mejor rendimiento real y mayor probabilidad.'
+
+    };
+
+  }
+
+
+  /*
+   * El algoritmo ordena claramente
+   * sus probabilidades, pero aún no
+   * vemos ese orden en resultados.
+   */
+
+  if(
+    Number.isFinite(probCorr) &&
+    probCorr<=-.15 &&
+    (
+      !Number.isFinite(outcomeCorr) ||
+      Math.abs(outcomeCorr)<.10
+    )
+  ){
+
+    return{
+
+      state:'PROB_ONLY',
+
+      label:'ORDENA PROBABILIDAD, NO RESULTADO',
+
+      cls:'bp-mid',
+
+      top,
+
+      lower,
+
+      hitDelta,
+
+      probDelta,
+
+      note:
+        'La jerarquía interna existe, pero todavía no se confirma en la tasa de acierto.'
+
+    };
+
+  }
+
+
+  /*
+   * Alerta:
+   * posiciones peores están rindiendo
+   * igual o mejor de forma consistente.
+   */
+
+  if(
+    (
+      Number.isFinite(outcomeCorr) &&
+      outcomeCorr>=.10
+    ) ||
+    (
+      Number.isFinite(hitDelta) &&
+      hitDelta<=-.05
+    )
+  ){
+
+    return{
+
+      state:'ORDER_ALERT',
+
+      label:'ALERTA DE ORDEN',
+
+      cls:'bp-bad',
+
+      top,
+
+      lower,
+
+      hitDelta,
+
+      probDelta,
+
+      note:
+        'Las posiciones altas no están superando a las posiciones inferiores como deberían.'
+
+    };
+
+  }
+
+
+  return{
+
+    state:'INCONCLUSIVE',
+
+    label:'RANKING NO CONCLUYENTE',
+
+    cls:'',
+
+    top,
+
+    lower,
+
+    hitDelta,
+
+    probDelta,
+
+    note:
+      'Todavía no existe una separación suficientemente consistente entre posiciones.'
+
+  };
+
+}
+
+
+function rankingVerdictDashboardHtml(){
+
+  const d=
+    rankingValidationStats(
+      censusAllRows()
+    );
+
+
+  const slices=
+    Array.isArray(d.slices)
+      ?d.slices
+      :[];
+
+
+  const wanted=[
+    'ACTIVE',
+    'JUGABLE',
+    'LEAN'
+  ];
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(
+          v>=0
+            ?'+'
+            :''
+        )+
+        (v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const hitFmt=v=>
+    Number.isFinite(v)
+      ?(v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const rows=
+    wanted.map(name=>{
+
+      const slice=
+        slices.find(
+          x=>x.name===name
+        );
+
+
+      if(!slice){
+        return'';
+      }
+
+
+      const v=
+        rankingValidationVerdict(
+          slice
+        );
+
+
+      return`
+
+        <tr>
+
+          <td>
+            <b>
+              ${name}
+            </b>
+          </td>
+
+          <td>
+            ${slice.settled}
+          </td>
+
+          <td>
+            ${v.top.n}
+          </td>
+
+          <td>
+            ${hitFmt(v.top.hit)}
+          </td>
+
+          <td>
+            ${v.lower.n}
+          </td>
+
+          <td>
+            ${hitFmt(v.lower.hit)}
+          </td>
+
+          <td>
+            ${pctFmt(v.hitDelta)}
+          </td>
+
+          <td>
+            ${pctFmt(v.probDelta)}
+          </td>
+
+          <td class="${v.cls}">
+            ${v.label}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join('');
+
+
+  const active=
+    slices.find(
+      x=>x.name==='ACTIVE'
+    );
+
+
+  const verdict=
+    active
+      ?rankingValidationVerdict(active)
+      :{
+          label:'SIN DATOS',
+          cls:'',
+          note:'No hay muestra ACTIVE disponible.'
+        };
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Ranking Verdict · Watch
+      </h3>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Veredicto ACTIVE
+          </small>
+
+          <div class="big ${verdict.cls}">
+            ${verdict.label}
+          </div>
+
+          <div class="smalltxt">
+            ${verdict.note}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Top #1–3
+          </small>
+
+          <div class="big">
+            ${verdict.top?.n || 0}
+          </div>
+
+          <div class="smalltxt">
+            Hit
+            ${hitFmt(verdict.top?.hit)}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Lower #4+
+          </small>
+
+          <div class="big">
+            ${verdict.lower?.n || 0}
+          </div>
+
+          <div class="smalltxt">
+            Hit
+            ${hitFmt(verdict.lower?.hit)}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Δ Hit Top − Lower
+          </small>
+
+          <div class="big">
+            ${pctFmt(verdict.hitDelta)}
+          </div>
+
+          <div class="smalltxt">
+            positivo favorece al Ranking
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="overflow:auto;
+               margin-top:12px"
+      >
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Grupo
+              </th>
+
+              <th>
+                N
+              </th>
+
+              <th>
+                Top N
+              </th>
+
+              <th>
+                Top Hit
+              </th>
+
+              <th>
+                Lower N
+              </th>
+
+              <th>
+                Lower Hit
+              </th>
+
+              <th>
+                Δ Hit
+              </th>
+
+              <th>
+                Δ Prob.
+              </th>
+
+              <th>
+                Veredicto
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${rows}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="note">
+
+        Top = posiciones #1–3.
+
+        Lower = posiciones #4 en adelante.
+
+        Δ Hit positivo significa que los picks
+        superiores están cobrando más que los
+        inferiores.
+
+        Δ Prob. positivo significa que el modelo
+        también asigna mayor probabilidad a sus
+        posiciones superiores.
+
+        No se emite veredicto estructural hasta
+        disponer de al menos 30 resultados,
+        incluyendo mínimo 10 Top y 10 Lower.
+
+        "ORDEN ÚTIL PROVISIONAL" no significa
+        que el ranking esté demostrado.
+        Significa que varias métricas empiezan
+        a apuntar en la dirección esperada.
+
+        "ALERTA DE ORDEN" tampoco modifica
+        automáticamente el algoritmo.
+
+        El Motor V7.0 permanece intacto.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* V7.8.6E2 RANKING VALIDATION DASHBOARD */
+
+function rankingValidationReading(
+  slice={}
+){
+
+  const n=
+    Number(slice?.settled)||0;
+
+
+  const corr=
+    Number(
+      slice?.normalizedOutcomeCorr
+    );
+
+
+  const mono=
+    Number(
+      slice?.monotonicRate
+    );
+
+
+  if(n<20){
+
+    return{
+      label:'MUESTRA BAJA',
+      cls:'bp-mid',
+      note:'Todavía no hay suficientes resultados para validar el orden.'
+    };
+
+  }
+
+
+  if(
+    Number.isFinite(corr) &&
+    corr<=-.15 &&
+    (
+      !Number.isFinite(mono) ||
+      mono>=.66
+    )
+  ){
+
+    return{
+      label:'ORDEN CON SEÑAL',
+      cls:'bp-good',
+      note:'Los puestos superiores muestran una relación favorable provisional.'
+    };
+
+  }
+
+
+  if(
+    Number.isFinite(corr) &&
+    corr>=.15
+  ){
+
+    return{
+      label:'ALERTA DE ORDEN',
+      cls:'bp-bad',
+      note:'Los resultados están mostrando una relación opuesta a la esperada.'
+    };
+
+  }
+
+
+  return{
+    label:'NO CONCLUYENTE',
+    cls:'',
+    note:'No hay evidencia clara de que bajar posiciones reduzca el rendimiento.'
+  };
+
+}
+
+
+function rankingValidationDashboardHtml(){
+
+  const d=
+    rankingValidationStats(
+      censusAllRows()
+    );
+
+
+  const slices=
+    Array.isArray(d.slices)
+      ?d.slices
+      :[];
+
+
+  const byName=
+    new Map(
+      slices.map(
+        x=>[
+          x.name,
+          x
+        ]
+      )
+    );
+
+
+  const active=
+    byName.get('ACTIVE') || {
+      bands:[],
+      settled:0
+    };
+
+
+  const all=
+    byName.get('ALL') || {
+      settled:0
+    };
+
+
+  const pctFmt=v=>
+    Number.isFinite(v)
+      ?(v*100).toFixed(1)+'%'
+      :'—';
+
+
+  const numFmt=(v,digits=3)=>
+    Number.isFinite(v)
+      ?Number(v).toFixed(digits)
+      :'—';
+
+
+  const corrFmt=v=>
+    Number.isFinite(v)
+      ?(
+          v>=0
+            ?'+'
+            :''
+        )+
+        Number(v).toFixed(3)
+      :'—';
+
+
+  const activeReading=
+    rankingValidationReading(
+      active
+    );
+
+
+  const activeBands=
+    (active.bands || [])
+      .map(x=>{
+
+        const rec=
+          x.n
+            ?x.wins+'-'+x.losses
+            :'—';
+
+
+        const ci=
+          Number.isFinite(x.ciLow) &&
+          Number.isFinite(x.ciHigh)
+            ?pctFmt(x.ciLow)+
+             ' – '+
+             pctFmt(x.ciHigh)
+            :'—';
+
+
+        const gap=
+          Number.isFinite(x.gap)
+            ?(
+                x.gap>=0
+                  ?'+'
+                  :''
+              )+
+              pctFmt(x.gap)
+            :'—';
+
+
+        return`
+
+          <tr>
+
+            <td>
+              <b>
+                ${x.label}
+              </b>
+            </td>
+
+            <td>
+              ${x.n}
+            </td>
+
+            <td>
+              ${rec}
+            </td>
+
+            <td>
+              ${x.pushes}
+            </td>
+
+            <td>
+              ${pctFmt(x.hit)}
+            </td>
+
+            <td>
+              ${pctFmt(x.avgProb)}
+            </td>
+
+            <td>
+              ${gap}
+            </td>
+
+            <td>
+              ${numFmt(x.brier)}
+            </td>
+
+            <td>
+              ${ci}
+            </td>
+
+          </tr>
+
+        `;
+
+      })
+      .join('');
+
+
+  const sliceRows=
+    slices.map(x=>{
+
+      const r=
+        rankingValidationReading(x);
+
+
+      const mono=
+        Number.isFinite(x.monotonicRate)
+          ?x.monotonicPass+
+           '/'+
+           x.monotonicComparisons+
+           ' · '+
+           pctFmt(x.monotonicRate)
+          :'—';
+
+
+      return`
+
+        <tr>
+
+          <td>
+
+            <b>
+              ${x.name}
+            </b>
+
+          </td>
+
+          <td>
+            ${x.settled}
+          </td>
+
+          <td>
+            ${corrFmt(
+              x.normalizedOutcomeCorr
+            )}
+          </td>
+
+          <td>
+            ${corrFmt(
+              x.normalizedProbCorr
+            )}
+          </td>
+
+          <td>
+            ${mono}
+          </td>
+
+          <td class="${r.cls}">
+            ${r.label}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join('');
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Ranking Validation
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Comprueba si las posiciones superiores
+        del Ranking realmente producen mejores
+        resultados. La prueba principal usa
+        JUGABLE + LEAN; PASS se audita aparte.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Filas con Rank
+          </small>
+
+          <div class="big">
+            ${d.ranked}
+          </div>
+
+          <div class="smalltxt">
+            de ${d.totalCensus} en Censo
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados · ALL
+          </small>
+
+          <div class="big">
+            ${all.settled || 0}
+          </div>
+
+          <div class="smalltxt">
+            con resultado W/L
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Liquidados · ACTIVE
+          </small>
+
+          <div class="big">
+            ${active.settled || 0}
+          </div>
+
+          <div class="smalltxt">
+            JUGABLE + LEAN
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Lectura principal
+          </small>
+
+          <div class="big ${activeReading.cls}">
+            ${activeReading.label}
+          </div>
+
+          <div class="smalltxt">
+            ${activeReading.note}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          ACTIVE · rendimiento por posición
+        </h3>
+
+
+        <div class="smalltxt"
+             style="margin-bottom:8px">
+
+          ACTIVE = JUGABLE + LEAN.
+
+          Idealmente #1 debería rendir al menos
+          tan bien como #2–3, éstos mejor que
+          #4–6, y así sucesivamente.
+
+        </div>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Rank
+                </th>
+
+                <th>
+                  N
+                </th>
+
+                <th>
+                  Récord
+                </th>
+
+                <th>
+                  Push
+                </th>
+
+                <th>
+                  Hit
+                </th>
+
+                <th>
+                  Prob.
+                </th>
+
+                <th>
+                  Gap
+                </th>
+
+                <th>
+                  Brier
+                </th>
+
+                <th>
+                  IC95
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${activeBands}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="section">
+
+        <h3>
+          Diagnóstico del orden
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Grupo
+                </th>
+
+                <th>
+                  N
+                </th>
+
+                <th>
+                  Corr. resultado
+                </th>
+
+                <th>
+                  Corr. prob.
+                </th>
+
+                <th>
+                  Monotonía
+                </th>
+
+                <th>
+                  Lectura
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${sliceRows}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        Corr. resultado utiliza la posición
+        relativa del pick dentro de su jornada
+        contra WIN/LOSS.
+
+        Una correlación NEGATIVA es la dirección
+        esperada: al empeorar la posición del
+        ranking, debería caer la tasa de victoria.
+
+        Corr. prob. comprueba si la propia
+        probabilidad del modelo también disminuye
+        conforme bajamos posiciones.
+
+        Monotonía compara:
+
+        #1 ≥ #2–3 ≥ #4–6 ≥ #7+.
+
+        Con menos de 20 resultados la lectura
+        permanece como MUESTRA BAJA.
+
+        Estas correlaciones son descriptivas;
+        no prueban causalidad ni justifican por
+        sí solas modificar el algoritmo.
+
+        Este panel NO cambia el Ranking,
+        probabilidades, señales, gates ni
+        pesos del Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* V7.8.6E1 RANKING VALIDATION ENGINE */
+
+function rankingValidationBand(
+  rank
+){
+
+  const r=
+    Number(rank);
+
+
+  if(
+    !Number.isFinite(r) ||
+    r<1
+  ){
+    return 'INVALID';
+  }
+
+
+  if(r===1){
+    return 'R1';
+  }
+
+
+  if(r<=3){
+    return 'R2_3';
+  }
+
+
+  if(r<=6){
+    return 'R4_6';
+  }
+
+
+  return 'R7_PLUS';
+
+}
+
+
+function rankingValidationSummary(
+  rows=[]
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  const finals=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='FINAL' &&
+      Number.isFinite(Number(r?.y))
+    );
+
+
+  const wins=
+    finals.filter(r=>
+      Number(r.y)===1
+    ).length;
+
+
+  const losses=
+    finals.length-wins;
+
+
+  const pushes=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='PUSH'
+    ).length;
+
+
+  const pending=
+    all.filter(r=>
+      String(r?.status||'').toUpperCase()==='PENDING'
+    ).length;
+
+
+  const probs=
+    finals
+      .map(r=>Number(r?.p))
+      .filter(Number.isFinite);
+
+
+  const briers=
+    finals
+      .map(r=>Number(r?.brier))
+      .filter(Number.isFinite);
+
+
+  const hit=
+    finals.length
+      ?wins/finals.length
+      :NaN;
+
+
+  const avgProb=
+    probs.length
+      ?probs.reduce(
+          (a,b)=>a+b,
+          0
+        )/probs.length
+      :NaN;
+
+
+  const brier=
+    briers.length
+      ?briers.reduce(
+          (a,b)=>a+b,
+          0
+        )/briers.length
+      :NaN;
+
+
+  const ci=
+    wilsonInterval(
+      wins,
+      finals.length
+    );
+
+
+  return{
+
+    total:
+      all.length,
+
+    n:
+      finals.length,
+
+    wins,
+
+    losses,
+
+    pushes,
+
+    pending,
+
+    hit,
+
+    avgProb,
+
+    gap:
+      Number.isFinite(hit) &&
+      Number.isFinite(avgProb)
+        ?hit-avgProb
+        :NaN,
+
+    brier,
+
+    ciLow:
+      ci?.low,
+
+    ciHigh:
+      ci?.high
+
+  };
+
+}
+
+
+function rankingValidationCorrelation(
+  pairs=[]
+){
+
+  const clean=
+    (Array.isArray(pairs)?pairs:[])
+      .filter(x=>
+        Number.isFinite(Number(x?.x)) &&
+        Number.isFinite(Number(x?.y))
+      )
+      .map(x=>({
+        x:Number(x.x),
+        y:Number(x.y)
+      }));
+
+
+  const n=
+    clean.length;
+
+
+  if(n<3){
+    return NaN;
+  }
+
+
+  const mx=
+    clean.reduce(
+      (a,z)=>a+z.x,
+      0
+    )/n;
+
+
+  const my=
+    clean.reduce(
+      (a,z)=>a+z.y,
+      0
+    )/n;
+
+
+  let num=0;
+  let dx=0;
+  let dy=0;
+
+
+  for(const z of clean){
+
+    const ax=
+      z.x-mx;
+
+    const ay=
+      z.y-my;
+
+    num+=ax*ay;
+    dx+=ax*ax;
+    dy+=ay*ay;
+
+  }
+
+
+  if(
+    dx<=0 ||
+    dy<=0
+  ){
+    return NaN;
+  }
+
+
+  return(
+    num/
+    Math.sqrt(dx*dy)
+  );
+
+}
+
+
+function rankingValidationSlice(
+  rows=[],
+  name='ALL'
+){
+
+  const bands=[
+    {
+      key:'R1',
+      label:'#1'
+    },
+    {
+      key:'R2_3',
+      label:'#2–3'
+    },
+    {
+      key:'R4_6',
+      label:'#4–6'
+    },
+    {
+      key:'R7_PLUS',
+      label:'#7+'
+    }
+  ];
+
+
+  const grouped=
+    bands.map(b=>{
+
+      const subset=
+        rows.filter(r=>
+          rankingValidationBand(
+            r.rank
+          )===b.key
+        );
+
+
+      return{
+        ...b,
+        ...rankingValidationSummary(
+          subset
+        )
+      };
+
+    });
+
+
+  /*
+   * Máximo rank de cada jornada.
+   * Así construimos también una posición
+   * relativa 0=mejor, 1=peor.
+   */
+
+  const maxByDay=
+    new Map();
+
+
+  for(const r of rows){
+
+    const day=
+      String(
+        r.censusDate ||
+        r.date ||
+        ''
+      );
+
+
+    const rank=
+      Number(r.rank);
+
+
+    if(
+      !day ||
+      !Number.isFinite(rank)
+    ){
+      continue;
+    }
+
+
+    maxByDay.set(
+      day,
+      Math.max(
+        maxByDay.get(day)||0,
+        rank
+      )
+    );
+
+  }
+
+
+  const settled=
+    rows.filter(r=>
+      String(r?.status||'').toUpperCase()==='FINAL' &&
+      Number.isFinite(Number(r?.y))
+    );
+
+
+  const normalized=
+    settled.map(r=>{
+
+      const day=
+        String(
+          r.censusDate ||
+          r.date ||
+          ''
+        );
+
+
+      const rank=
+        Number(r.rank);
+
+
+      const max=
+        Number(
+          maxByDay.get(day)
+        );
+
+
+      const percentile=
+        Number.isFinite(max) &&
+        max>1
+          ?(rank-1)/(max-1)
+          :0;
+
+
+      return{
+        ...r,
+        rankPercentile:
+          percentile
+      };
+
+    });
+
+
+  /*
+   * Correlación esperada:
+   *
+   * rank vs resultado:
+   * negativa = mejor ranking tiende
+   * a ganar más.
+   *
+   * rank vs probabilidad:
+   * negativa = las probabilidades sí
+   * decrecen conforme cae el ranking.
+   */
+
+  const rawOutcomeCorr=
+    rankingValidationCorrelation(
+      settled.map(r=>({
+        x:Number(r.rank),
+        y:Number(r.y)
+      }))
+    );
+
+
+  const normalizedOutcomeCorr=
+    rankingValidationCorrelation(
+      normalized.map(r=>({
+        x:r.rankPercentile,
+        y:Number(r.y)
+      }))
+    );
+
+
+  const normalizedProbCorr=
+    rankingValidationCorrelation(
+      normalized
+        .filter(r=>
+          Number.isFinite(Number(r.p))
+        )
+        .map(r=>({
+          x:r.rankPercentile,
+          y:Number(r.p)
+        }))
+    );
+
+
+  /*
+   * Monotonicidad de hit-rate por bandas.
+   * Ideal:
+   *
+   * #1 >= #2-3 >= #4-6 >= #7+
+   *
+   * Sólo comparamos pares que ya tienen
+   * resultados disponibles.
+   */
+
+  let comparisons=0;
+  let monotonic=0;
+
+
+  for(
+    let i=0;
+    i<grouped.length-1;
+    i++
+  ){
+
+    const a=
+      grouped[i];
+
+    const b=
+      grouped[i+1];
+
+
+    if(
+      !Number.isFinite(a.hit) ||
+      !Number.isFinite(b.hit)
+    ){
+      continue;
+    }
+
+
+    comparisons++;
+
+
+    if(
+      a.hit>=b.hit
+    ){
+      monotonic++;
+    }
+
+  }
+
+
+  return{
+
+    name,
+
+    total:
+      rows.length,
+
+    settled:
+      settled.length,
+
+    bands:
+      grouped,
+
+    rawOutcomeCorr,
+
+    normalizedOutcomeCorr,
+
+    normalizedProbCorr,
+
+    monotonicComparisons:
+      comparisons,
+
+    monotonicPass:
+      monotonic,
+
+    monotonicRate:
+      comparisons
+        ?monotonic/comparisons
+        :NaN
+
+  };
+
+}
+
+
+function rankingValidationStats(
+  rows=censusAllRows()
+){
+
+  const all=
+    (Array.isArray(rows)?rows:[])
+      .filter(r=>
+        (
+          !r?.market ||
+          String(r.market).toUpperCase()==='TOTAL'
+        ) &&
+        Number.isFinite(Number(r?.rank)) &&
+        Number(r.rank)>=1
+      );
+
+
+  const signal=r=>
+    String(
+      r?.signal || ''
+    ).toUpperCase();
+
+
+  const active=
+    all.filter(r=>
+      signal(r)==='JUGABLE' ||
+      signal(r)==='LEAN'
+    );
+
+
+  const jugable=
+    all.filter(r=>
+      signal(r)==='JUGABLE'
+    );
+
+
+  const lean=
+    all.filter(r=>
+      signal(r)==='LEAN'
+    );
+
+
+  const pass=
+    all.filter(r=>
+      signal(r)==='PASS'
+    );
+
+
+  return{
+
+    totalCensus:
+      Array.isArray(rows)
+        ?rows.length
+        :0,
+
+    ranked:
+      all.length,
+
+    unranked:
+      Math.max(
+        0,
+        (Array.isArray(rows)?rows.length:0)-
+        all.length
+      ),
+
+    slices:[
+
+      rankingValidationSlice(
+        all,
+        'ALL'
+      ),
+
+      rankingValidationSlice(
+        active,
+        'ACTIVE'
+      ),
+
+      rankingValidationSlice(
+        jugable,
+        'JUGABLE'
+      ),
+
+      rankingValidationSlice(
+        lean,
+        'LEAN'
+      ),
+
+      rankingValidationSlice(
+        pass,
+        'PASS'
+      )
+
+    ]
+
+  };
+
+}
 
 
 /* V7.8.6D3 SEGMENT WATCHLIST ALERTS */
