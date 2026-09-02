@@ -13386,7 +13386,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}${policyCohortDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}${policyCohortDashboardHtml()}${finalIntegrityDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -16521,6 +16521,1073 @@ function policyCohortDashboardHtml(){
     </div>
 
   `;
+
+}
+
+
+
+/* V7.8.6L1 FINAL INTEGRITY SUITE */
+
+function finalIntegrityNormalize(
+  id,
+  label,
+  report
+){
+
+  const total=
+    Number(
+      report?.total
+    ) || 0;
+
+
+  const passed=
+    Number(
+      report?.passed
+    ) || 0;
+
+
+  let failedCount=0;
+
+
+  if(
+    Array.isArray(
+      report?.failed
+    )
+  ){
+
+    failedCount=
+      report.failed.length;
+
+
+  }else if(
+    Number.isFinite(
+      Number(report?.failed)
+    )
+  ){
+
+    failedCount=
+      Number(
+        report.failed
+      );
+
+
+  }else{
+
+    failedCount=
+      Math.max(
+        0,
+        total-passed
+      );
+
+  }
+
+
+  return{
+
+    id,
+
+    label,
+
+    ok:
+      report?.ok===true &&
+      total>0 &&
+      passed===total &&
+      failedCount===0,
+
+    total,
+
+    passed,
+
+    failed:
+      failedCount,
+
+    version:
+      report?.version ||
+      null
+
+  };
+
+}
+
+
+function finalIntegrityFamily(
+  id,
+  label,
+  getter
+){
+
+  try{
+
+    const report=
+      getter();
+
+
+    return finalIntegrityNormalize(
+      id,
+      label,
+      report
+    );
+
+
+  }catch(e){
+
+    return{
+
+      id,
+
+      label,
+
+      ok:false,
+
+      total:0,
+
+      passed:0,
+
+      failed:1,
+
+      error:
+        e?.message ||
+        String(e)
+
+    };
+
+  }
+
+}
+
+
+function finalIntegritySuite(){
+
+  const families=[
+
+    finalIntegrityFamily(
+      'CORE',
+      'Core Math / Data Vault',
+      ()=>
+        window.MLB_SELF_TESTS ||
+        runCoreSelfTests()
+    ),
+
+
+    finalIntegrityFamily(
+      'RANK',
+      'Ranking Invariant',
+      ()=>
+        window.__MLB_RANK_INVARIANT__ ||
+        rankAuditInvariantSelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'SETTLEMENT',
+      'Settlement',
+      ()=>
+        window.__MLB_SETTLEMENT_INTEGRITY__ ||
+        settlementIntegritySelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'TRACE',
+      'Decision Trace',
+      ()=>
+        window.__MLB_DECISION_TRACE_INTEGRITY__ ||
+        decisionTraceIntegritySelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'ODDS',
+      'Safe Odds',
+      ()=>
+        window.__MLB_SAFE_ODDS_INTEGRITY__ ||
+        safeOddsIntegritySelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'IMPORT',
+      'Backup / Safe Import',
+      ()=>
+        window.__MLB_SAFE_IMPORT_INTEGRITY__ ||
+        safeImportIntegritySelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'POLICY',
+      'Policy Cohort',
+      ()=>
+        window.__MLB_POLICY_COHORT_INTEGRITY__ ||
+        policyCohortIntegritySelfTest()
+    ),
+
+
+    finalIntegrityFamily(
+      'CROSS',
+      'Cross-System',
+      ()=>
+        window.__MLB_CROSS_SYSTEM_INTEGRITY__ ||
+        crossSystemIntegritySelfTest()
+    )
+
+  ];
+
+
+  const total=
+    families.reduce(
+      (a,x)=>
+        a+x.total,
+      0
+    );
+
+
+  const passed=
+    families.reduce(
+      (a,x)=>
+        a+x.passed,
+      0
+    );
+
+
+  const failed=
+    families.reduce(
+      (a,x)=>
+        a+x.failed,
+      0
+    );
+
+
+  const familyPass=
+    families.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    version:
+      'V7.8.6L1',
+
+    ok:
+      families.length===8 &&
+      familyPass===8 &&
+      failed===0 &&
+      passed===total &&
+      total>0,
+
+    families,
+
+    familyPass,
+
+    familyTotal:
+      families.length,
+
+    total,
+
+    passed,
+
+    failed,
+
+    modelVersion:
+      MODEL_VERSION,
+
+    policyVersion:
+      typeof GLOBAL_POLICY_VERSION!=='undefined'
+        ?GLOBAL_POLICY_VERSION
+        :null,
+
+    cohortId:
+      typeof GLOBAL_COHORT_ID!=='undefined'
+        ?GLOBAL_COHORT_ID
+        :null,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function finalIntegrityRunSuite(){
+
+  const report=
+    finalIntegritySuite();
+
+
+  window.__MLB_FINAL_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'FINAL INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total,
+      '· familias '+
+      report.familyPass+
+      '/'+
+      report.familyTotal
+    );
+
+
+  }else{
+
+    console.error(
+      'FINAL INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+
+}
+
+
+/* =========================================
+   DASHBOARD
+   ========================================= */
+
+function finalIntegrityDashboardHtml(){
+
+  const r=
+    window.__MLB_FINAL_INTEGRITY__ ||
+    finalIntegrityRunSuite();
+
+
+  const rows=
+    r.families
+      .map(x=>`
+
+        <tr>
+
+          <td>
+            <b>
+              ${x.label}
+            </b>
+          </td>
+
+          <td>
+            ${x.passed}/${x.total}
+          </td>
+
+          <td
+            class="${x.ok?'bp-good':'bp-bad'}"
+          >
+            <b>
+              ${x.ok?'PASS':'FAIL'}
+            </b>
+          </td>
+
+        </tr>
+
+      `)
+      .join('');
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Final Integrity Suite
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Auditoría conjunta de matemáticas,
+        persistencia, Ranking, liquidación,
+        Decision Trace, líneas, backups,
+        importación y cohort.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Integridad global
+          </small>
+
+          <div
+            class="big ${r.ok?'bp-good':'bp-bad'}"
+          >
+            ${r.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            V7.8.6L1
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Pruebas
+          </small>
+
+          <div class="big">
+            ${r.passed}/${r.total}
+          </div>
+
+          <div class="smalltxt">
+            fallos ${r.failed}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Familias
+          </small>
+
+          <div class="big">
+            ${r.familyPass}/${r.familyTotal}
+          </div>
+
+          <div class="smalltxt">
+            subsistemas PASS
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Motor
+          </small>
+
+          <div class="big">
+            ${r.modelVersion}
+          </div>
+
+          <div class="smalltxt">
+            sin cambios
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Policy
+          </small>
+
+          <div class="big">
+            V7.8.6
+          </div>
+
+          <div class="smalltxt">
+            ${r.policyVersion || '—'}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cohort
+          </small>
+
+          <div class="big">
+            FREEZE 1
+          </div>
+
+          <div class="smalltxt">
+            ${r.cohortId || '—'}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          Resultado por subsistema
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Familia
+                </th>
+
+                <th>
+                  Pruebas
+                </th>
+
+                <th>
+                  Estado
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+              ${rows}
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="${r.ok?'okbox':'danger'}"
+      >
+
+        <b>
+          ${r.ok
+            ?'Integridad conjunta confirmada'
+            :'Hay al menos un subsistema con fallo'}
+        </b>
+
+        <br>
+
+        ${r.passed}/${r.total}
+        comprobaciones aprobadas.
+
+      </div>
+
+
+      <div class="note">
+
+        Este certificado es diagnóstico.
+        No modifica señales, probabilidades,
+        pesos, Ranking, thresholds,
+        apuestas ni Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+
+/* V7.8.6L2 CROSS SYSTEM INVARIANTS */
+
+function crossSystemIntegritySelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  const clone=x=>
+    JSON.parse(
+      JSON.stringify(x)
+    );
+
+
+  const t1=
+    '2026-09-01T20:00:00.000Z';
+
+  const t2=
+    '2026-09-01T20:15:00.000Z';
+
+
+  /*
+   * 1 · POLICY + DECISION TRACE
+   * pueden convivir en el mismo registro.
+   */
+
+  const first={
+
+    gamePk:7001,
+
+    signal:'LEAN',
+
+    p:.55,
+
+    side:'OVER',
+
+    line:8.5,
+
+    rank:5,
+
+    activeRank:3,
+
+    ...globalPolicyIdentity(
+      null,
+      t1
+    )
+
+  };
+
+
+  decisionTraceApply(
+    null,
+    first,
+    t1
+  );
+
+
+  test(
+    'Policy y Decision Trace coexisten',
+    first.policyVersion===
+      GLOBAL_POLICY_VERSION &&
+    first.cohortId===
+      GLOBAL_COHORT_ID &&
+    first.firstSignal==='LEAN' &&
+    first.lastSignal==='LEAN' &&
+    first.decisionTraceOrigin==='NEW_ROW'
+  );
+
+
+  /*
+   * 2 · Una actualización pregame
+   * no debe alterar ni FIRST ni POLICY.
+   */
+
+  const second={
+
+    ...clone(first),
+
+    signal:'JUGABLE',
+
+    p:.60,
+
+    rank:2,
+
+    activeRank:1
+
+  };
+
+
+  decisionTraceApply(
+    first,
+    second,
+    t2
+  );
+
+
+  test(
+    'actualización preserva First y Policy',
+    second.firstSignal==='LEAN' &&
+    second.lastSignal==='JUGABLE' &&
+    second.signalFlipCount===1 &&
+    second.policyVersion===
+      GLOBAL_POLICY_VERSION &&
+    second.cohortId===
+      GLOBAL_COHORT_ID &&
+    second.policyCapturedAt===t1
+  );
+
+
+  /*
+   * 3 · LEGACY debe seguir siendo
+   * legacy tanto en Trace como Policy.
+   */
+
+  const legacyOld={
+
+    gamePk:7002,
+
+    signal:'PASS',
+
+    p:.51,
+
+    side:'UNDER',
+
+    line:9,
+
+    rank:7,
+
+    status:'PENDING'
+
+  };
+
+
+  const legacyFresh={
+
+    ...legacyOld,
+
+    signal:'LEAN',
+
+    p:.54,
+
+    rank:6
+
+  };
+
+
+  decisionTraceApply(
+    legacyOld,
+    legacyFresh,
+    t2
+  );
+
+
+  Object.assign(
+    legacyFresh,
+    globalPolicyIdentity(
+      legacyOld,
+      t2
+    )
+  );
+
+
+  test(
+    'legacy no recibe historia inventada',
+    legacyFresh.decisionTraceOrigin===
+      'H1_BASELINE' &&
+    legacyFresh.signalFlipCount===0 &&
+    legacyFresh.policyOrigin===
+      'LEGACY_PRE_K1' &&
+    legacyFresh.policyVersion===null &&
+    legacyFresh.cohortId===null
+  );
+
+
+  /*
+   * 4 · SETTLEMENT + SAFE IMPORT.
+   *
+   * Un resultado FINAL real no puede
+   * retroceder al importar PENDING.
+   */
+
+  const settlement=
+    unifiedSettlementRecordState(
+      'UNDER',
+      8.5,
+      8
+    );
+
+
+  const settledCurrent={
+
+    ...clone(second),
+
+    status:
+      settlement.labStatus,
+
+    y:
+      settlement.y,
+
+    actual:8,
+
+    updated:t2
+
+  };
+
+
+  const pendingBackup={
+
+    status:'PENDING',
+
+    importedOnly:
+      'CONSERVAR',
+
+    updated:t1
+
+  };
+
+
+  const protectedFinal=
+    safeImportChooseRecord(
+      settledCurrent,
+      pendingBackup
+    );
+
+
+  test(
+    'Settlement FINAL resiste backup PENDING',
+    protectedFinal.row.status==='FINAL' &&
+    protectedFinal.row.y===1 &&
+    protectedFinal.usedIncoming===false &&
+    protectedFinal.row.policyVersion===
+      GLOBAL_POLICY_VERSION &&
+    protectedFinal.row.firstSignal==='LEAN' &&
+    protectedFinal.row.importedOnly===
+      'CONSERVAR'
+  );
+
+
+  /*
+   * 5 · Si el actual está PENDING y el
+   * backup trae FINAL, debe completar el
+   * resultado SIN borrar metadata moderna.
+   */
+
+  const currentPending={
+
+    ...clone(second),
+
+    status:'PENDING',
+
+    y:null,
+
+    actual:null,
+
+    updated:t1
+
+  };
+
+
+  const importedFinal={
+
+    status:'FINAL',
+
+    y:0,
+
+    actual:11,
+
+    settled:t2
+
+  };
+
+
+  const recoveredFinal=
+    safeImportChooseRecord(
+      currentPending,
+      importedFinal
+    );
+
+
+  test(
+    'FINAL importado no borra metadata moderna',
+    recoveredFinal.usedIncoming===true &&
+    recoveredFinal.row.status==='FINAL' &&
+    recoveredFinal.row.y===0 &&
+    recoveredFinal.row.policyVersion===
+      GLOBAL_POLICY_VERSION &&
+    recoveredFinal.row.cohortId===
+      GLOBAL_COHORT_ID &&
+    recoveredFinal.row.firstSignal==='LEAN' &&
+    recoveredFinal.row.lastSignal==='JUGABLE'
+  );
+
+
+  /*
+   * 6 · Orden del pipeline CENSO:
+   *
+   * Rank Identity
+   *      ↓
+   * Decision Trace
+   *      ↓
+   * Global Policy
+   */
+
+  const syncSource=
+    String(
+      syncRankingCensus
+    );
+
+
+  const rankPos=
+    syncSource.indexOf(
+      'rankAuditApplyIdentity('
+    );
+
+
+  const tracePos=
+    syncSource.indexOf(
+      'decisionTraceApply('
+    );
+
+
+  const policyPos=
+    syncSource.indexOf(
+      'globalPolicyIdentity('
+    );
+
+
+  test(
+    'pipeline Censo conserva orden de identidades',
+    rankPos>=0 &&
+    tracePos>rankPos &&
+    policyPos>tracePos
+  );
+
+
+  /*
+   * 7 · ROLLING BACKUP debe contener
+   * todos los stores de aprendizaje.
+   */
+
+  const backupSource=
+    String(
+      rollingBackupPayload
+    );
+
+
+  test(
+    'Rolling Backup cubre stores críticos',
+    backupSource.includes(
+      'bets()'
+    ) &&
+    backupSource.includes(
+      'lab()'
+    ) &&
+    backupSource.includes(
+      'rankCensus()'
+    ) &&
+    backupSource.includes(
+      'bankCfg()'
+    ) &&
+    backupSource.includes(
+      'markets()'
+    ) &&
+    backupSource.includes(
+      'cfg()'
+    )
+  );
+
+
+  /*
+   * 8 · SAFE ODDS debe ser aislado.
+   *
+   * Restaurar líneas nunca debe escribir
+   * LAB, apuestas ni Censo.
+   */
+
+  const oddsRestoreSource=
+    String(
+      safeOddsRestore
+    );
+
+
+  const oddsMergeSource=
+    String(
+      safeOddsMergeMissing
+    );
+
+
+  test(
+    'Safe Odds no modifica aprendizaje',
+    !oddsRestoreSource.includes(
+      'saveLab('
+    ) &&
+    !oddsRestoreSource.includes(
+      'saveBets('
+    ) &&
+    !oddsRestoreSource.includes(
+      'saveRankCensus('
+    ) &&
+    !oddsMergeSource.includes(
+      'saveLab('
+    ) &&
+    !oddsMergeSource.includes(
+      'saveBets('
+    ) &&
+    !oddsMergeSource.includes(
+      'saveRankCensus('
+    )
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function crossSystemRunIntegritySelfTest(){
+
+  const report=
+    crossSystemIntegritySelfTest();
+
+
+  window.__MLB_CROSS_SYSTEM_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'CROSS SYSTEM INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+
+  }else{
+
+    console.error(
+      'CROSS SYSTEM INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
 
 }
 
@@ -27101,7 +28168,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();policyCohortRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();policyCohortRunIntegritySelfTest();crossSystemRunIntegritySelfTest();finalIntegrityRunSuite();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
