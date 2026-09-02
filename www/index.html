@@ -1489,7 +1489,7 @@ tbody tr:active{
 <section id="ranking" class="panel hidden"><div id="rankContent"></div></section>
 <section id="census" class="panel hidden"><div id="censusContent"></div></section>
 <section id="teams" class="panel hidden"><div class="histbar" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button class="btn green" id="settleTeams">Liquidar todo + actualizar</button><button class="btn" id="exportTeams">Exportar equipos CSV</button><button class="btn ghost" id="refreshTeams">Recalcular vista</button></div><div id="teamContent"></div></section>
-<section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar todo</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Backup Data Vault</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="historyContent"></div></section>
+<section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar todo</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Backup Data Vault</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="rollingBackupPanel"></div><div id="historyContent"></div></section>
 <section id="bank" class="panel hidden">
   <div id="bankContent"></div>
 </section>
@@ -1532,7 +1532,7 @@ const STORE={
  removeItem(k){try{window.localStorage.removeItem(k)}catch{}MEMSTORE.delete(k);IDBSTORE.remove(k).catch(()=>{})},
  clearPrefix(prefix){try{const ls=window.localStorage;for(let i=ls.length-1;i>=0;i--){const k=ls.key(i);if(k&&k.startsWith(prefix))ls.removeItem(k)}}catch{}for(const k of [...MEMSTORE.keys()])if(k.startsWith(prefix))MEMSTORE.delete(k);IDBSTORE.keys().then(keys=>keys.filter(k=>String(k).startsWith(prefix)).forEach(k=>IDBSTORE.remove(k))).catch(()=>{})}
 };
-const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache','mlb_v71_bank'];
+const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache','mlb_v71_bank','mlb_v786_rolling_backups'];
 async function initPersistentStore(){const localOK=localStorageAvailable(),db=await IDBSTORE.open().catch(()=>null);STORAGE_MODE=localOK?(db?'localStorage + IndexedDB':'localStorage'):(db?'IndexedDB':'memoria temporal');for(const k of PERSIST_KEYS){let local=null;if(localOK)try{local=window.localStorage.getItem(k)}catch{}if(local!==null){MEMSTORE.set(k,local);if(db)await IDBSTORE.set(k,local).catch(()=>{});continue}const saved=db?await IDBSTORE.get(k).catch(()=>null):null;if(saved!==null){MEMSTORE.set(k,String(saved));if(localOK)try{window.localStorage.setItem(k,String(saved))}catch{}}}}
 const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)];
 const n=(x,d=0)=>Number.isFinite(+x)?+x:d,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),fix=(x,k=2)=>Number.isFinite(+x)?(+x).toFixed(k):'—',pct=x=>Number.isFinite(x)?`${(x*100).toFixed(1)}%`:'—',esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -22920,6 +22920,1474 @@ async function download(
   }
 }
 function exportCsv(){const a=bets().filter(x=>String(x.market||'TOTAL').toUpperCase()==='TOTAL'),head=['date','away','home','label','side','line','odds','stake','p','edge','status','profit'],rows=a.map(x=>head.map(k=>JSON.stringify(x[k]??'')).join(','));download('mlb_v70_apuestas_full_game.csv',[head.join(','),...rows].join('\n'),'text/csv')}
+
+/* V7.8.6J1 ROLLING BACKUP CORE */
+
+const ROLLING_BACKUP_KEY=
+  'mlb_v786_rolling_backups';
+
+const ROLLING_BACKUP_SQL_KEY=
+  'rolling_backups_v1';
+
+const ROLLING_BACKUP_MAX=
+  10;
+
+
+function rollingBackupRead(){
+
+  try{
+
+    const rows=
+      JSON.parse(
+        STORE.getItem(
+          ROLLING_BACKUP_KEY
+        ) || '[]'
+      );
+
+
+    return Array.isArray(rows)
+      ?rows
+      :[];
+
+  }catch{
+
+    return[];
+
+  }
+
+}
+
+
+function rollingBackupRankDrafts(){
+
+  try{
+
+    const x=
+      JSON.parse(
+        STORE.getItem(
+          'mlb_v59_rank_drafts'
+        ) || '{}'
+      );
+
+
+    return(
+      x &&
+      typeof x==='object'
+    )
+      ?x
+      :{};
+
+  }catch{
+
+    return{};
+
+  }
+
+}
+
+
+function rollingBackupPayload(
+  reason='DAILY'
+){
+
+  const createdAt=
+    new Date()
+      .toISOString();
+
+
+  return{
+
+    schema:
+      1,
+
+    backupVersion:
+      'V7.8.6J1',
+
+    modelVersion:
+      typeof MODEL_VERSION!=='undefined'
+        ?MODEL_VERSION
+        :'V7.0',
+
+    reason:
+      String(reason||'DAILY'),
+
+    day:
+      localDay(),
+
+    createdAt,
+
+
+    /*
+     * Únicamente información irremplazable
+     * o necesaria para reconstruir el estado.
+     * No copiamos caches de Statcast/MLB.
+     */
+
+    bets:
+      bets(),
+
+    lab:
+      lab(),
+
+    rankCensus:
+      rankCensus(),
+
+    bank:
+      bankCfg(),
+
+    markets:
+      markets(),
+
+    cfg:
+      cfg(),
+
+    rankDrafts:
+      rollingBackupRankDrafts()
+
+  };
+
+}
+
+
+function rollingBackupSummary(
+  payload={}
+){
+
+  const censusDays=
+    payload?.rankCensus?.days &&
+    typeof payload.rankCensus.days==='object'
+      ?Object.values(
+          payload.rankCensus.days
+        )
+      :[];
+
+
+  const censusRows=
+    censusDays.reduce(
+      (n,d)=>
+        n+
+        (
+          Array.isArray(d?.rows)
+            ?d.rows.length
+            :0
+        ),
+      0
+    );
+
+
+  return{
+
+    bets:
+      Array.isArray(payload.bets)
+        ?payload.bets.length
+        :0,
+
+    lab:
+      Array.isArray(payload.lab)
+        ?payload.lab.length
+        :0,
+
+    census:
+      censusRows,
+
+    censusDays:
+      censusDays.length,
+
+    markets:
+      payload.markets &&
+      typeof payload.markets==='object'
+        ?Object.keys(
+            payload.markets
+          ).length
+        :0
+
+  };
+
+}
+
+
+function rollingBackupEntry(
+  reason='DAILY'
+){
+
+  const payload=
+    rollingBackupPayload(
+      reason
+    );
+
+
+  const summary=
+    rollingBackupSummary(
+      payload
+    );
+
+
+  return{
+
+    id:
+      'RB_'+
+      payload.day+
+      '_'+
+      Date.now()+
+      '_'+
+      Math.random()
+        .toString(16)
+        .slice(2,8),
+
+    day:
+      payload.day,
+
+    createdAt:
+      payload.createdAt,
+
+    reason:
+      payload.reason,
+
+    backupVersion:
+      payload.backupVersion,
+
+    summary,
+
+    payload
+
+  };
+
+}
+
+
+async function rollingBackupPersist(
+  rows=[]
+){
+
+  const safe=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  STORE.setItem(
+    ROLLING_BACKUP_KEY,
+    JSON.stringify(safe)
+  );
+
+
+  /*
+   * Segunda copia nativa.
+   * No dependemos de ella para continuar
+   * si SQLite todavía no está listo.
+   */
+
+  try{
+
+    if(
+      window.MLBDB?.ready &&
+      typeof window.MLBDB?.setKV==='function'
+    ){
+
+      await window.MLBDB.setKV(
+        ROLLING_BACKUP_SQL_KEY,
+        JSON.stringify(safe)
+      );
+
+    }
+
+  }catch(e){
+
+    console.warn(
+      'Rolling Backup SQLite:',
+      e
+    );
+
+  }
+
+
+  return safe.length;
+}
+
+
+async function rollingBackupCreate(
+  reason='DAILY',
+  force=false
+){
+
+  const type=
+    String(
+      reason||'DAILY'
+    ).toUpperCase();
+
+
+  let rows=
+    rollingBackupRead();
+
+
+  /*
+   * DAILY es inmutable:
+   * una vez creado el snapshot del día,
+   * no se reemplaza silenciosamente.
+   */
+
+  if(
+    !force &&
+    type==='DAILY'
+  ){
+
+    const existing=
+      rows.find(r=>
+        r?.day===localDay() &&
+        String(
+          r?.reason||''
+        ).toUpperCase()==='DAILY'
+      );
+
+
+    if(existing){
+
+      S.rollingBackupStatus={
+
+        ok:true,
+
+        created:false,
+
+        reason:
+          'ALREADY_EXISTS',
+
+        id:
+          existing.id,
+
+        day:
+          existing.day,
+
+        total:
+          rows.length,
+
+        at:
+          new Date()
+            .toISOString()
+
+      };
+
+
+      return existing;
+
+    }
+
+  }
+
+
+  const entry=
+    rollingBackupEntry(
+      type
+    );
+
+
+  rows.push(
+    entry
+  );
+
+
+  /*
+   * Siempre conservamos los diez
+   * snapshots más recientes.
+   */
+
+  rows=
+    rows
+      .sort(
+        (a,b)=>
+          String(a.createdAt)
+            .localeCompare(
+              String(b.createdAt)
+            )
+      )
+      .slice(
+        -ROLLING_BACKUP_MAX
+      );
+
+
+  await rollingBackupPersist(
+    rows
+  );
+
+
+  S.rollingBackupStatus={
+
+    ok:true,
+
+    created:true,
+
+    reason:
+      type,
+
+    id:
+      entry.id,
+
+    day:
+      entry.day,
+
+    total:
+      rows.length,
+
+    summary:
+      entry.summary,
+
+    at:
+      new Date()
+        .toISOString()
+
+  };
+
+
+  return entry;
+
+}
+
+
+async function rollingBackupNativeRestore(){
+
+  /*
+   * Sólo recuperamos desde SQLite cuando
+   * el almacenamiento web no tiene copias.
+   * Nunca sobreescribimos un historial
+   * existente automáticamente.
+   */
+
+  const local=
+    rollingBackupRead();
+
+
+  if(local.length){
+    return local;
+  }
+
+
+  try{
+
+    if(
+      !window.MLBDB?.ready ||
+      typeof window.MLBDB?.getKV!=='function'
+    ){
+      return[];
+    }
+
+
+    const raw=
+      await window.MLBDB.getKV(
+        ROLLING_BACKUP_SQL_KEY
+      );
+
+
+    if(!raw){
+      return[];
+    }
+
+
+    const rows=
+      JSON.parse(raw);
+
+
+    if(
+      !Array.isArray(rows) ||
+      !rows.length
+    ){
+      return[];
+    }
+
+
+    STORE.setItem(
+      ROLLING_BACKUP_KEY,
+      JSON.stringify(rows)
+    );
+
+
+    return rows;
+
+
+  }catch(e){
+
+    console.warn(
+      'Rolling Backup native restore:',
+      e
+    );
+
+
+    return[];
+
+  }
+
+}
+
+
+
+
+/* V7.8.6J4 SAFE IMPORT INTEGRITY TEST */
+
+function safeImportIntegritySelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  let x;
+
+
+  /*
+   * 1 · FINAL nunca retrocede.
+   */
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        id:'current_1',
+        status:'FINAL',
+        y:1,
+        actual:10,
+        updated:
+          '2026-09-01T12:00:00.000Z'
+      },
+
+      {
+        id:'old_backup_1',
+        status:'PENDING',
+        y:null,
+        actual:null,
+        updated:
+          '2026-08-31T12:00:00.000Z'
+      }
+
+    );
+
+
+  test(
+    'FINAL actual resiste PENDING importado',
+    x.row.status==='FINAL' &&
+    x.row.y===1 &&
+    x.row.actual===10 &&
+    x.usedIncoming===false &&
+    x.conflict===false
+  );
+
+
+  /*
+   * 2 · Un backup FINAL sí puede
+   * completar un registro PENDING.
+   */
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        id:'current_2',
+        status:'PENDING',
+        y:null,
+        actual:null
+      },
+
+      {
+        id:'backup_2',
+        status:'FINAL',
+        y:0,
+        actual:7,
+        settled:
+          '2026-09-01T13:00:00.000Z'
+      }
+
+    );
+
+
+  test(
+    'FINAL importado completa PENDING',
+    x.row.status==='FINAL' &&
+    x.row.y===0 &&
+    x.row.actual===7 &&
+    x.usedIncoming===true
+  );
+
+
+  /*
+   * 3 · PUSH también es resultado
+   * terminal y no puede retroceder.
+   */
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        status:'PUSH',
+        y:null,
+        actual:9
+      },
+
+      {
+        status:'PENDING',
+        actual:null
+      }
+
+    );
+
+
+  test(
+    'PUSH actual resiste PENDING importado',
+    x.row.status==='PUSH' &&
+    x.row.actual===9 &&
+    x.usedIncoming===false
+  );
+
+
+  /*
+   * 4 · Dos resultados liquidados
+   * contradictorios generan conflicto.
+   */
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        status:'FINAL',
+        y:1,
+        actual:10,
+        updated:
+          '2026-09-01T15:00:00.000Z'
+      },
+
+      {
+        status:'FINAL',
+        y:0,
+        actual:7,
+        updated:
+          '2026-09-01T16:00:00.000Z'
+      }
+
+    );
+
+
+  test(
+    'conflicto settled conserva actual',
+    x.conflict===true &&
+    x.usedIncoming===false &&
+    x.row.y===1 &&
+    x.row.actual===10
+  );
+
+
+  /*
+   * 5 · Mismo estado:
+   * gana el registro más reciente,
+   * pero conserva campos exclusivos
+   * del registro anterior.
+   */
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        status:'PENDING',
+        p:.55,
+        oldOnly:'CONSERVAR',
+        updated:
+          '2026-09-01T12:00:00.000Z'
+      },
+
+      {
+        status:'PENDING',
+        p:.59,
+        newOnly:'NUEVO',
+        updated:
+          '2026-09-01T13:00:00.000Z'
+      }
+
+    );
+
+
+  test(
+    'más reciente gana sin perder campos',
+    x.usedIncoming===true &&
+    x.row.p===.59 &&
+    x.row.oldOnly==='CONSERVAR' &&
+    x.row.newOnly==='NUEVO'
+  );
+
+
+  /*
+   * 6 · Mismo timestamp y estado:
+   * gana el registro más completo.
+   */
+
+  const sameTime=
+    '2026-09-01T14:00:00.000Z';
+
+
+  x=
+    safeImportChooseRecord(
+
+      {
+        status:'PENDING',
+        p:.54,
+        updated:sameTime
+      },
+
+      {
+        status:'PENDING',
+        p:.56,
+        line:8.5,
+        side:'OVER',
+        edge:.04,
+        updated:sameTime
+      }
+
+    );
+
+
+  test(
+    'registro más completo gana empate',
+    x.usedIncoming===true &&
+    x.row.p===.56 &&
+    x.row.line===8.5 &&
+    x.row.side==='OVER'
+  );
+
+
+  /*
+   * 7 · Configuración:
+   * actual gana, backup sólo rellena
+   * campos ausentes.
+   */
+
+  const cfgMerged=
+    safeImportFillMissing(
+
+      {
+        sims:8000,
+
+        odds:{
+          provider:'PUBLIC'
+        }
+      },
+
+      {
+        sims:4000,
+
+        odds:{
+          provider:'API',
+          region:'us'
+        },
+
+        importedOnly:true
+      }
+
+    );
+
+
+  test(
+    'config actual tiene prioridad',
+    cfgMerged.sims===8000 &&
+    cfgMerged.odds.provider==='PUBLIC' &&
+    cfgMerged.odds.region==='us' &&
+    cfgMerged.importedOnly===true
+  );
+
+
+  /*
+   * 8 · PRE_IMPORT puede construirse
+   * sin escribir nada.
+   */
+
+  const pre=
+    rollingBackupEntry(
+      'PRE_IMPORT'
+    );
+
+
+  test(
+    'PRE_IMPORT genera snapshot válido',
+    pre &&
+    pre.reason==='PRE_IMPORT' &&
+    pre.payload?.reason==='PRE_IMPORT' &&
+    pre.backupVersion==='V7.8.6J1'
+  );
+
+
+  /*
+   * 9 · Verificación estructural del
+   * import real:
+   *
+   * PRE_IMPORT debe aparecer ANTES
+   * de cualquier merge de datos.
+   */
+
+  const importSource=
+    String(
+      importJson
+    );
+
+
+  const prePos=
+    importSource.indexOf(
+      "rollingBackupCreate("
+    );
+
+
+  const labPos=
+    importSource.indexOf(
+      'safeImportMergeLab('
+    );
+
+
+  const censusPos=
+    importSource.indexOf(
+      'safeImportMergeCensus('
+    );
+
+
+  const betsPos=
+    importSource.indexOf(
+      'mergeBetRows('
+    );
+
+
+  test(
+    'PRE_IMPORT ocurre antes del merge',
+    prePos>=0 &&
+    labPos>prePos &&
+    censusPos>prePos &&
+    betsPos>prePos
+  );
+
+
+  /*
+   * 10 · No debe existir ya la vía
+   * destructiva antigua dentro de
+   * importJson.
+   */
+
+  test(
+    'importJson no sobrescribe LAB o Censo directo',
+    !importSource.includes(
+      'saveLab('
+    ) &&
+    !importSource.includes(
+      'saveRankCensus('
+    )
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function safeImportRunIntegritySelfTest(){
+
+  const report=
+    safeImportIntegritySelfTest();
+
+
+  window.__MLB_SAFE_IMPORT_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'SAFE IMPORT INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+  }else{
+
+    console.error(
+      'SAFE IMPORT INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+}
+
+
+/* V7.8.6J2 ROLLING BACKUP DASHBOARD */
+
+function rollingBackupDashboardStats(){
+
+  const rows=
+    rollingBackupRead()
+      .slice()
+      .sort(
+        (a,b)=>
+          String(b?.createdAt||'')
+            .localeCompare(
+              String(a?.createdAt||'')
+            )
+      );
+
+  const last=
+    rows[0] || null;
+
+  return{
+    rows,
+    count:rows.length,
+    max:ROLLING_BACKUP_MAX,
+    last,
+
+    daily:
+      rows.filter(r=>
+        String(
+          r?.reason||''
+        ).toUpperCase()==='DAILY'
+      ).length,
+
+    manual:
+      rows.filter(r=>
+        String(
+          r?.reason||''
+        ).toUpperCase()==='MANUAL'
+      ).length
+  };
+}
+
+
+function rollingBackupDashboardHtml(){
+
+  const d=
+    rollingBackupDashboardStats();
+
+
+  const integrity=
+    safeImportIntegritySelfTest();
+
+
+  const dateFmt=v=>{
+
+    if(!v){
+      return '—';
+    }
+
+    try{
+
+      return new Date(v)
+        .toLocaleString(
+          'es-MX',
+          {
+            day:'2-digit',
+            month:'2-digit',
+            year:'numeric',
+            hour:'2-digit',
+            minute:'2-digit'
+          }
+        );
+
+    }catch{
+      return '—';
+    }
+
+  };
+
+
+  const latestSummary=
+    d.last?.summary || {};
+
+
+  const rowsHtml=
+    d.rows.length
+
+      ?d.rows.map((r,i)=>{
+
+          const sm=
+            r?.summary || {};
+
+          const reason=
+            String(
+              r?.reason||'—'
+            ).toUpperCase();
+
+          return`
+
+            <tr>
+
+              <td>
+                <b>#${i+1}</b>
+
+                <div class="smalltxt">
+                  ${esc(reason)}
+                </div>
+              </td>
+
+              <td>
+                ${dateFmt(
+                  r?.createdAt
+                )}
+              </td>
+
+              <td>
+                ${Number(sm.census)||0}
+              </td>
+
+              <td>
+                ${Number(sm.lab)||0}
+              </td>
+
+              <td>
+                ${Number(sm.bets)||0}
+              </td>
+
+              <td>
+                ${Number(sm.markets)||0}
+              </td>
+
+            </tr>
+
+          `;
+
+        }).join('')
+
+      :`
+
+        <tr>
+
+          <td colspan="6">
+
+            <div class="smalltxt">
+
+              Todavía no hay Rolling Backups.
+              El primer DAILY se creará
+              automáticamente al arrancar.
+
+            </div>
+
+          </td>
+
+        </tr>
+
+      `;
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Rolling Backups · Data Vault
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Conserva hasta ${d.max} snapshots
+        recientes del estado completo.
+        Los DAILY no se sobrescriben
+        silenciosamente.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Backup / Import Integrity
+          </small>
+
+          <div class="big ${integrity.ok?'bp-good':'bp-bad'}">
+            ${integrity.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            ${integrity.passed}/${integrity.total} pruebas
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Snapshots
+          </small>
+
+          <div class="big">
+            ${d.count} / ${d.max}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            DAILY
+          </small>
+
+          <div class="big">
+            ${d.daily}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            MANUAL
+          </small>
+
+          <div class="big">
+            ${d.manual}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Último respaldo
+          </small>
+
+          <div class="big">
+
+            ${d.last
+              ?esc(
+                  String(
+                    d.last.reason||'—'
+                  ).toUpperCase()
+                )
+              :'—'}
+
+          </div>
+
+          <div class="smalltxt">
+            ${dateFmt(
+              d.last?.createdAt
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="cards"
+        style="margin-top:10px"
+      >
+
+        <div class="card">
+
+          <small>
+            Censo último
+          </small>
+
+          <div class="big">
+            ${Number(
+              latestSummary.census
+            )||0}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            LAB último
+          </small>
+
+          <div class="big">
+            ${Number(
+              latestSummary.lab
+            )||0}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Apuestas último
+          </small>
+
+          <div class="big">
+            ${Number(
+              latestSummary.bets
+            )||0}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Markets último
+          </small>
+
+          <div class="big">
+            ${Number(
+              latestSummary.markets
+            )||0}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="actions"
+        style="margin-top:12px"
+      >
+
+        <button
+          class="btn green"
+          id="rollingBackupCreateNow"
+        >
+          Crear snapshot ahora
+        </button>
+
+
+        <button
+          class="btn ghost"
+          id="rollingBackupRefresh"
+        >
+          Refrescar vista
+        </button>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          Historial de snapshots
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Censo</th>
+                <th>LAB</th>
+                <th>Bets</th>
+                <th>Markets</th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        DAILY = respaldo automático del día.
+
+        MANUAL = respaldo creado antes
+        de una operación delicada.
+
+        Crear un snapshot NO modifica
+        Censo, LAB, Bank, apuestas,
+        Ranking ni Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+function bindRollingBackupDashboard(){
+
+  const create=
+    document.getElementById(
+      'rollingBackupCreateNow'
+    );
+
+
+  if(create){
+
+    create.onclick=async()=>{
+
+      create.disabled=true;
+
+      const previous=
+        create.textContent;
+
+      create.textContent=
+        'Creando…';
+
+
+      try{
+
+        const entry=
+          await rollingBackupCreate(
+            'MANUAL',
+            true
+          );
+
+
+        renderRollingBackupDashboard();
+
+
+        status(
+          'Snapshot manual creado · '+
+          (
+            entry?.summary?.census ||
+            0
+          )+
+          ' Censo · '+
+          (
+            entry?.summary?.lab ||
+            0
+          )+
+          ' LAB · '+
+          (
+            entry?.summary?.bets ||
+            0
+          )+
+          ' apuestas.',
+          'ok'
+        );
+
+
+      }catch(e){
+
+        status(
+          'No se pudo crear snapshot: '+
+          esc(
+            e?.message ||
+            String(e)
+          ),
+          'err'
+        );
+
+
+      }finally{
+
+        if(
+          document.body.contains(create)
+        ){
+
+          create.disabled=false;
+
+          create.textContent=
+            previous;
+
+        }
+
+      }
+
+    };
+
+  }
+
+
+  const refresh=
+    document.getElementById(
+      'rollingBackupRefresh'
+    );
+
+
+  if(refresh){
+
+    refresh.onclick=
+      renderRollingBackupDashboard;
+
+  }
+
+}
+
+
+function renderRollingBackupDashboard(){
+
+  const root=
+    document.getElementById(
+      'rollingBackupPanel'
+    );
+
+
+  if(!root){
+    return;
+  }
+
+
+  root.innerHTML=
+    rollingBackupDashboardHtml();
+
+
+  bindRollingBackupDashboard();
+
+}
+
+
 /* V7.8.1D2 INTEGRAL DATA VAULT BACKUP */
 
 async function exportJson(){
@@ -23101,8 +24569,1481 @@ async function exportJson(){
   return ok;
 }
 function exportLab(){download('mlb_v70_calibracion_full_game.json',JSON.stringify(lab(),null,2),'application/json')}
-function importJson(file){const r=new FileReader;r.onload=()=>{try{const x=JSON.parse(r.result);let added=0;if(Array.isArray(x))added=mergeBetRows(x,'V4 JSON');else{if(Array.isArray(x.bets))added=mergeBetRows(x.bets,'v5');if(Array.isArray(x.lab))saveLab(dedupeLabRows(x.lab));if(x.cfg)STORE.setItem('mlb_v5_cfg',JSON.stringify(x.cfg));if(x.bank&&typeof x.bank==='object')saveBankCfg(x.bank);if(x.markets)STORE.setItem('mlb_v5_markets',JSON.stringify(x.markets));if(x.rankCensus&&typeof x.rankCensus==='object')saveRankCensus(x.rankCensus);else if(x.rankTracker&&typeof x.rankTracker==='object'){saveLegacyRankArchive(x.rankTracker);const c=rankCensus();c.migrated=false;saveRankCensus(c);migrateRankingToCensus()}if(x.rankDrafts&&typeof x.rankDrafts==='object')STORE.setItem('mlb_v59_rank_drafts',JSON.stringify(x.rankDrafts))}loadCfg();renderHistory();renderBank();renderLab();renderTeams();renderCensus();renderRanking();status(`Respaldo importado${added?`: ${added} apuestas agregadas`:''}.`,'ok')}catch(e){alert(`JSON inválido: ${e.message}`)}};r.readAsText(file)}
-$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history')renderHistory();if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
+
+/* V7.8.6J3 SAFE IMPORT MERGE */
+
+function safeImportStatusRank(
+  status=''
+){
+
+  const x=
+    String(
+      status||''
+    ).toUpperCase();
+
+
+  if(
+    x==='FINAL' ||
+    x==='PUSH' ||
+    x==='WIN' ||
+    x==='LOSS'
+  ){
+    return 3;
+  }
+
+
+  if(x==='PENDING'){
+    return 1;
+  }
+
+
+  return 0;
+}
+
+
+function safeImportRecordTime(
+  r={}
+){
+
+  const candidates=[
+
+    r.settled,
+
+    r.updated,
+
+    r.rankLastCapturedAt,
+
+    r.lastSnapshotAt,
+
+    r.created
+
+  ];
+
+
+  for(const value of candidates){
+
+    const t=
+      Date.parse(
+        value||''
+      );
+
+
+    if(Number.isFinite(t)){
+      return t;
+    }
+
+  }
+
+
+  return 0;
+}
+
+
+function safeImportCompleteness(
+  r={}
+){
+
+  if(
+    !r ||
+    typeof r!=='object'
+  ){
+    return 0;
+  }
+
+
+  let n=0;
+
+
+  for(
+    const value
+    of Object.values(r)
+  ){
+
+    if(
+      value!==null &&
+      value!==undefined &&
+      value!==''
+    ){
+      n++;
+    }
+
+  }
+
+
+  return n;
+}
+
+
+function safeImportSettled(
+  r={}
+){
+
+  return(
+    safeImportStatusRank(
+      r.status
+    )>=3
+  );
+
+}
+
+
+function safeImportOutcomeToken(
+  r={}
+){
+
+  const status=
+    String(
+      r.status||''
+    ).toUpperCase();
+
+
+  if(!safeImportSettled(r)){
+    return '';
+  }
+
+
+  if(status==='PUSH'){
+    return 'PUSH';
+  }
+
+
+  if(
+    status==='WIN' ||
+    status==='LOSS'
+  ){
+    return status;
+  }
+
+
+  return[
+    status,
+    r.y ?? '',
+    r.actual ?? ''
+  ].join('|');
+
+}
+
+
+function safeImportChooseRecord(
+  current,
+  incoming
+){
+
+  if(!current){
+
+    return{
+      row:{
+        ...incoming
+      },
+      usedIncoming:true,
+      conflict:false
+    };
+
+  }
+
+
+  if(!incoming){
+
+    return{
+      row:{
+        ...current
+      },
+      usedIncoming:false,
+      conflict:false
+    };
+
+  }
+
+
+  const currentRank=
+    safeImportStatusRank(
+      current.status
+    );
+
+
+  const incomingRank=
+    safeImportStatusRank(
+      incoming.status
+    );
+
+
+  /*
+   * Dos resultados ya liquidados que
+   * se contradicen: jamás cambiamos
+   * silenciosamente el actual.
+   */
+
+  if(
+    currentRank>=3 &&
+    incomingRank>=3
+  ){
+
+    const a=
+      safeImportOutcomeToken(
+        current
+      );
+
+
+    const b=
+      safeImportOutcomeToken(
+        incoming
+      );
+
+
+    if(
+      a &&
+      b &&
+      a!==b
+    ){
+
+      return{
+
+        row:{
+          ...incoming,
+          ...current,
+          id:
+            current.id ||
+            incoming.id,
+          created:
+            current.created ||
+            incoming.created
+        },
+
+        usedIncoming:false,
+
+        conflict:true
+
+      };
+
+    }
+
+  }
+
+
+  let incomingWins=false;
+
+
+  if(incomingRank>currentRank){
+
+    incomingWins=true;
+
+
+  }else if(incomingRank===currentRank){
+
+    const ct=
+      safeImportRecordTime(
+        current
+      );
+
+
+    const it=
+      safeImportRecordTime(
+        incoming
+      );
+
+
+    if(it>ct){
+
+      incomingWins=true;
+
+
+    }else if(it===ct){
+
+      incomingWins=
+        safeImportCompleteness(
+          incoming
+        )>
+        safeImportCompleteness(
+          current
+        );
+
+    }
+
+  }
+
+
+  const winner=
+    incomingWins
+      ?incoming
+      :current;
+
+
+  const loser=
+    incomingWins
+      ?current
+      :incoming;
+
+
+  return{
+
+    /*
+     * Los campos que sólo existan en el
+     * registro perdedor también sobreviven.
+     */
+
+    row:{
+
+      ...loser,
+
+      ...winner,
+
+      id:
+        current.id ||
+        incoming.id,
+
+      created:
+        current.created ||
+        incoming.created
+
+    },
+
+    usedIncoming:
+      incomingWins,
+
+    conflict:false
+
+  };
+
+}
+
+
+/* =========================================
+   LAB
+   ========================================= */
+
+function safeImportMergeLab(
+  incoming=[]
+){
+
+  const current=
+    dedupeLabRows(
+      lab()
+    );
+
+
+  const imported=
+    dedupeLabRows(
+      Array.isArray(incoming)
+        ?incoming
+        :[]
+    );
+
+
+  const map=
+    new Map(
+      current.map(r=>[
+        labForecastKey(r),
+        r
+      ])
+    );
+
+
+  let added=0;
+  let updated=0;
+  let conflicts=0;
+
+
+  for(const r of imported){
+
+    const key=
+      labForecastKey(r);
+
+
+    const old=
+      map.get(key);
+
+
+    if(!old){
+
+      map.set(
+        key,
+        r
+      );
+
+      added++;
+
+      continue;
+    }
+
+
+    const chosen=
+      safeImportChooseRecord(
+        old,
+        r
+      );
+
+
+    if(chosen.conflict){
+      conflicts++;
+    }
+
+
+    if(chosen.usedIncoming){
+      updated++;
+    }
+
+
+    map.set(
+      key,
+      chosen.row
+    );
+
+  }
+
+
+  const merged=
+    dedupeLabRows(
+      [...map.values()]
+    );
+
+
+  saveLab(
+    merged
+  );
+
+
+  return{
+
+    before:
+      current.length,
+
+    imported:
+      imported.length,
+
+    after:
+      merged.length,
+
+    added,
+
+    updated,
+
+    conflicts
+
+  };
+
+}
+
+
+/* =========================================
+   CENSO
+   ========================================= */
+
+function safeImportMergeCensus(
+  incoming={}
+){
+
+  const current=
+    rankCensus();
+
+
+  const imported=
+    (
+      incoming &&
+      typeof incoming==='object'
+    )
+      ?incoming
+      :{};
+
+
+  const result={
+
+    ...imported,
+
+    ...current,
+
+    days:{
+      ...(current.days||{})
+    }
+
+  };
+
+
+  let added=0;
+  let updated=0;
+  let conflicts=0;
+
+
+  for(
+    const [date,importDay]
+    of Object.entries(
+      imported.days||{}
+    )
+  ){
+
+    if(
+      !importDay ||
+      typeof importDay!=='object'
+    ){
+      continue;
+    }
+
+
+    const currentDay=
+      result.days[date];
+
+
+    /*
+     * Día completamente ausente:
+     * podemos incorporarlo entero.
+     */
+
+    if(!currentDay){
+
+      result.days[date]={
+
+        ...importDay,
+
+        date:
+          importDay.date ||
+          date,
+
+        rows:
+          Array.isArray(
+            importDay.rows
+          )
+            ?importDay.rows
+              .filter(r=>
+                !r?.market ||
+                String(
+                  r.market
+                ).toUpperCase()==='TOTAL'
+              )
+            :[]
+
+      };
+
+
+      added+=
+        result.days[date]
+          .rows.length;
+
+
+      continue;
+
+    }
+
+
+    const map=
+      new Map(
+        (
+          Array.isArray(currentDay.rows)
+            ?currentDay.rows
+            :[]
+        )
+        .filter(r=>
+          !r?.market ||
+          String(
+            r.market
+          ).toUpperCase()==='TOTAL'
+        )
+        .map(r=>[
+          String(r.gamePk),
+          r
+        ])
+      );
+
+
+    for(
+      const incomingRow
+      of (
+        Array.isArray(importDay.rows)
+          ?importDay.rows
+          :[]
+      )
+    ){
+
+      if(
+        incomingRow?.market &&
+        String(
+          incomingRow.market
+        ).toUpperCase()!=='TOTAL'
+      ){
+        continue;
+      }
+
+
+      const key=
+        String(
+          incomingRow?.gamePk ??
+          ''
+        );
+
+
+      if(!key){
+        continue;
+      }
+
+
+      const old=
+        map.get(key);
+
+
+      if(!old){
+
+        map.set(
+          key,
+          incomingRow
+        );
+
+        added++;
+
+        continue;
+      }
+
+
+      const chosen=
+        safeImportChooseRecord(
+          old,
+          incomingRow
+        );
+
+
+      if(chosen.conflict){
+        conflicts++;
+      }
+
+
+      if(chosen.usedIncoming){
+        updated++;
+      }
+
+
+      map.set(
+        key,
+        chosen.row
+      );
+
+    }
+
+
+    const currentUpdated=
+      Date.parse(
+        currentDay.updated||''
+      ) || 0;
+
+
+    const importedUpdated=
+      Date.parse(
+        importDay.updated||''
+      ) || 0;
+
+
+    result.days[date]={
+
+      ...importDay,
+
+      ...currentDay,
+
+      date,
+
+      created:
+        currentDay.created ||
+        importDay.created ||
+        new Date()
+          .toISOString(),
+
+      updated:
+        importedUpdated>
+        currentUpdated
+          ?importDay.updated
+          :currentDay.updated,
+
+      rows:
+        [...map.values()]
+          .sort(
+            (a,b)=>
+              n(
+                a.rank,
+                999
+              )-
+              n(
+                b.rank,
+                999
+              )
+          )
+
+    };
+
+  }
+
+
+  saveRankCensus(
+    result
+  );
+
+
+  return{
+
+    days:
+      Object.keys(
+        result.days||{}
+      ).length,
+
+    rows:
+      censusAllRows(
+        result
+      ).length,
+
+    added,
+
+    updated,
+
+    conflicts
+
+  };
+
+}
+
+
+/* =========================================
+   MARKETS
+   ========================================= */
+
+function safeImportMergeMarkets(
+  incoming={}
+){
+
+  const current=
+    markets();
+
+
+  const imported=
+    (
+      incoming &&
+      typeof incoming==='object'
+    )
+      ?incoming
+      :{};
+
+
+  const out={
+    ...current
+  };
+
+
+  let added=0;
+  let updated=0;
+
+
+  for(
+    const [pk,row]
+    of Object.entries(imported)
+  ){
+
+    const old=
+      out[pk];
+
+
+    if(!old){
+
+      out[pk]=row;
+      added++;
+      continue;
+
+    }
+
+
+    const oldTime=
+      Date.parse(
+        old?.updated||''
+      ) || 0;
+
+
+    const newTime=
+      Date.parse(
+        row?.updated||''
+      ) || 0;
+
+
+    if(newTime>oldTime){
+
+      out[pk]={
+        ...old,
+        ...row
+      };
+
+      updated++;
+
+    }
+
+  }
+
+
+  STORE.setItem(
+    'mlb_v5_markets',
+    JSON.stringify(out)
+  );
+
+
+  return{
+    total:
+      Object.keys(out).length,
+    added,
+    updated
+  };
+
+}
+
+
+/* =========================================
+   RANK DRAFTS
+   ========================================= */
+
+function safeImportRankDraftsRead(){
+
+  try{
+
+    const x=
+      JSON.parse(
+        STORE.getItem(
+          'mlb_v59_rank_drafts'
+        ) || '{}'
+      );
+
+
+    return(
+      x &&
+      typeof x==='object'
+    )
+      ?x
+      :{};
+
+  }catch{
+
+    return{};
+
+  }
+
+}
+
+
+function safeImportMergeRankDrafts(
+  incoming={}
+){
+
+  const current=
+    safeImportRankDraftsRead();
+
+
+  const imported=
+    (
+      incoming &&
+      typeof incoming==='object'
+    )
+      ?incoming
+      :{};
+
+
+  const out={
+    ...current
+  };
+
+
+  let added=0;
+  let updated=0;
+
+
+  for(
+    const [date,row]
+    of Object.entries(imported)
+  ){
+
+    if(!out[date]){
+
+      out[date]=row;
+      added++;
+      continue;
+
+    }
+
+
+    const oldTime=
+      Date.parse(
+        out[date]?.savedAt||''
+      ) || 0;
+
+
+    const newTime=
+      Date.parse(
+        row?.savedAt||''
+      ) || 0;
+
+
+    if(newTime>oldTime){
+
+      out[date]={
+        ...out[date],
+        ...row
+      };
+
+      updated++;
+
+    }
+
+  }
+
+
+  STORE.setItem(
+    'mlb_v59_rank_drafts',
+    JSON.stringify(out)
+  );
+
+
+  return{
+    total:
+      Object.keys(out).length,
+    added,
+    updated
+  };
+
+}
+
+
+/* =========================================
+   CONFIG: ACTUAL TIENE PRIORIDAD
+   ========================================= */
+
+function safeImportFillMissing(
+  current,
+  incoming
+){
+
+  const currentObj=
+    current &&
+    typeof current==='object' &&
+    !Array.isArray(current);
+
+
+  const incomingObj=
+    incoming &&
+    typeof incoming==='object' &&
+    !Array.isArray(incoming);
+
+
+  if(
+    currentObj &&
+    incomingObj
+  ){
+
+    const out={
+      ...incoming
+    };
+
+
+    for(
+      const [key,value]
+      of Object.entries(current)
+    ){
+
+      if(
+        value &&
+        typeof value==='object' &&
+        !Array.isArray(value) &&
+        incoming[key] &&
+        typeof incoming[key]==='object' &&
+        !Array.isArray(incoming[key])
+      ){
+
+        out[key]=
+          safeImportFillMissing(
+            value,
+            incoming[key]
+          );
+
+
+      }else{
+
+        out[key]=value;
+
+      }
+
+    }
+
+
+    return out;
+
+  }
+
+
+  return current!==undefined
+    ?current
+    :incoming;
+
+}
+
+
+/* =========================================
+   BANK
+   ========================================= */
+
+function safeImportMovementKey(
+  m={}
+){
+
+  if(m.id){
+    return 'ID|'+m.id;
+  }
+
+
+  return[
+
+    m.created || m.date || '',
+
+    m.type || m.kind || '',
+
+    m.amount ?? '',
+
+    m.note || m.label || ''
+
+  ].join('|');
+
+}
+
+
+function safeImportMergeBank(
+  incoming={}
+){
+
+  const current=
+    bankCfg();
+
+
+  if(
+    !incoming ||
+    typeof incoming!=='object'
+  ){
+
+    return{
+      movements:
+        Array.isArray(current.movements)
+          ?current.movements.length
+          :0,
+      added:0
+    };
+
+  }
+
+
+  const currentMoves=
+    Array.isArray(current.movements)
+      ?current.movements
+      :[];
+
+
+  const importedMoves=
+    Array.isArray(incoming.movements)
+      ?incoming.movements
+      :[];
+
+
+  const map=
+    new Map(
+      currentMoves.map(m=>[
+        safeImportMovementKey(m),
+        m
+      ])
+    );
+
+
+  let added=0;
+
+
+  for(const m of importedMoves){
+
+    const key=
+      safeImportMovementKey(m);
+
+
+    if(map.has(key)){
+      continue;
+    }
+
+
+    map.set(
+      key,
+      m
+    );
+
+
+    added++;
+
+  }
+
+
+  /*
+   * Si ya existe una banca real,
+   * sus valores de configuración ganan.
+   * Si está completamente vacía,
+   * permitimos recuperar los valores
+   * del respaldo.
+   */
+
+  const currentHasData=
+    Number(current.initial)!==0 ||
+    currentMoves.length>0;
+
+
+  const merged={
+
+    ...(currentHasData
+      ?incoming
+      :current),
+
+    ...(currentHasData
+      ?current
+      :incoming),
+
+    movements:
+      [...map.values()]
+
+  };
+
+
+  saveBankCfg(
+    merged
+  );
+
+
+  return{
+
+    movements:
+      merged.movements.length,
+
+    added
+
+  };
+
+}
+
+
+/* =========================================
+   SAFE IMPORT PRINCIPAL
+   ========================================= */
+
+function importJson(file){
+
+  const reader=
+    new FileReader();
+
+
+  reader.onload=async()=>{
+
+    try{
+
+      const parsed=
+        JSON.parse(
+          reader.result
+        );
+
+
+      /*
+       * PROTECCIÓN OBLIGATORIA.
+       *
+       * Si esto falla, NO importamos.
+       */
+
+      const preImport=
+        await rollingBackupCreate(
+          'PRE_IMPORT',
+          true
+        );
+
+
+      if(!preImport){
+
+        throw Error(
+          'No se pudo crear PRE_IMPORT'
+        );
+
+      }
+
+
+      let addedBets=0;
+
+
+      const report={
+
+        version:
+          'V7.8.6J3',
+
+        at:
+          new Date()
+            .toISOString(),
+
+        preImportId:
+          preImport.id,
+
+        bets:null,
+
+        lab:null,
+
+        census:null,
+
+        markets:null,
+
+        bank:null,
+
+        rankDrafts:null,
+
+        cfg:false,
+
+        conflicts:0
+
+      };
+
+
+      /*
+       * JSON antiguo que era sólo
+       * un arreglo de apuestas.
+       */
+
+      if(Array.isArray(parsed)){
+
+        addedBets=
+          mergeBetRows(
+            parsed,
+            'V4 JSON'
+          );
+
+
+        report.bets={
+          added:
+            addedBets
+        };
+
+
+      }else{
+
+        /*
+         * También aceptamos directamente
+         * payloads extraídos de un
+         * Rolling Backup.
+         */
+
+        const x=
+          (
+            parsed?.payload &&
+            typeof parsed.payload==='object'
+          )
+            ?parsed.payload
+            :parsed;
+
+
+        if(
+          Array.isArray(x.bets)
+        ){
+
+          addedBets=
+            mergeBetRows(
+              x.bets,
+              'SAFE IMPORT'
+            );
+
+
+          report.bets={
+            added:
+              addedBets
+          };
+
+        }
+
+
+        if(
+          Array.isArray(x.lab)
+        ){
+
+          report.lab=
+            safeImportMergeLab(
+              x.lab
+            );
+
+
+          report.conflicts+=
+            report.lab.conflicts ||
+            0;
+
+        }
+
+
+        if(
+          x.rankCensus &&
+          typeof x.rankCensus==='object'
+        ){
+
+          report.census=
+            safeImportMergeCensus(
+              x.rankCensus
+            );
+
+
+          report.conflicts+=
+            report.census.conflicts ||
+            0;
+
+
+        }else if(
+          x.rankTracker &&
+          typeof x.rankTracker==='object'
+        ){
+
+          /*
+           * Compatibilidad histórica.
+           * migrateRankingToCensus añade
+           * únicamente gamePk ausentes.
+           */
+
+          saveLegacyRankArchive(
+            x.rankTracker
+          );
+
+
+          migrateRankingToCensus();
+
+        }
+
+
+        if(
+          x.markets &&
+          typeof x.markets==='object'
+        ){
+
+          report.markets=
+            safeImportMergeMarkets(
+              x.markets
+            );
+
+        }
+
+
+        if(
+          x.rankDrafts &&
+          typeof x.rankDrafts==='object'
+        ){
+
+          report.rankDrafts=
+            safeImportMergeRankDrafts(
+              x.rankDrafts
+            );
+
+        }
+
+
+        if(
+          x.bank &&
+          typeof x.bank==='object'
+        ){
+
+          report.bank=
+            safeImportMergeBank(
+              x.bank
+            );
+
+        }
+
+
+        if(
+          x.cfg &&
+          typeof x.cfg==='object'
+        ){
+
+          const mergedCfg=
+            safeImportFillMissing(
+              cfg(),
+              x.cfg
+            );
+
+
+          STORE.setItem(
+            'mlb_v5_cfg',
+            JSON.stringify(
+              mergedCfg
+            )
+          );
+
+
+          report.cfg=true;
+
+        }
+
+      }
+
+
+      S.safeImportReport=
+        report;
+
+
+      loadCfg();
+
+      repairLabHistory();
+
+      renderHistory();
+
+      renderBank();
+
+      renderLab();
+
+      renderUnifiedSettlementStatus();
+
+      renderTeams();
+
+      renderCensus();
+
+      renderRanking();
+
+      renderRollingBackupDashboard();
+
+
+      status(
+        'Importación segura completada · '+
+        addedBets+
+        ' apuestas nuevas · '+
+        (
+          report.lab?.added ||
+          0
+        )+
+        ' LAB nuevos · '+
+        (
+          report.census?.added ||
+          0
+        )+
+        ' Censo nuevos · '+
+        report.conflicts+
+        ' conflictos protegidos.',
+        report.conflicts
+          ?'err'
+          :'ok'
+      );
+
+
+    }catch(e){
+
+      console.error(
+        'Safe Import:',
+        e
+      );
+
+
+      alert(
+        'Importación cancelada: '+
+        (
+          e?.message ||
+          e
+        )
+      );
+
+    }
+
+  };
+
+
+  reader.readAsText(
+    file
+  );
+
+}
+
+
+$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history'){renderHistory();renderRollingBackupDashboard();}if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
 $('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;
 /* V7.8.5A2 SAFE RESET HANDLER */
 
@@ -23241,7 +26182,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
