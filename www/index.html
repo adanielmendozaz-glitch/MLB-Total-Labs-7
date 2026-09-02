@@ -1511,6 +1511,120 @@ tbody tr:active{
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
 const APP_VERSION='V7.8.5',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
+
+/* V7.8.6K1 GLOBAL POLICY COHORT IDENTITY */
+
+const GLOBAL_POLICY_VERSION=
+  'V7.8.6_POLICY_1';
+
+const GLOBAL_COHORT_ID=
+  'V786_FREEZE_1';
+
+const GLOBAL_POLICY_SCHEMA=
+  1;
+
+
+function globalPolicyIdentity(
+  old=null,
+  at=new Date().toISOString()
+){
+
+  /*
+   * Una predicción que ya nació dentro
+   * de un cohort conserva para siempre
+   * su identidad original.
+   */
+
+  if(
+    old &&
+    old.policyVersion &&
+    old.cohortId
+  ){
+
+    return{
+
+      policyVersion:
+        String(
+          old.policyVersion
+        ),
+
+      cohortId:
+        String(
+          old.cohortId
+        ),
+
+      policyOrigin:
+        old.policyOrigin ||
+        'PRESERVED',
+
+      policyCapturedAt:
+        old.policyCapturedAt ||
+        null,
+
+      policySchema:
+        Number(
+          old.policySchema
+        ) ||
+        GLOBAL_POLICY_SCHEMA
+
+    };
+
+  }
+
+
+  /*
+   * Si el registro ya existía antes
+   * de K1, NO lo etiquetamos como si
+   * hubiera nacido bajo la política nueva.
+   */
+
+  if(old){
+
+    return{
+
+      policyVersion:null,
+
+      cohortId:null,
+
+      policyOrigin:
+        'LEGACY_PRE_K1',
+
+      policyCapturedAt:null,
+
+      policySchema:
+        GLOBAL_POLICY_SCHEMA
+
+    };
+
+  }
+
+
+  /*
+   * Sólo una predicción realmente nueva
+   * recibe el cohort V786_FREEZE_1.
+   */
+
+  return{
+
+    policyVersion:
+      GLOBAL_POLICY_VERSION,
+
+    cohortId:
+      GLOBAL_COHORT_ID,
+
+    policyOrigin:
+      'NATIVE_K1',
+
+    policyCapturedAt:
+      at,
+
+    policySchema:
+      GLOBAL_POLICY_SCHEMA
+
+  };
+
+}
+
 const LG={rpg:4.45,paGame:38.1,k:.225,bb:.083,hbp:.011,s1:.146,s2:.043,s3:.004,hr:.031,out:.457,era:4.20,whip:1.28};
 const PARK={"Coors Field":1.145,"Great American Ball Park":1.075,"Fenway Park":1.055,"Yankee Stadium":1.045,"Citizens Bank Park":1.04,"Globe Life Field":1.015,"Dodger Stadium":1.01,"Oriole Park at Camden Yards":.99,"Wrigley Field":1,"Truist Park":1.015,"Minute Maid Park":1.01,"Kauffman Stadium":1.01,"Chase Field":1.005,"American Family Field":1.01,"Busch Stadium":.985,"Progressive Field":.99,"Comerica Park":.975,"Target Field":.99,"Citi Field":.975,"Nationals Park":1,"loanDepot park":.965,"Petco Park":.955,"Oracle Park":.95,"T-Mobile Park":.955,"Angel Stadium":.99,"Rogers Centre":1.015,"Tropicana Field":.97,"Rate Field":1.015,"Sutter Health Park":1.035};
 const S={loadedDay:'',games:[],data:new Map(),analyses:new Map(),cache:new Map(),odds:new Map(),bullpens:new Map(),lineups:new Map(),people:new Map(),statcast:new Map(),statcastSeason:null,statcastPromise:null,statcastStatus:{state:'idle',at:0,message:''},current:null,liveOn:true,liveTimer:null,lastOddsAt:0,lastOddsDay:'',oddsRemaining:null,publicOddsStatus:{source:'',at:0,error:''},refreshingAll:false};
@@ -6860,13 +6974,14 @@ dataQualityTier:
 appVersion:APP_VERSION,
 dataSchema:DATA_SCHEMA,
 modelVersion:MODEL_VERSION,
+...globalPolicyIdentity(null),
 predictionSnapshot:predictionSnapshot(
   e,
   upper,
   built,
   g
 ),
-isLabPick:upper===labSide,status:'PENDING',created:stamp,updated:stamp,seed:built.seed,includeExtras:built.ctx?.gameRules?.extras!==false},key=labForecastKey(fresh),idx=rows.findIndex(r=>labForecastKey(r)===key);if(idx>=0){if(rows[idx].status==='PENDING'){rows[idx]={...rows[idx],...fresh,id:rows[idx].id||fresh.id,created:rows[idx].created||stamp};updated++}}else{rows.push(fresh);saved++}}}rows=dedupeLabRows(rows);saveLab(rows);return{saved,updated,skippedModel,skipped:false}}
+isLabPick:upper===labSide,status:'PENDING',created:stamp,updated:stamp,seed:built.seed,includeExtras:built.ctx?.gameRules?.extras!==false},key=labForecastKey(fresh),idx=rows.findIndex(r=>labForecastKey(r)===key);if(idx>=0){if(rows[idx].status==='PENDING'){const old=rows[idx];rows[idx]={...old,...fresh,...globalPolicyIdentity(old,old.policyCapturedAt||stamp),id:old.id||fresh.id,created:old.created||stamp};updated++}}else{rows.push(fresh);saved++}}}rows=dedupeLabRows(rows);saveLab(rows);return{saved,updated,skippedModel,skipped:false}}
 
 /* ---------- V7.3 · RISK MANAGER V1 ---------- */
 
@@ -7183,6 +7298,29 @@ modelVersion:
     ?String(r.modelVersion)
     :null,
 
+policyVersion:
+  r.policyVersion
+    ?String(r.policyVersion)
+    :null,
+
+cohortId:
+  r.cohortId
+    ?String(r.cohortId)
+    :null,
+
+policyOrigin:
+  r.policyOrigin
+    ?String(r.policyOrigin)
+    :null,
+
+policyCapturedAt:
+  r.policyCapturedAt ||
+  null,
+
+policySchema:
+  Number(r.policySchema) ||
+  null,
+
 predictionSnapshot:
   r.predictionSnapshot &&
   typeof r.predictionSnapshot==='object'
@@ -7485,6 +7623,7 @@ function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value)
      winProb:z.win,pushProb:e.push,includeExtras:cfg().gameRules?.extras!==false,edge:p.edge,dis:p.dis,recommended:!p.pass,manualPass:p.pass,status:'PENDING',created:new Date().toISOString(),profit:null,closingLine:null,closingOdds:null,clv:NaN,appVersion:APP_VERSION,
 dataSchema:DATA_SCHEMA,
 modelVersion:MODEL_VERSION,
+...globalPolicyIdentity(null),
 predictionSnapshot:predictionSnapshot(
   e,
   choice.side,
@@ -13247,7 +13386,7 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
   `;
 }
 
-function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
+function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}${policyCohortDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
 function renderHomeDashboard(){
 
@@ -13624,7 +13763,8 @@ edge:
     :null,
   odds:Number.isFinite(+r.odds)?+r.odds:null,signal:r.signal||'LAB',signalClass:r.signalClass||censusSignalClass(r.signal),
   pass:r.pass??String(r.signal).toUpperCase()==='PASS',status:'PENDING',actual:null,y:null,brier:null,
-  includeExtras:cfg().gameRules?.extras!==false,created:new Date().toISOString(),updated:new Date().toISOString(),modelVersion:MODEL_VERSION
+  includeExtras:cfg().gameRules?.extras!==false,created:new Date().toISOString(),updated:new Date().toISOString(),modelVersion:MODEL_VERSION,
+  ...globalPolicyIdentity(null)
  }}
 
 /* V7.8.6F3 RANK INVARIANT SELF TEST */
@@ -15618,6 +15758,773 @@ function decisionTraceDashboardHtml(){
 }
 
 
+
+/* V7.8.6K2 POLICY COHORT DASHBOARD INTEGRITY */
+
+function policyCohortClassify(
+  r={}
+){
+
+  const policy=
+    String(
+      r?.policyVersion||''
+    );
+
+
+  const cohort=
+    String(
+      r?.cohortId||''
+    );
+
+
+  const origin=
+    String(
+      r?.policyOrigin||''
+    );
+
+
+  if(
+    policy===GLOBAL_POLICY_VERSION &&
+    cohort===GLOBAL_COHORT_ID
+  ){
+    return 'CURRENT';
+  }
+
+
+  if(origin==='LEGACY_PRE_K1'){
+    return 'LEGACY_EXPLICIT';
+  }
+
+
+  if(
+    !policy &&
+    !cohort
+  ){
+    return 'LEGACY_UNTAGGED';
+  }
+
+
+  return 'OTHER';
+
+}
+
+
+function policyCohortStoreStats(
+  rows=[]
+){
+
+  const list=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  const current=
+    list.filter(r=>
+      policyCohortClassify(r)==='CURRENT'
+    );
+
+
+  return{
+
+    total:
+      list.length,
+
+    current:
+      current.length,
+
+    legacyExplicit:
+      list.filter(r=>
+        policyCohortClassify(r)==='LEGACY_EXPLICIT'
+      ).length,
+
+    legacyUntagged:
+      list.filter(r=>
+        policyCohortClassify(r)==='LEGACY_UNTAGGED'
+      ).length,
+
+    other:
+      list.filter(r=>
+        policyCohortClassify(r)==='OTHER'
+      ).length,
+
+    settledCurrent:
+      current.filter(r=>
+        [
+          'FINAL',
+          'PUSH',
+          'WIN',
+          'LOSS'
+        ].includes(
+          String(
+            r?.status||''
+          ).toUpperCase()
+        )
+      ).length
+
+  };
+
+}
+
+
+function policyCohortStats(){
+
+  const censusRows=
+    censusAllRows();
+
+
+  const labRows=
+    dedupeLabRows(
+      lab()
+    );
+
+
+  const betRows=
+    bets();
+
+
+  return{
+
+    census:
+      policyCohortStoreStats(
+        censusRows
+      ),
+
+    lab:
+      policyCohortStoreStats(
+        labRows
+      ),
+
+    bets:
+      policyCohortStoreStats(
+        betRows
+      ),
+
+    currentGames:
+      new Set(
+        censusRows
+          .filter(r=>
+            policyCohortClassify(r)==='CURRENT'
+          )
+          .map(r=>
+            String(r.gamePk)
+          )
+      ).size
+
+  };
+
+}
+
+
+/* =========================================
+   INTEGRITY TEST
+   ========================================= */
+
+function policyCohortIntegritySelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  const t=
+    '2026-09-01T20:00:00.000Z';
+
+
+  /*
+   * 1 · Registro nuevo.
+   */
+
+  const fresh=
+    globalPolicyIdentity(
+      null,
+      t
+    );
+
+
+  test(
+    'nuevo registro recibe policy actual',
+    fresh.policyVersion===
+      GLOBAL_POLICY_VERSION &&
+    fresh.cohortId===
+      GLOBAL_COHORT_ID &&
+    fresh.policyOrigin===
+      'NATIVE_K1' &&
+    fresh.policyCapturedAt===t
+  );
+
+
+  /*
+   * 2 · Registro legacy no se
+   * convierte falsamente.
+   */
+
+  const legacy=
+    globalPolicyIdentity(
+      {
+        status:'PENDING'
+      },
+      t
+    );
+
+
+  test(
+    'legacy no se recohortiza',
+    legacy.policyVersion===null &&
+    legacy.cohortId===null &&
+    legacy.policyOrigin===
+      'LEGACY_PRE_K1'
+  );
+
+
+  /*
+   * 3 · Identidad ya existente
+   * permanece congelada.
+   */
+
+  const oldIdentity={
+
+    policyVersion:
+      'OLD_POLICY',
+
+    cohortId:
+      'OLD_COHORT',
+
+    policyOrigin:
+      'NATIVE_OLD',
+
+    policyCapturedAt:
+      '2026-08-01T00:00:00.000Z',
+
+    policySchema:1
+
+  };
+
+
+  const preserved=
+    globalPolicyIdentity(
+      oldIdentity,
+      t
+    );
+
+
+  test(
+    'identidad previa permanece congelada',
+    preserved.policyVersion==='OLD_POLICY' &&
+    preserved.cohortId==='OLD_COHORT' &&
+    preserved.policyCapturedAt===
+      '2026-08-01T00:00:00.000Z'
+  );
+
+
+  /*
+   * 4 · Clasificador.
+   */
+
+  test(
+    'clasificador separa cohorts',
+    policyCohortClassify(fresh)==='CURRENT' &&
+    policyCohortClassify({
+      policyOrigin:'LEGACY_PRE_K1'
+    })==='LEGACY_EXPLICIT' &&
+    policyCohortClassify({})===
+      'LEGACY_UNTAGGED' &&
+    policyCohortClassify({
+      policyVersion:'X',
+      cohortId:'Y'
+    })==='OTHER'
+  );
+
+
+  /*
+   * 5 · LAB nuevo conectado.
+   */
+
+  test(
+    'LAB crea policy identity',
+    String(
+      addLabForecast
+    ).includes(
+      'globalPolicyIdentity(null)'
+    )
+  );
+
+
+  /*
+   * 6 · Censo nuevo conectado.
+   */
+
+  test(
+    'Censo crea policy identity',
+    String(
+      censusFromViewRow
+    ).includes(
+      'globalPolicyIdentity(null)'
+    )
+  );
+
+
+  /*
+   * 7 · Apuesta nueva conectada.
+   */
+
+  test(
+    'Apuesta crea policy identity',
+    String(
+      saveBetFromResult
+    ).includes(
+      'globalPolicyIdentity(null)'
+    )
+  );
+
+
+  /*
+   * 8 · Sync Censo preserva old.
+   */
+
+  test(
+    'Censo existente preserva identidad',
+    String(
+      syncRankingCensus
+    ).includes(
+      'globalPolicyIdentity('
+    ) &&
+    String(
+      syncRankingCensus
+    ).includes(
+      'old?.policyCapturedAt'
+    )
+  );
+
+
+  /*
+   * 9 · Importación de apuestas
+   * conserva los campos.
+   */
+
+  test(
+    'normalizeBetRow conserva policy',
+    String(
+      normalizeBetRow
+    ).includes(
+      'policyVersion'
+    ) &&
+    String(
+      normalizeBetRow
+    ).includes(
+      'cohortId'
+    ) &&
+    String(
+      normalizeBetRow
+    ).includes(
+      'policyCapturedAt'
+    )
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function policyCohortRunIntegritySelfTest(){
+
+  const report=
+    policyCohortIntegritySelfTest();
+
+
+  window.__MLB_POLICY_COHORT_INTEGRITY__=
+    report;
+
+
+  if(report.ok){
+
+    console.log(
+      'POLICY COHORT INTEGRITY PASS',
+      report.passed+
+      '/'+
+      report.total
+    );
+
+  }else{
+
+    console.error(
+      'POLICY COHORT INTEGRITY FAILURE',
+      report
+    );
+
+  }
+
+
+  return report;
+
+}
+
+
+/* =========================================
+   DASHBOARD
+   ========================================= */
+
+function policyCohortDashboardHtml(){
+
+  const d=
+    policyCohortStats();
+
+
+  const integrity=
+    policyCohortIntegritySelfTest();
+
+
+  const row=(
+    name,
+    x
+  )=>`
+
+    <tr>
+
+      <td>
+        <b>${name}</b>
+      </td>
+
+      <td>
+        ${x.total}
+      </td>
+
+      <td>
+        ${x.current}
+      </td>
+
+      <td>
+        ${x.settledCurrent}
+      </td>
+
+      <td>
+        ${x.legacyExplicit}
+      </td>
+
+      <td>
+        ${x.legacyUntagged}
+      </td>
+
+      <td>
+        ${x.other}
+      </td>
+
+    </tr>
+
+  `;
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Policy Cohort · Freeze Identity
+      </h3>
+
+
+      <div
+        class="smalltxt"
+        style="margin-bottom:10px"
+      >
+
+        Desde K1, cada predicción realmente
+        nueva queda identificada con una
+        política y cohort inmutables.
+
+        Los históricos anteriores permanecen
+        separados y no se reconstruyen.
+
+      </div>
+
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Policy Integrity
+          </small>
+
+          <div class="big ${integrity.ok?'bp-good':'bp-bad'}">
+            ${integrity.ok?'PASS':'FAIL'}
+          </div>
+
+          <div class="smalltxt">
+            ${integrity.passed}/${integrity.total} pruebas
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Policy
+          </small>
+
+          <div class="big">
+            V7.8.6
+          </div>
+
+          <div class="smalltxt">
+            ${GLOBAL_POLICY_VERSION}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cohort
+          </small>
+
+          <div class="big">
+            FREEZE 1
+          </div>
+
+          <div class="smalltxt">
+            ${GLOBAL_COHORT_ID}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Juegos Censo cohort
+          </small>
+
+          <div class="big">
+            ${d.currentGames}
+          </div>
+
+          <div class="smalltxt">
+            nacidos bajo K1
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Censo cohort
+          </small>
+
+          <div class="big">
+            ${d.census.current}
+          </div>
+
+          <div class="smalltxt">
+            liquidados ${d.census.settledCurrent}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            LAB cohort
+          </small>
+
+          <div class="big">
+            ${d.lab.current}
+          </div>
+
+          <div class="smalltxt">
+            liquidados ${d.lab.settledCurrent}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Bets cohort
+          </small>
+
+          <div class="big">
+            ${d.bets.current}
+          </div>
+
+          <div class="smalltxt">
+            liquidadas ${d.bets.settledCurrent}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Legacy Censo
+          </small>
+
+          <div class="big">
+            ${
+              d.census.legacyExplicit+
+              d.census.legacyUntagged
+            }
+          </div>
+
+          <div class="smalltxt">
+            fuera del nuevo cohort
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="section"
+        style="margin-top:12px"
+      >
+
+        <h3>
+          Cobertura por almacén
+        </h3>
+
+
+        <div style="overflow:auto">
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Store
+                </th>
+
+                <th>
+                  Total
+                </th>
+
+                <th>
+                  Cohort
+                </th>
+
+                <th>
+                  Settled
+                </th>
+
+                <th>
+                  Legacy ID
+                </th>
+
+                <th>
+                  Legacy sin ID
+                </th>
+
+                <th>
+                  Otros
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              ${row(
+                'CENSO',
+                d.census
+              )}
+
+              ${row(
+                'LAB',
+                d.lab
+              )}
+
+              ${row(
+                'APUESTAS',
+                d.bets
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <div class="note">
+
+        Cohort = registros nacidos realmente
+        bajo V786_FREEZE_1.
+
+        Legacy ID = registros anteriores a K1
+        que ya fueron identificados
+        explícitamente.
+
+        Legacy sin ID = históricos anteriores
+        que todavía no necesitaron actualizarse.
+
+        "Otros" permite detectar datos creados
+        bajo otra política futura.
+
+        Ninguna clasificación modifica
+        probabilidades, Ranking, señales,
+        thresholds ni Motor V7.0.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
 function syncRankingCensus(date,viewRows){
  if(!date||!Array.isArray(viewRows)||!viewRows.length)return 0;
  const data=rankCensus(),now=Date.now(),existing=data.days[date]||{date,created:new Date().toISOString(),updated:null,rows:[]};
@@ -15637,6 +16544,18 @@ function syncRankingCensus(date,viewRows){
     old,
     fresh
   );
+
+
+  Object.assign(
+    fresh,
+    globalPolicyIdentity(
+      old,
+      old?.policyCapturedAt ||
+      fresh.created ||
+      new Date().toISOString()
+    )
+  );
+
 
   byGame.set(key,fresh);changed++;
  }
@@ -26182,7 +27101,7 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();policyCohortRunIntegritySelfTest();renderOriginWarning();await initPersistentStore();migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 
