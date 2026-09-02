@@ -1,8 +1,8 @@
 {
   "name": "mlb-totals-lab-v7-android",
-  "version": "7.8.5",
+  "version": "7.8.6",
   "private": true,
-  "description": "MLB Totals Lab V7.8.5 · Full Game O/U · Motor V7.0",
+  "description": "MLB Totals Lab V7.8.6 · Full Game O/U · Motor V7.0",
   "scripts": {
     "android:add": "cap add android",
     "android:sync": "cap sync android",

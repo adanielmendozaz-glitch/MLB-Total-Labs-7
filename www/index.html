@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06111e">
-<title>MLB Totals Lab V7.8.5 · Full Game O/U Focus</title>
+<title>MLB Totals Lab V7.8.6 · Full Game O/U Focus</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#071728">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1481,7 +1481,7 @@ tbody tr:active{
 </head>
 <body>
 <div class="app">
-<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.5</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.5</div></div></header>
+<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.6</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.5</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
 <div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
@@ -1510,7 +1510,7 @@ tbody tr:active{
 <script>
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
-const APP_VERSION='V7.8.5',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
+const APP_VERSION='V7.8.6',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
 
 /* V7.8.6K1 GLOBAL POLICY COHORT IDENTITY */
 
@@ -17808,7 +17808,7 @@ function selfTestDashboardHtml(
     '<div class="section">'+
 
       '<h3>'+
-        'V7.8.5 · Diagnóstico interno'+
+        'V7.8.6 · Diagnóstico interno'+
       '</h3>'+
 
 
@@ -19656,14 +19656,14 @@ function runCoreSelfTests(){
 
 
 
-  /* V7.8.5C3 RELEASE IDENTITY TEST */
+  /* V7.8.6M1 RELEASE IDENTITY TEST */
 
   test(
-    'Release identity V7.8.5',
+    'Release identity V7.8.6',
     ()=>{
 
       assert(
-        APP_VERSION==='V7.8.5',
+        APP_VERSION==='V7.8.6',
         'APP_VERSION incorrecta: '+
         APP_VERSION
       );
@@ -19678,7 +19678,7 @@ function runCoreSelfTests(){
 
       assert(
         document.title.includes(
-          'MLB Totals Lab V7.8.5'
+          'MLB Totals Lab V7.8.6'
         ),
         'Título HTML desincronizado'
       );
@@ -19693,14 +19693,14 @@ function runCoreSelfTests(){
       assert(
         hero &&
         hero.textContent.includes(
-          'MLB Totals Lab V7.8.5'
+          'MLB Totals Lab V7.8.6'
         ),
         'Header visual desincronizado'
       );
 
 
       return(
-        'App V7.8.5 · Motor V7.0'
+        'App V7.8.6 · Motor V7.0'
       );
     }
   );
