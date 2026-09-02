@@ -327,6 +327,7 @@ dialog{
   .tab[data-tab="ranking"]::before{content:"▥"}
   .tab[data-tab="census"]::before{content:"◫"}
   .tab[data-tab="teams"]::before{content:"⚾"}
+  .tab[data-tab="shadow"]::before{content:"◈"}
   .tab[data-tab="history"]::before{content:"✓"}
   .tab[data-tab="bank"]::before{content:"$"}
   .tab[data-tab="lab"]::before{content:"⌁"}
@@ -1484,11 +1485,19 @@ tbody tr:active{
 <header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.6</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.5</div></div></header>
 <div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
-<div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
+<div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="shadow">Shadow Lab</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
 <section id="daily" class="panel"><div id="homeDashboard"></div><div id="games" class="games"></div></section>
 <section id="ranking" class="panel hidden"><div id="rankContent"></div></section>
 <section id="census" class="panel hidden"><div id="censusContent"></div></section>
 <section id="teams" class="panel hidden"><div class="histbar" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button class="btn green" id="settleTeams">Liquidar todo + actualizar</button><button class="btn" id="exportTeams">Exportar equipos CSV</button><button class="btn ghost" id="refreshTeams">Recalcular vista</button></div><div id="teamContent"></div></section>
+<section id="shadow" class="panel hidden">
+  <div class="histbar" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <button class="btn green" id="shadowSettleNow">Sincronizar resultados</button>
+    <button class="btn" id="shadowRefresh">Refrescar vista</button>
+    <button class="btn ghost" id="shadowExport">Exportar Shadow CSV</button>
+  </div>
+  <div id="shadowIntegrity"></div><div id="shadowContent"></div>
+</section>
 <section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar todo</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Backup Data Vault</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="rollingBackupPanel"></div><div id="historyContent"></div></section>
 <section id="bank" class="panel hidden">
   <div id="bankContent"></div>
@@ -1646,7 +1655,7 @@ const STORE={
  removeItem(k){try{window.localStorage.removeItem(k)}catch{}MEMSTORE.delete(k);IDBSTORE.remove(k).catch(()=>{})},
  clearPrefix(prefix){try{const ls=window.localStorage;for(let i=ls.length-1;i>=0;i--){const k=ls.key(i);if(k&&k.startsWith(prefix))ls.removeItem(k)}}catch{}for(const k of [...MEMSTORE.keys()])if(k.startsWith(prefix))MEMSTORE.delete(k);IDBSTORE.keys().then(keys=>keys.filter(k=>String(k).startsWith(prefix)).forEach(k=>IDBSTORE.remove(k))).catch(()=>{})}
 };
-const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache','mlb_v71_bank','mlb_v786_rolling_backups'];
+const PERSIST_KEYS=['mlb_v5_cfg','mlb_v5_markets','mlb_v5_lab','mlb_v5_bets','mlb_v5_history_migrated','mlb_v4_history','mlb_v45_history','mlb_v44_history','mlb_totals_history','mlb_history','mlb_v53_bullpen_cache','mlb_v56_lineup_cache','mlb_v58_rank_tracker','mlb_v59_rank_drafts','mlb_v60_rank_census','mlb_v61_public_odds_cache','mlb_v71_bank','mlb_v786_rolling_backups','mlb_v786_team_shadow_lab'];
 async function initPersistentStore(){const localOK=localStorageAvailable(),db=await IDBSTORE.open().catch(()=>null);STORAGE_MODE=localOK?(db?'localStorage + IndexedDB':'localStorage'):(db?'IndexedDB':'memoria temporal');for(const k of PERSIST_KEYS){let local=null;if(localOK)try{local=window.localStorage.getItem(k)}catch{}if(local!==null){MEMSTORE.set(k,local);if(db)await IDBSTORE.set(k,local).catch(()=>{});continue}const saved=db?await IDBSTORE.get(k).catch(()=>null):null;if(saved!==null){MEMSTORE.set(k,String(saved));if(localOK)try{window.localStorage.setItem(k,String(saved))}catch{}}}}
 const $=q=>document.querySelector(q),$$=q=>[...document.querySelectorAll(q)];
 const n=(x,d=0)=>Number.isFinite(+x)?+x:d,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),fix=(x,k=2)=>Number.isFinite(+x)?(+x).toFixed(k):'—',pct=x=>Number.isFinite(x)?`${(x*100).toFixed(1)}%`:'—',esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -7278,7 +7287,3929 @@ function bindBetSelector(evals,best){const sel=$('#betPick');if(!sel)return;cons
      refresh()
     }
 
-async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);$('#results').innerHTML=resultHtml(g,built,ev,best,N);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
+
+/* V7.8.6 SHADOW S2 CAPTURE + GATING */
+
+function teamShadowOfficialSignal(
+  pick,
+  source=''
+){
+
+  try{
+
+    const label=
+      String(
+        signalLabel(
+          pick,
+          source
+        )?.txt || ''
+      ).toUpperCase();
+
+
+    if(
+      label.includes('JUGABLE')
+    ){
+      return 'JUGABLE';
+    }
+
+
+    if(
+      label.includes('LEAN')
+    ){
+      return 'LEAN';
+    }
+
+
+    return 'NO BET';
+
+
+  }catch{
+
+    if(pick?.pass){
+      return 'NO BET';
+    }
+
+    return 'LEAN';
+
+  }
+
+}
+
+function teamShadowGatingDecision(
+  officialSignal,
+  teamScore
+){
+
+  const original=
+    String(
+      officialSignal || 'NO BET'
+    ).toUpperCase();
+
+
+  const score=
+    clamp(
+      Number(teamScore) || 0,
+      -3,
+      3
+    );
+
+
+  let hypothetical=
+    original;
+
+  let action=
+    'KEEP';
+
+
+  /*
+   * Nunca resucita NO BET.
+   */
+
+  if(original==='NO BET'){
+
+    hypothetical='NO BET';
+    action='KEEP NO BET';
+
+  }
+
+
+  /*
+   * Confirmación fuerte:
+   * LEAN → JUGABLE.
+   */
+
+  else if(score>=2){
+
+    if(original==='LEAN'){
+
+      hypothetical='JUGABLE';
+      action='PROMOTE';
+
+    }
+
+  }
+
+
+  /*
+   * Conflicto moderado.
+   */
+
+  else if(score===-2){
+
+    if(original==='JUGABLE'){
+
+      hypothetical='LEAN';
+      action='DOWNGRADE';
+
+    }else if(original==='LEAN'){
+
+      hypothetical='NO BET';
+      action='BLOCK';
+
+    }
+
+  }
+
+
+  /*
+   * Conflicto fuerte.
+   */
+
+  else if(score<=-3){
+
+    if(
+      original==='JUGABLE' ||
+      original==='LEAN'
+    ){
+
+      hypothetical='NO BET';
+      action='STRONG BLOCK';
+
+    }
+
+  }
+
+
+  return{
+
+    officialSignal:
+      original,
+
+    hypotheticalSignal:
+      hypothetical,
+
+    action,
+
+    changed:
+      original!==hypothetical,
+
+    blocked:
+      hypothetical==='NO BET' &&
+      original!=='NO BET',
+
+    promoted:
+      original==='LEAN' &&
+      hypothetical==='JUGABLE',
+
+    downgraded:
+      original==='JUGABLE' &&
+      hypothetical==='LEAN',
+
+    score
+
+  };
+
+}
+
+function teamShadowGameStarted(
+  g,
+  now=Date.now()
+){
+
+  const start=
+    Date.parse(
+      g?.gameDate || ''
+    );
+
+
+  if(
+    !Number.isFinite(start)
+  ){
+    return false;
+  }
+
+
+  return now>=start;
+
+}
+
+function teamShadowDecisionKey(
+  row={}
+){
+
+  return[
+
+    row.gamePk ?? '',
+
+    Number.isFinite(+row.line)
+      ?Number(row.line)
+      :'',
+
+    row.officialSide || '',
+
+    row.officialSignal || '',
+
+    row.teamScore ?? '',
+
+    row.hypotheticalSignal || ''
+
+  ].join('|');
+
+}
+
+function teamShadowOfficialPickSnapshot(
+  g,
+  evals,
+  built,
+  best
+){
+
+  const pick=
+    best?.pick;
+
+  const ev=
+    best?.ev;
+
+
+  if(
+    !pick ||
+    !ev
+  ){
+    return null;
+  }
+
+
+  const side=
+    String(
+      pick.side || ''
+    ).toUpperCase();
+
+
+  if(
+    side!=='OVER' &&
+    side!=='UNDER'
+  ){
+    return null;
+  }
+
+
+  const line=
+    Number(ev.line);
+
+
+  if(
+    !Number.isFinite(line)
+  ){
+    return null;
+  }
+
+
+  const source=
+    String(
+      ev.source || ''
+    );
+
+
+  const officialSignal=
+    teamShadowOfficialSignal(
+      pick,
+      source
+    );
+
+
+  const teamLayer=
+    teamShadowScoreForGame(
+      g,
+      side
+    );
+
+
+  const gating=
+    teamShadowGatingDecision(
+      officialSignal,
+      teamLayer.score
+    );
+
+
+  const now=
+    new Date()
+      .toISOString();
+
+
+  return{
+
+    version:
+      TEAM_SHADOW_VERSION,
+
+    schema:1,
+
+    gamePk:
+      Number(g?.gamePk) || 0,
+
+    date:
+      String(
+        g?.officialDate ||
+        localDay()
+      ),
+
+    scheduledStart:
+      g?.gameDate || null,
+
+    away:
+      String(
+        g?.teams?.away?.team?.name ||
+        ''
+      ),
+
+    home:
+      String(
+        g?.teams?.home?.team?.name ||
+        ''
+      ),
+
+    officialSide:
+      side,
+
+    line,
+
+    officialProbability:
+      Number.isFinite(+pick.p)
+        ?+pick.p
+        :null,
+
+    officialEdge:
+      Number.isFinite(+pick.edge)
+        ?+pick.edge
+        :null,
+
+    officialFair:
+      pick.fair ?? null,
+
+    officialSignal,
+
+    officialPass:
+      !!pick.pass,
+
+    lineSource:
+      source,
+
+    modelMean:
+      Number.isFinite(
+        +built?.mean?.total
+      )
+        ?+built.mean.total
+        :null,
+
+    teamScore:
+      teamLayer.score,
+
+    teamScoreRaw:
+      Number.isFinite(
+        +teamLayer.raw
+      )
+        ?+teamLayer.raw
+        :null,
+
+    teamSignal:
+      teamLayer.signal,
+
+    teamLabel:
+      teamLayer.label,
+
+    awayTeamDna:
+      teamLayer.away?.dna || null,
+
+    awayReliability:
+      teamLayer.away?.reliability || null,
+
+    awaySample:
+      Number(
+        teamLayer.away?.n
+      ) || 0,
+
+    awayBias:
+      Number.isFinite(
+        +teamLayer.away?.bias
+      )
+        ?+teamLayer.away.bias
+        :null,
+
+    homeTeamDna:
+      teamLayer.home?.dna || null,
+
+    homeReliability:
+      teamLayer.home?.reliability || null,
+
+    homeSample:
+      Number(
+        teamLayer.home?.n
+      ) || 0,
+
+    homeBias:
+      Number.isFinite(
+        +teamLayer.home?.bias
+      )
+        ?+teamLayer.home.bias
+        :null,
+
+    hypotheticalSignal:
+      gating.hypotheticalSignal,
+
+    gatingAction:
+      gating.action,
+
+    gatingChanged:
+      gating.changed,
+
+    gatingBlocked:
+      gating.blocked,
+
+    gatingPromoted:
+      gating.promoted,
+
+    gatingDowngraded:
+      gating.downgraded,
+
+    status:'PENDING',
+
+    actual:null,
+
+    officialOutcome:null,
+
+    hypotheticalOutcome:null,
+
+    lossesAvoided:0,
+
+    winnersBlocked:0,
+
+    leanPromotedWin:0,
+
+    leanPromotedLoss:0,
+
+    observations:1,
+
+    firstObservedAt:now,
+
+    lastObservedAt:now,
+
+    created:now,
+
+    updated:now,
+
+    primaryCase:true,
+
+    experimental:true,
+
+    readOnly:true
+
+  };
+
+}
+
+function teamShadowCaptureOfficial(
+  g,
+  evals,
+  built,
+  best
+){
+
+  if(
+    teamShadowGameStarted(g)
+  ){
+
+    return{
+      captured:false,
+      reason:'GAME_STARTED'
+    };
+
+  }
+
+
+  const fresh=
+    teamShadowOfficialPickSnapshot(
+      g,
+      evals,
+      built,
+      best
+    );
+
+
+  if(!fresh){
+
+    return{
+      captured:false,
+      reason:'NO_OFFICIAL_PICK'
+    };
+
+  }
+
+
+  const state=
+    teamShadowState();
+
+
+  const rows=
+    Array.isArray(state.rows)
+      ?state.rows
+      :[];
+
+
+  const key=
+    teamShadowDecisionKey(
+      fresh
+    );
+
+
+  for(const row of rows){
+
+    if(
+      Number(row.gamePk)===
+      Number(fresh.gamePk) &&
+      String(
+        row.status || ''
+      ).toUpperCase()==='PENDING'
+    ){
+
+      row.primaryCase=false;
+
+    }
+
+  }
+
+
+  const existing=
+    rows.find(
+      row=>
+        String(
+          row.status || ''
+        ).toUpperCase()==='PENDING' &&
+        Number(row.gamePk)===
+          Number(fresh.gamePk) &&
+        teamShadowDecisionKey(row)===
+          key
+    );
+
+
+  if(existing){
+
+    existing.observations=
+      Math.max(
+        1,
+        Number(
+          existing.observations
+        ) || 1
+      )+1;
+
+
+    existing.lastObservedAt=
+      fresh.lastObservedAt;
+
+
+    existing.updated=
+      fresh.updated;
+
+
+    existing.primaryCase=true;
+
+
+    saveTeamShadowData({
+      ...state,
+      rows
+    });
+
+
+    return{
+      captured:true,
+      created:false,
+      row:existing
+    };
+
+  }
+
+
+  fresh.id=[
+    'TS',
+    fresh.gamePk,
+    Date.now(),
+    Math.random()
+      .toString(16)
+      .slice(2,8)
+  ].join('_');
+
+
+  rows.push(
+    fresh
+  );
+
+
+  saveTeamShadowData({
+    ...state,
+    rows
+  });
+
+
+  return{
+    captured:true,
+    created:true,
+    row:fresh
+  };
+
+}
+
+function teamShadowGatingSelfTest(){
+
+  const cases=[
+
+    ['JUGABLE',3,'JUGABLE'],
+    ['LEAN',3,'JUGABLE'],
+    ['LEAN',2,'JUGABLE'],
+
+    ['JUGABLE',1,'JUGABLE'],
+    ['LEAN',0,'LEAN'],
+    ['JUGABLE',-1,'JUGABLE'],
+
+    ['JUGABLE',-2,'LEAN'],
+    ['LEAN',-2,'NO BET'],
+
+    ['JUGABLE',-3,'NO BET'],
+    ['LEAN',-3,'NO BET'],
+
+    ['NO BET',3,'NO BET'],
+    ['NO BET',-3,'NO BET']
+
+  ];
+
+
+  const failed=[];
+
+
+  for(
+    const [
+      official,
+      score,
+      expected
+    ]
+    of cases
+  ){
+
+    const got=
+      teamShadowGatingDecision(
+        official,
+        score
+      );
+
+
+    if(
+      got.hypotheticalSignal!==
+      expected
+    ){
+
+      failed.push(
+        official+
+        ' / '+
+        score+
+        ' => '+
+        got.hypotheticalSignal+
+        ' esperado '+
+        expected
+      );
+
+    }
+
+  }
+
+
+  return{
+
+    ok:
+      failed.length===0,
+
+    total:
+      cases.length,
+
+    passed:
+      cases.length-
+      failed.length,
+
+    failed
+
+  };
+
+}
+
+
+
+/* V7.8.6 SHADOW S3 WHAT IF SETTLEMENT */
+
+function teamShadowPickOutcome(
+  side,
+  line,
+  actual
+){
+
+  const pickSide=
+    String(
+      side || ''
+    ).toUpperCase();
+
+
+  const marketLine=
+    Number(line);
+
+  const finalTotal=
+    Number(actual);
+
+
+  if(
+    !Number.isFinite(marketLine) ||
+    !Number.isFinite(finalTotal)
+  ){
+    return null;
+  }
+
+
+  if(
+    Math.abs(
+      finalTotal-marketLine
+    )<1e-9
+  ){
+    return 'PUSH';
+  }
+
+
+  if(pickSide==='OVER'){
+
+    return(
+      finalTotal>marketLine
+        ?'WIN'
+        :'LOSS'
+    );
+
+  }
+
+
+  if(pickSide==='UNDER'){
+
+    return(
+      finalTotal<marketLine
+        ?'WIN'
+        :'LOSS'
+    );
+
+  }
+
+
+  return null;
+
+}
+
+function teamShadowActualFromOfficialRow(
+  row={}
+){
+
+  if(
+    row.actual!==null &&
+    row.actual!==undefined &&
+    row.actual!=='' &&
+    Number.isFinite(
+      Number(row.actual)
+    )
+  ){
+
+    return Number(
+      row.actual
+    );
+
+  }
+
+
+  const away=
+    row.awayScore;
+
+  const home=
+    row.homeScore;
+
+
+  if(
+    away!==null &&
+    away!==undefined &&
+    away!=='' &&
+    home!==null &&
+    home!==undefined &&
+    home!=='' &&
+    Number.isFinite(Number(away)) &&
+    Number.isFinite(Number(home))
+  ){
+
+    return(
+      Number(away)+
+      Number(home)
+    );
+
+  }
+
+
+  return NaN;
+
+}
+
+function teamShadowOfficialFinalsByGame(){
+
+  const map=
+    new Map();
+
+
+  const ingest=(
+    rows,
+    source
+  )=>{
+
+    for(
+      const row
+      of Array.isArray(rows)
+        ?rows
+        :[]
+    ){
+
+      const gamePk=
+        Number(
+          row?.gamePk
+        );
+
+
+      if(!gamePk){
+        continue;
+      }
+
+
+      const status=
+        String(
+          row?.status || ''
+        ).toUpperCase();
+
+
+      if(
+        ![
+          'FINAL',
+          'PUSH',
+          'WIN',
+          'LOSS'
+        ].includes(status)
+      ){
+        continue;
+      }
+
+
+      const actual=
+        teamShadowActualFromOfficialRow(
+          row
+        );
+
+
+      if(
+        !Number.isFinite(actual)
+      ){
+        continue;
+      }
+
+
+      /*
+       * Censo tiene prioridad.
+       * LAB sólo rellena juegos
+       * todavía ausentes.
+       */
+
+      if(
+        map.has(gamePk)
+      ){
+        continue;
+      }
+
+
+      map.set(
+        gamePk,
+        {
+          gamePk,
+          actual,
+          source,
+
+          awayScore:
+            row.awayScore ??
+            null,
+
+          homeScore:
+            row.homeScore ??
+            null,
+
+          officialStatus:
+            status,
+
+          settledAt:
+            row.settled ||
+            row.updated ||
+            null
+        }
+      );
+
+    }
+
+  };
+
+
+  ingest(
+    censusAllRows(),
+    'OFFICIAL_CENSUS'
+  );
+
+
+  ingest(
+    lab(),
+    'OFFICIAL_LAB'
+  );
+
+
+  return map;
+
+}
+
+function teamShadowSettlementMetrics(
+  row,
+  pickOutcome
+){
+
+  const officialSignal=
+    String(
+      row?.officialSignal ||
+      'NO BET'
+    ).toUpperCase();
+
+
+  const hypotheticalSignal=
+    String(
+      row?.hypotheticalSignal ||
+      officialSignal
+    ).toUpperCase();
+
+
+  /*
+   * Para el A/B:
+   *
+   * JUGABLE = ejecutable.
+   * LEAN / NO BET = observación.
+   */
+
+  const officialBet=
+    officialSignal==='JUGABLE';
+
+
+  const hypotheticalBet=
+    hypotheticalSignal==='JUGABLE';
+
+
+  const removedOfficialBet=
+    officialBet &&
+    !hypotheticalBet;
+
+
+  const promotedLean=
+    officialSignal==='LEAN' &&
+    hypotheticalBet;
+
+
+  const lossesAvoided=
+    removedOfficialBet &&
+    pickOutcome==='LOSS'
+      ?1
+      :0;
+
+
+  const winnersBlocked=
+    removedOfficialBet &&
+    pickOutcome==='WIN'
+      ?1
+      :0;
+
+
+  const leanPromotedWin=
+    promotedLean &&
+    pickOutcome==='WIN'
+      ?1
+      :0;
+
+
+  const leanPromotedLoss=
+    promotedLean &&
+    pickOutcome==='LOSS'
+      ?1
+      :0;
+
+
+  return{
+
+    officialBet,
+
+    hypotheticalBet,
+
+    officialOutcome:
+      officialBet
+        ?pickOutcome
+        :'NO BET',
+
+    hypotheticalOutcome:
+      hypotheticalBet
+        ?pickOutcome
+        :'NO BET',
+
+    lossesAvoided,
+
+    winnersBlocked,
+
+    netSaves:
+      lossesAvoided-
+      winnersBlocked,
+
+    leanPromotedWin,
+
+    leanPromotedLoss,
+
+    leanPromotedPush:
+      promotedLean &&
+      pickOutcome==='PUSH'
+        ?1
+        :0
+
+  };
+
+}
+
+function teamShadowSettleFromOfficial(){
+
+  const state=
+    teamShadowState();
+
+
+  const rows=
+    Array.isArray(state.rows)
+      ?state.rows
+      :[];
+
+
+  if(!rows.length){
+
+    return{
+      settled:0,
+      pending:0,
+      total:0
+    };
+
+  }
+
+
+  const finals=
+    teamShadowOfficialFinalsByGame();
+
+
+  let settled=0;
+
+
+  for(const row of rows){
+
+    if(
+      String(
+        row?.status || ''
+      ).toUpperCase()!=='PENDING'
+    ){
+      continue;
+    }
+
+
+    const official=
+      finals.get(
+        Number(row.gamePk)
+      );
+
+
+    if(!official){
+      continue;
+    }
+
+
+    const pickOutcome=
+      teamShadowPickOutcome(
+        row.officialSide,
+        row.line,
+        official.actual
+      );
+
+
+    if(!pickOutcome){
+      continue;
+    }
+
+
+    const metrics=
+      teamShadowSettlementMetrics(
+        row,
+        pickOutcome
+      );
+
+
+    row.actual=
+      official.actual;
+
+
+    row.awayScore=
+      official.awayScore;
+
+
+    row.homeScore=
+      official.homeScore;
+
+
+    row.pickOutcome=
+      pickOutcome;
+
+
+    row.officialOutcome=
+      metrics.officialOutcome;
+
+
+    row.hypotheticalOutcome=
+      metrics.hypotheticalOutcome;
+
+
+    row.officialBet=
+      metrics.officialBet;
+
+
+    row.hypotheticalBet=
+      metrics.hypotheticalBet;
+
+
+    row.lossesAvoided=
+      metrics.lossesAvoided;
+
+
+    row.winnersBlocked=
+      metrics.winnersBlocked;
+
+
+    row.netSaves=
+      metrics.netSaves;
+
+
+    row.leanPromotedWin=
+      metrics.leanPromotedWin;
+
+
+    row.leanPromotedLoss=
+      metrics.leanPromotedLoss;
+
+
+    row.leanPromotedPush=
+      metrics.leanPromotedPush;
+
+
+    row.status=
+      pickOutcome==='PUSH'
+        ?'PUSH'
+        :'FINAL';
+
+
+    row.settlementSource=
+      official.source;
+
+
+    row.settled=
+      official.settledAt ||
+      new Date()
+        .toISOString();
+
+
+    row.updated=
+      new Date()
+        .toISOString();
+
+
+    settled++;
+
+  }
+
+
+  if(settled){
+
+    saveTeamShadowData({
+      ...state,
+      rows
+    });
+
+  }
+
+
+  const pending=
+    rows.filter(
+      r=>
+        String(
+          r?.status || ''
+        ).toUpperCase()==='PENDING'
+    ).length;
+
+
+  return{
+    settled,
+    pending,
+    total:rows.length
+  };
+
+}
+
+function teamShadowStartSettlementWatcher(){
+
+  /*
+   * Primera comprobación después de que
+   * Censo/LAB hayan terminado de restaurar.
+   */
+
+  setTimeout(
+    ()=>{
+
+      try{
+        teamShadowSettleFromOfficial();
+      }catch(e){
+
+        console.warn(
+          'TEAM SHADOW initial settlement',
+          e
+        );
+
+      }
+
+    },
+    2500
+  );
+
+
+  /*
+   * Sólo lectura local.
+   * No consulta MLB directamente.
+   */
+
+  if(
+    window.__TEAM_SHADOW_SETTLEMENT_TIMER__
+  ){
+    return;
+  }
+
+
+  window.__TEAM_SHADOW_SETTLEMENT_TIMER__=
+    setInterval(
+      ()=>{
+
+        try{
+
+          teamShadowSettleFromOfficial();
+
+        }catch(e){
+
+          console.warn(
+            'TEAM SHADOW settlement watcher',
+            e
+          );
+
+        }
+
+      },
+      15000
+    );
+
+}
+
+function teamShadowSettlementSelfTest(){
+
+  const tests=[];
+
+
+  const test=(
+    name,
+    condition
+  )=>{
+
+    tests.push({
+      name,
+      ok:condition===true
+    });
+
+  };
+
+
+  test(
+    'OVER WIN',
+    teamShadowPickOutcome(
+      'OVER',
+      8.5,
+      10
+    )==='WIN'
+  );
+
+
+  test(
+    'OVER LOSS',
+    teamShadowPickOutcome(
+      'OVER',
+      8.5,
+      7
+    )==='LOSS'
+  );
+
+
+  test(
+    'UNDER WIN',
+    teamShadowPickOutcome(
+      'UNDER',
+      8.5,
+      7
+    )==='WIN'
+  );
+
+
+  test(
+    'UNDER LOSS',
+    teamShadowPickOutcome(
+      'UNDER',
+      8.5,
+      10
+    )==='LOSS'
+  );
+
+
+  test(
+    'PUSH',
+    teamShadowPickOutcome(
+      'OVER',
+      9,
+      9
+    )==='PUSH'
+  );
+
+
+  let x=
+    teamShadowSettlementMetrics(
+      {
+        officialSignal:'JUGABLE',
+        hypotheticalSignal:'NO BET'
+      },
+      'LOSS'
+    );
+
+
+  test(
+    'Loss Avoided',
+    x.lossesAvoided===1 &&
+    x.winnersBlocked===0 &&
+    x.netSaves===1
+  );
+
+
+  x=
+    teamShadowSettlementMetrics(
+      {
+        officialSignal:'JUGABLE',
+        hypotheticalSignal:'NO BET'
+      },
+      'WIN'
+    );
+
+
+  test(
+    'Winner Blocked',
+    x.lossesAvoided===0 &&
+    x.winnersBlocked===1 &&
+    x.netSaves===-1
+  );
+
+
+  x=
+    teamShadowSettlementMetrics(
+      {
+        officialSignal:'LEAN',
+        hypotheticalSignal:'JUGABLE'
+      },
+      'WIN'
+    );
+
+
+  test(
+    'LEAN promote WIN',
+    x.leanPromotedWin===1 &&
+    x.leanPromotedLoss===0 &&
+    x.hypotheticalOutcome==='WIN'
+  );
+
+
+  x=
+    teamShadowSettlementMetrics(
+      {
+        officialSignal:'LEAN',
+        hypotheticalSignal:'JUGABLE'
+      },
+      'LOSS'
+    );
+
+
+  test(
+    'LEAN promote LOSS',
+    x.leanPromotedWin===0 &&
+    x.leanPromotedLoss===1 &&
+    x.hypotheticalOutcome==='LOSS'
+  );
+
+
+  x=
+    teamShadowSettlementMetrics(
+      {
+        officialSignal:'JUGABLE',
+        hypotheticalSignal:'JUGABLE'
+      },
+      'WIN'
+    );
+
+
+  test(
+    'KEEP no altera A/B',
+    x.lossesAvoided===0 &&
+    x.winnersBlocked===0 &&
+    x.officialOutcome==='WIN' &&
+    x.hypotheticalOutcome==='WIN'
+  );
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    ok:
+      passed===tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    failed:
+      tests
+        .filter(x=>!x.ok)
+        .map(x=>x.name),
+
+    tests
+
+  };
+
+}
+
+
+window.teamShadowSettleFromOfficial=teamShadowSettleFromOfficial;
+window.teamShadowStartSettlementWatcher=teamShadowStartSettlementWatcher;
+
+
+/* V7.8.6 SHADOW S4 DASHBOARD */
+
+function teamShadowOutcomeCounts(
+  rows=[],
+  field='pickOutcome'
+){
+
+  const out={
+    win:0,
+    loss:0,
+    push:0
+  };
+
+
+  for(
+    const r
+    of Array.isArray(rows)
+      ?rows
+      :[]
+  ){
+
+    const value=
+      String(
+        r?.[field] || ''
+      ).toUpperCase();
+
+
+    if(value==='WIN'){
+      out.win++;
+    }
+
+    if(value==='LOSS'){
+      out.loss++;
+    }
+
+    if(value==='PUSH'){
+      out.push++;
+    }
+
+  }
+
+
+  out.n=
+    out.win+
+    out.loss+
+    out.push;
+
+
+  out.decisions=
+    out.win+
+    out.loss;
+
+
+  out.hit=
+    out.decisions
+      ?out.win/out.decisions
+      :NaN;
+
+
+  return out;
+
+}
+
+function teamShadowPrimaryRows(
+  rows=[]
+){
+
+  return(
+    Array.isArray(rows)
+      ?rows
+      :[]
+  ).filter(
+    r=>
+      r?.primaryCase!==false
+  );
+
+}
+
+function teamShadowSettledRows(
+  rows=[]
+){
+
+  return teamShadowPrimaryRows(
+    rows
+  ).filter(
+    r=>
+      (
+        String(
+          r?.status || ''
+        ).toUpperCase()==='FINAL' ||
+        String(
+          r?.status || ''
+        ).toUpperCase()==='PUSH'
+      ) &&
+      [
+        'WIN',
+        'LOSS',
+        'PUSH'
+      ].includes(
+        String(
+          r?.pickOutcome || ''
+        ).toUpperCase()
+      )
+  );
+
+}
+
+function teamShadowStatsFromRows(
+  rows=[]
+){
+
+  const all=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  const primary=
+    teamShadowPrimaryRows(
+      all
+    );
+
+
+  const settled=
+    teamShadowSettledRows(
+      all
+    );
+
+
+  const officialBets=
+    settled.filter(
+      r=>r?.officialBet===true
+    );
+
+
+  const hypotheticalBets=
+    settled.filter(
+      r=>r?.hypotheticalBet===true
+    );
+
+
+  const official=
+    teamShadowOutcomeCounts(
+      officialBets,
+      'pickOutcome'
+    );
+
+
+  const shadow=
+    teamShadowOutcomeCounts(
+      hypotheticalBets,
+      'pickOutcome'
+    );
+
+
+  const sum=field=>
+    settled.reduce(
+      (a,r)=>
+        a+
+        (
+          Number(r?.[field]) ||
+          0
+        ),
+      0
+    );
+
+
+  return{
+
+    rows:
+      all.length,
+
+    observed:
+      primary.length,
+
+    settled:
+      settled.length,
+
+    pending:
+      primary.filter(
+        r=>
+          String(
+            r?.status || ''
+          ).toUpperCase()==='PENDING'
+      ).length,
+
+    changed:
+      primary.filter(
+        r=>r?.gatingChanged===true
+      ).length,
+
+    official,
+
+    shadow,
+
+    lossesAvoided:
+      sum('lossesAvoided'),
+
+    winnersBlocked:
+      sum('winnersBlocked'),
+
+    netSaves:
+      sum('netSaves'),
+
+    leanPromotedWin:
+      sum('leanPromotedWin'),
+
+    leanPromotedLoss:
+      sum('leanPromotedLoss'),
+
+    leanPromotedPush:
+      sum('leanPromotedPush'),
+
+    settledRows:
+      settled,
+
+    primaryRows:
+      primary
+
+  };
+
+}
+
+function teamShadowStats(){
+
+  return teamShadowStatsFromRows(
+    teamShadowState().rows
+  );
+
+}
+
+function teamShadowPct(
+  value
+){
+
+  return Number.isFinite(value)
+    ?(
+        value*100
+      ).toFixed(1)+'%'
+    :'—';
+
+}
+
+function teamShadowRecord(
+  counts={}
+){
+
+  if(
+    !counts.n
+  ){
+    return '—';
+  }
+
+
+  return[
+    counts.win || 0,
+    counts.loss || 0,
+    counts.push || 0
+  ].join('-');
+
+}
+
+function teamShadowScoreClass(
+  score
+){
+
+  const n=
+    Number(score) || 0;
+
+
+  if(n>=2){
+    return 'bp-good';
+  }
+
+
+  if(n<=-2){
+    return 'bp-bad';
+  }
+
+
+  return 'bp-mid';
+
+}
+
+function teamShadowScoreAudit(
+  rows=[]
+){
+
+  const settled=
+    teamShadowSettledRows(
+      rows
+    );
+
+
+  const output=[];
+
+
+  for(
+    let score=-3;
+    score<=3;
+    score++
+  ){
+
+    const group=
+      settled.filter(
+        r=>
+          Number(
+            r?.teamScore
+          )===score
+      );
+
+
+    const record=
+      teamShadowOutcomeCounts(
+        group
+      );
+
+
+    output.push({
+
+      score,
+
+      n:
+        group.length,
+
+      record,
+
+      changed:
+        group.filter(
+          r=>r?.gatingChanged===true
+        ).length,
+
+      lossesAvoided:
+        group.reduce(
+          (a,r)=>
+            a+
+            (
+              Number(
+                r?.lossesAvoided
+              ) || 0
+            ),
+          0
+        ),
+
+      winnersBlocked:
+        group.reduce(
+          (a,r)=>
+            a+
+            (
+              Number(
+                r?.winnersBlocked
+              ) || 0
+            ),
+          0
+        )
+
+    });
+
+  }
+
+
+  return output;
+
+}
+
+function teamShadowSideAudit(
+  rows=[]
+){
+
+  const settled=
+    teamShadowSettledRows(
+      rows
+    );
+
+
+  return[
+    'OVER',
+    'UNDER'
+  ].map(
+    side=>{
+
+      const group=
+        settled.filter(
+          r=>
+            String(
+              r?.officialSide || ''
+            ).toUpperCase()===side
+        );
+
+
+      return{
+
+        side,
+
+        n:
+          group.length,
+
+        record:
+          teamShadowOutcomeCounts(
+            group
+          ),
+
+        lossesAvoided:
+          group.reduce(
+            (a,r)=>
+              a+
+              (
+                Number(
+                  r?.lossesAvoided
+                ) || 0
+              ),
+            0
+          ),
+
+        winnersBlocked:
+          group.reduce(
+            (a,r)=>
+              a+
+              (
+                Number(
+                  r?.winnersBlocked
+                ) || 0
+              ),
+            0
+          )
+
+      };
+
+    }
+  );
+
+}
+
+function teamShadowTeamAudit(
+  rows=[]
+){
+
+  const settled=
+    teamShadowSettledRows(
+      rows
+    );
+
+
+  const map=
+    new Map();
+
+
+  const add=(
+    team,
+    row
+  )=>{
+
+    const name=
+      String(
+        team || ''
+      ).trim();
+
+
+    if(!name){
+      return;
+    }
+
+
+    if(
+      !map.has(name)
+    ){
+
+      map.set(
+        name,
+        {
+          team:name,
+          rows:[],
+          scoreSum:0,
+          lossesAvoided:0,
+          winnersBlocked:0
+        }
+      );
+
+    }
+
+
+    const x=
+      map.get(name);
+
+
+    x.rows.push(
+      row
+    );
+
+
+    x.scoreSum+=
+      Number(
+        row?.teamScore
+      ) || 0;
+
+
+    x.lossesAvoided+=
+      Number(
+        row?.lossesAvoided
+      ) || 0;
+
+
+    x.winnersBlocked+=
+      Number(
+        row?.winnersBlocked
+      ) || 0;
+
+  };
+
+
+  for(
+    const row
+    of settled
+  ){
+
+    add(
+      row.away,
+      row
+    );
+
+    add(
+      row.home,
+      row
+    );
+
+  }
+
+
+  return[
+    ...map.values()
+  ]
+    .map(
+      x=>({
+
+        team:
+          x.team,
+
+        n:
+          x.rows.length,
+
+        record:
+          teamShadowOutcomeCounts(
+            x.rows
+          ),
+
+        avgScore:
+          x.rows.length
+            ?x.scoreSum/
+              x.rows.length
+            :NaN,
+
+        lossesAvoided:
+          x.lossesAvoided,
+
+        winnersBlocked:
+          x.winnersBlocked,
+
+        net:
+          x.lossesAvoided-
+          x.winnersBlocked
+
+      })
+    )
+    .sort(
+      (a,b)=>
+        b.n-a.n ||
+        b.net-a.net ||
+        a.team.localeCompare(
+          b.team
+        )
+    );
+
+}
+
+function teamShadowDashboardHtml(){
+
+  const state=
+    teamShadowState();
+
+
+  const stats=
+    teamShadowStatsFromRows(
+      state.rows
+    );
+
+
+  const scoreAudit=
+    teamShadowScoreAudit(
+      state.rows
+    );
+
+
+  const sideAudit=
+    teamShadowSideAudit(
+      state.rows
+    );
+
+
+  const teamAudit=
+    teamShadowTeamAudit(
+      state.rows
+    );
+
+
+  const scoreRows=
+    scoreAudit
+      .map(
+        x=>`
+
+          <tr>
+
+            <td class="${teamShadowScoreClass(x.score)}">
+              <b>
+                ${x.score>0?'+':''}${x.score}
+              </b>
+            </td>
+
+            <td>
+              ${x.n}
+            </td>
+
+            <td>
+              ${teamShadowRecord(x.record)}
+            </td>
+
+            <td>
+              ${teamShadowPct(x.record.hit)}
+            </td>
+
+            <td>
+              ${x.changed}
+            </td>
+
+            <td>
+              ${x.lossesAvoided}
+            </td>
+
+            <td>
+              ${x.winnersBlocked}
+            </td>
+
+            <td>
+              ${x.lossesAvoided-x.winnersBlocked}
+            </td>
+
+          </tr>
+
+        `
+      )
+      .join('');
+
+
+  const sideRows=
+    sideAudit
+      .map(
+        x=>`
+
+          <tr>
+
+            <td>
+              <b>
+                ${esc(x.side)}
+              </b>
+            </td>
+
+            <td>
+              ${x.n}
+            </td>
+
+            <td>
+              ${teamShadowRecord(x.record)}
+            </td>
+
+            <td>
+              ${teamShadowPct(x.record.hit)}
+            </td>
+
+            <td>
+              ${x.lossesAvoided}
+            </td>
+
+            <td>
+              ${x.winnersBlocked}
+            </td>
+
+            <td>
+              ${x.lossesAvoided-x.winnersBlocked}
+            </td>
+
+          </tr>
+
+        `
+      )
+      .join('');
+
+
+  const teamRowsHtml=
+    teamAudit.length
+
+      ?teamAudit
+        .map(
+          x=>`
+
+            <tr>
+
+              <td>
+                <b>
+                  ${esc(x.team)}
+                </b>
+              </td>
+
+              <td>
+                ${x.n}
+              </td>
+
+              <td>
+                ${teamShadowRecord(x.record)}
+              </td>
+
+              <td>
+                ${teamShadowPct(x.record.hit)}
+              </td>
+
+              <td>
+                ${
+                  Number.isFinite(
+                    x.avgScore
+                  )
+                    ?(
+                        x.avgScore>=0
+                          ?'+'
+                          :''
+                      )+
+                      x.avgScore.toFixed(2)
+                    :'—'
+                }
+              </td>
+
+              <td>
+                ${x.lossesAvoided}
+              </td>
+
+              <td>
+                ${x.winnersBlocked}
+              </td>
+
+              <td>
+                ${x.net}
+              </td>
+
+            </tr>
+
+          `
+        )
+        .join('')
+
+      :`
+
+        <tr>
+
+          <td colspan="8">
+
+            Todavía no hay casos
+            Shadow liquidados.
+
+          </td>
+
+        </tr>
+
+      `;
+
+
+  const history=
+    [
+      ...(Array.isArray(state.rows)
+        ?state.rows
+        :[])
+    ]
+      .sort(
+        (a,b)=>
+          teamShadowRowTime(b)-
+          teamShadowRowTime(a)
+      );
+
+
+  const historyRows=
+    history.length
+
+      ?history
+        .map(
+          r=>{
+
+            const score=
+              Number(
+                r?.teamScore
+              ) || 0;
+
+
+            const result=
+              r?.pickOutcome ||
+              (
+                String(
+                  r?.status || ''
+                ).toUpperCase()==='PENDING'
+                  ?'PENDING'
+                  :'—'
+              );
+
+
+            return`
+
+              <tr>
+
+                <td>
+
+                  <b>
+                    ${esc(r?.date || '—')}
+                  </b>
+
+                  <div class="smalltxt">
+                    ${esc(r?.away || '')}
+                    @
+                    ${esc(r?.home || '')}
+                  </div>
+
+                </td>
+
+                <td>
+
+                  ${esc(r?.officialSide || '—')}
+                  ${Number.isFinite(+r?.line)
+                    ?Number(r.line)
+                    :'—'}
+
+                </td>
+
+                <td>
+                  ${esc(r?.officialSignal || '—')}
+                </td>
+
+                <td class="${teamShadowScoreClass(score)}">
+
+                  <b>
+                    ${score>0?'+':''}${score}
+                  </b>
+
+                  <div class="smalltxt">
+                    ${esc(r?.teamLabel || '')}
+                  </div>
+
+                </td>
+
+                <td>
+                  ${esc(r?.gatingAction || 'KEEP')}
+                </td>
+
+                <td>
+                  ${esc(r?.hypotheticalSignal || '—')}
+                </td>
+
+                <td>
+                  ${esc(result)}
+                </td>
+
+                <td>
+                  ${
+                    r?.primaryCase===false
+                      ?'HIST'
+                      :'PRIMARY'
+                  }
+                </td>
+
+                <td>
+                  ${Number(r?.observations) || 1}
+                </td>
+
+              </tr>
+
+            `;
+
+          }
+        )
+        .join('')
+
+      :`
+
+        <tr>
+
+          <td colspan="9">
+
+            No hay casos Shadow todavía.
+            Analiza partidos pregame para
+            comenzar el experimento.
+
+          </td>
+
+        </tr>
+
+      `;
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        TEAM SHADOW LAB
+      </h3>
+
+      <div class="warn">
+
+        <b>
+          ${TEAM_SHADOW_NOTICE}
+        </b>
+
+        <br>
+
+        Shadow Mode, Gating Simulation
+        y What-If Census viven fuera
+        del Censo oficial.
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Resumen experimental
+      </h3>
+
+      <div class="cards">
+
+        <div class="card">
+
+          <small>
+            Casos observados
+          </small>
+
+          <div class="big">
+            ${stats.observed}
+          </div>
+
+          <div class="smalltxt">
+            ${stats.settled} liquidados
+            · ${stats.pending} pendientes
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Cambios hipotéticos
+          </small>
+
+          <div class="big">
+            ${stats.changed}
+          </div>
+
+          <div class="smalltxt">
+            gating distinto al oficial
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Losses Avoided
+          </small>
+
+          <div class="big bp-good">
+            ${stats.lossesAvoided}
+          </div>
+
+          <div class="smalltxt">
+            JUGABLE oficial que perdió
+            y Shadow habría retirado
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Winners Blocked
+          </small>
+
+          <div class="big bp-bad">
+            ${stats.winnersBlocked}
+          </div>
+
+          <div class="smalltxt">
+            ganador oficial que
+            Shadow habría retirado
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            Net Saves
+          </small>
+
+          <div class="big ${
+            stats.netSaves>0
+              ?'bp-good'
+              :stats.netSaves<0
+                ?'bp-bad'
+                :'bp-mid'
+          }">
+            ${
+              stats.netSaves>0
+                ?'+'
+                :''
+            }${stats.netSaves}
+          </div>
+
+          <div class="smalltxt">
+            Losses Avoided −
+            Winners Blocked
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            LEAN → JUGABLE
+          </small>
+
+          <div class="big">
+            ${stats.leanPromotedWin}
+            -
+            ${stats.leanPromotedLoss}
+          </div>
+
+          <div class="smalltxt">
+            ganados - perdidos
+            · push ${stats.leanPromotedPush}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Comparativa A/B
+      </h3>
+
+      <div class="note">
+
+        Para esta prueba:
+        JUGABLE = decisión ejecutable.
+        LEAN y NO BET = observación.
+
+        No representa dinero apostado
+        ni altera el historial oficial.
+
+      </div>
+
+      <div style="overflow:auto">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Sistema
+              </th>
+
+              <th>
+                N
+              </th>
+
+              <th>
+                Récord
+              </th>
+
+              <th>
+                Hit
+              </th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            <tr>
+
+              <td>
+                <b>
+                  V7.8 original
+                </b>
+              </td>
+
+              <td>
+                ${stats.official.n}
+              </td>
+
+              <td>
+                ${teamShadowRecord(stats.official)}
+              </td>
+
+              <td>
+                ${teamShadowPct(stats.official.hit)}
+              </td>
+
+            </tr>
+
+
+            <tr>
+
+              <td>
+                <b>
+                  V7.8 + Gating hipotético
+                </b>
+              </td>
+
+              <td>
+                ${stats.shadow.n}
+              </td>
+
+              <td>
+                ${teamShadowRecord(stats.shadow)}
+              </td>
+
+              <td>
+                ${teamShadowPct(stats.shadow.hit)}
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Auditoría por Team Score
+      </h3>
+
+      <div style="overflow:auto">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Score</th>
+              <th>N</th>
+              <th>Récord</th>
+              <th>Hit</th>
+              <th>Cambios</th>
+              <th>Loss Avoid.</th>
+              <th>Win Block.</th>
+              <th>Net</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+            ${scoreRows}
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Auditoría OVER / UNDER
+      </h3>
+
+      <div style="overflow:auto">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Lado</th>
+              <th>N</th>
+              <th>Récord</th>
+              <th>Hit</th>
+              <th>Loss Avoid.</th>
+              <th>Win Block.</th>
+              <th>Net</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+            ${sideRows}
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Auditoría por equipo
+      </h3>
+
+      <div style="overflow:auto">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Equipo</th>
+              <th>N</th>
+              <th>Récord</th>
+              <th>Hit</th>
+              <th>Score medio</th>
+              <th>Loss Avoid.</th>
+              <th>Win Block.</th>
+              <th>Net</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+            ${teamRowsHtml}
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Historial individual Shadow
+      </h3>
+
+      <div class="note">
+
+        PRIMARY = última decisión pregame
+        utilizada para la comparativa A/B.
+
+        HIST = lectura Shadow anterior
+        conservada para estudiar cómo
+        evolucionó el análisis.
+
+      </div>
+
+      <div style="overflow:auto">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Juego</th>
+              <th>Pick</th>
+              <th>Oficial</th>
+              <th>Team Score</th>
+              <th>Acción</th>
+              <th>Hipotético</th>
+              <th>Resultado</th>
+              <th>Tipo</th>
+              <th>Obs.</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+            ${historyRows}
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <div class="section">
+
+      <h3>
+        Protocolo de observación
+      </h3>
+
+      <div class="okbox">
+
+        Objetivo:
+        acumular 50–100 casos PRIMARY
+        antes de decidir si TEAM SHADOW
+        aporta valor real.
+
+      </div>
+
+      <div class="note">
+
+        No promoveremos esta capa al
+        modelo oficial por una racha corta.
+
+        Primero estudiaremos Net Saves,
+        Winners Blocked, estabilidad por
+        Team Score, equipo, lado y tamaño
+        de muestra.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+function renderShadowLab(){
+
+  const root=
+    document.getElementById(
+      'shadowContent'
+    );
+
+
+  if(!root){
+    return;
+  }
+
+
+  try{
+
+    root.innerHTML=
+      teamShadowDashboardHtml();
+
+  }catch(e){
+
+    console.error(
+      'TEAM SHADOW render',
+      e
+    );
+
+
+    root.innerHTML=`
+
+      <div class="danger">
+
+        TEAM SHADOW no pudo renderizar:
+        ${esc(
+          e?.message ||
+          String(e)
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+function teamShadowCsvCell(
+  value
+){
+
+  const s=
+    String(
+      value ??
+      ''
+    );
+
+
+  return(
+    '"'+
+    s.replace(
+      /"/g,
+      '""'
+    )+
+    '"'
+  );
+
+}
+
+function exportTeamShadowCsv(){
+
+  const rows=
+    teamShadowState().rows;
+
+
+  const headers=[
+
+    'id',
+    'date',
+    'gamePk',
+    'away',
+    'home',
+
+    'officialSide',
+    'line',
+    'officialProbability',
+    'officialEdge',
+    'officialSignal',
+
+    'teamScore',
+    'teamSignal',
+    'teamLabel',
+
+    'awayTeamDna',
+    'awayReliability',
+    'awaySample',
+    'awayBias',
+
+    'homeTeamDna',
+    'homeReliability',
+    'homeSample',
+    'homeBias',
+
+    'gatingAction',
+    'hypotheticalSignal',
+    'gatingChanged',
+
+    'status',
+    'pickOutcome',
+    'officialOutcome',
+    'hypotheticalOutcome',
+
+    'lossesAvoided',
+    'winnersBlocked',
+    'netSaves',
+
+    'leanPromotedWin',
+    'leanPromotedLoss',
+    'leanPromotedPush',
+
+    'primaryCase',
+    'observations',
+
+    'firstObservedAt',
+    'lastObservedAt',
+    'settled'
+
+  ];
+
+
+  const csv=[
+    headers.map(
+      teamShadowCsvCell
+    ).join(',')
+  ];
+
+
+  for(
+    const row
+    of Array.isArray(rows)
+      ?rows
+      :[]
+  ){
+
+    csv.push(
+      headers
+        .map(
+          h=>
+            teamShadowCsvCell(
+              row?.[h]
+            )
+        )
+        .join(',')
+    );
+
+  }
+
+
+  const blob=
+    new Blob(
+      [
+        '\ufeff'+
+        csv.join('\n')
+      ],
+      {
+        type:
+          'text/csv;charset=utf-8'
+      }
+    );
+
+
+  const url=
+    URL.createObjectURL(
+      blob
+    );
+
+
+  const a=
+    document.createElement(
+      'a'
+    );
+
+
+  a.href=url;
+
+  a.download=
+    'mlb_v786_team_shadow_lab.csv';
+
+
+  document.body.appendChild(
+    a
+  );
+
+
+  a.click();
+
+  a.remove();
+
+
+  setTimeout(
+    ()=>
+      URL.revokeObjectURL(
+        url
+      ),
+    1000
+  );
+
+}
+
+function teamShadowDashboardSelfTest(){
+
+  const rows=[
+
+    {
+      primaryCase:true,
+      status:'FINAL',
+      pickOutcome:'LOSS',
+      officialBet:true,
+      hypotheticalBet:false,
+      lossesAvoided:1,
+      winnersBlocked:0,
+      netSaves:1,
+      leanPromotedWin:0,
+      leanPromotedLoss:0,
+      teamScore:-3
+    },
+
+    {
+      primaryCase:true,
+      status:'FINAL',
+      pickOutcome:'WIN',
+      officialBet:true,
+      hypotheticalBet:false,
+      lossesAvoided:0,
+      winnersBlocked:1,
+      netSaves:-1,
+      leanPromotedWin:0,
+      leanPromotedLoss:0,
+      teamScore:-2
+    },
+
+    {
+      primaryCase:true,
+      status:'FINAL',
+      pickOutcome:'WIN',
+      officialBet:false,
+      hypotheticalBet:true,
+      lossesAvoided:0,
+      winnersBlocked:0,
+      netSaves:0,
+      leanPromotedWin:1,
+      leanPromotedLoss:0,
+      teamScore:3
+    },
+
+    {
+      primaryCase:true,
+      status:'FINAL',
+      pickOutcome:'LOSS',
+      officialBet:false,
+      hypotheticalBet:true,
+      lossesAvoided:0,
+      winnersBlocked:0,
+      netSaves:0,
+      leanPromotedWin:0,
+      leanPromotedLoss:1,
+      teamScore:2
+    },
+
+    {
+      primaryCase:false,
+      status:'FINAL',
+      pickOutcome:'LOSS',
+      officialBet:true,
+      hypotheticalBet:true,
+      lossesAvoided:0,
+      winnersBlocked:0,
+      netSaves:0,
+      teamScore:0
+    }
+
+  ];
+
+
+  const x=
+    teamShadowStatsFromRows(
+      rows
+    );
+
+
+  const tests=[
+
+    x.observed===4,
+
+    x.settled===4,
+
+    x.lossesAvoided===1,
+
+    x.winnersBlocked===1,
+
+    x.netSaves===0,
+
+    x.leanPromotedWin===1,
+
+    x.leanPromotedLoss===1,
+
+    x.official.win===1 &&
+    x.official.loss===1,
+
+    x.shadow.win===1 &&
+    x.shadow.loss===1
+
+  ];
+
+
+  return{
+
+    ok:
+      tests.every(Boolean),
+
+    passed:
+      tests.filter(Boolean).length,
+
+    total:
+      tests.length
+
+  };
+
+}
+
+
+
+/* V7.8.6 SHADOW S5 ANALYSIS CARD + INTEGRITY */
+
+function teamShadowAnalysisCardHtml(
+  g,
+  best,
+  capturedRow=null
+){
+
+  const pick=
+    best?.pick;
+
+  const ev=
+    best?.ev;
+
+
+  if(
+    !pick ||
+    !ev
+  ){
+    return '';
+  }
+
+
+  let row=
+    capturedRow;
+
+
+  if(!row){
+
+    const side=
+      String(
+        pick.side || ''
+      ).toUpperCase();
+
+
+    if(
+      side!=='OVER' &&
+      side!=='UNDER'
+    ){
+      return '';
+    }
+
+
+    const layer=
+      teamShadowScoreForGame(
+        g,
+        side
+      );
+
+
+    const official=
+      teamShadowOfficialSignal(
+        pick,
+        ev.source || ''
+      );
+
+
+    const gating=
+      teamShadowGatingDecision(
+        official,
+        layer.score
+      );
+
+
+    row={
+
+      officialSide:
+        side,
+
+      officialSignal:
+        official,
+
+      teamScore:
+        layer.score,
+
+      teamSignal:
+        layer.signal,
+
+      teamLabel:
+        layer.label,
+
+      hypotheticalSignal:
+        gating.hypotheticalSignal,
+
+      gatingAction:
+        gating.action,
+
+      awayTeamDna:
+        layer.away?.dna,
+
+      awayReliability:
+        layer.away?.reliability,
+
+      homeTeamDna:
+        layer.home?.dna,
+
+      homeReliability:
+        layer.home?.reliability
+
+    };
+
+  }
+
+
+  const score=
+    Number(
+      row.teamScore
+    ) || 0;
+
+
+  const scoreClass=
+    teamShadowScoreClass(
+      score
+    );
+
+
+  const signalClass=
+    row.teamSignal==='CONFIRM'
+      ?'bp-good'
+      :row.teamSignal==='CONFLICT'
+        ?'bp-bad'
+        :'bp-mid';
+
+
+  const changed=
+    String(
+      row.officialSignal
+    )!==
+    String(
+      row.hypotheticalSignal
+    );
+
+
+  const observationState=
+    capturedRow
+      ?'CASO SHADOW REGISTRADO'
+      :teamShadowGameStarted(g)
+        ?'POST-START · NO SE REGISTRA'
+        :'OBSERVACIÓN READ ONLY';
+
+
+  return`
+
+    <div
+      class="section"
+      style="
+        margin-top:10px;
+        padding:10px;
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          gap:8px;
+          align-items:center;
+          margin-bottom:8px;
+        "
+      >
+
+        <b>
+          TEAM SHADOW
+        </b>
+
+        <span class="tag warn">
+          EXPERIMENTAL
+        </span>
+
+      </div>
+
+
+      <div
+        class="grid3"
+        style="gap:7px"
+      >
+
+        <div class="card">
+
+          <small>
+            TEAM SCORE
+          </small>
+
+          <div class="big ${scoreClass}">
+
+            ${score>0?'+':''}${score}
+
+          </div>
+
+          <div class="smalltxt">
+
+            ${esc(
+              row.teamLabel ||
+              'Neutral'
+            )}
+
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            SEÑAL TEAM
+          </small>
+
+          <div class="big ${signalClass}">
+
+            ${esc(
+              row.teamSignal ||
+              'NEUTRAL'
+            )}
+
+          </div>
+
+          <div class="smalltxt">
+
+            ${
+              esc(
+                row.awayTeamDna ||
+                '—'
+              )
+            }
+            /
+            ${
+              esc(
+                row.homeTeamDna ||
+                '—'
+              )
+            }
+
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            GATING HIPOTÉTICO
+          </small>
+
+          <div
+            class="big ${
+              changed
+                ?'bp-mid'
+                :''
+            }"
+            style="font-size:.94rem"
+          >
+
+            ${esc(
+              row.officialSignal ||
+              '—'
+            )}
+            →
+            ${esc(
+              row.hypotheticalSignal ||
+              '—'
+            )}
+
+          </div>
+
+          <div class="smalltxt">
+
+            ${esc(
+              row.gatingAction ||
+              'KEEP'
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="smalltxt"
+        style="margin-top:7px"
+      >
+
+        ${esc(observationState)}
+        · Reliability:
+        ${
+          esc(
+            row.awayReliability ||
+            'D'
+          )
+        }
+        /
+        ${
+          esc(
+            row.homeReliability ||
+            'D'
+          )
+        }
+
+      </div>
+
+
+      <div
+        class="warn"
+        style="
+          margin-top:8px;
+          padding:7px 9px;
+          font-size:.66rem;
+        "
+      >
+
+        <b>
+          EXPERIMENTAL — READ ONLY.
+        </b>
+
+        Esta capa no modifica motores,
+        probabilidades, Ranking,
+        señales ni picks oficiales.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+function teamShadowIntegritySelfTest(){
+
+  const gating=
+    teamShadowGatingSelfTest();
+
+
+  const settlement=
+    teamShadowSettlementSelfTest();
+
+
+  const dashboard=
+    teamShadowDashboardSelfTest();
+
+
+  const state=
+    teamShadowState();
+
+
+  const rows=
+    Array.isArray(
+      state.rows
+    )
+      ?state.rows
+      :[];
+
+
+  const censusLeak=
+    censusAllRows()
+      .filter(
+        r=>
+          r?.version===
+          TEAM_SHADOW_VERSION
+      )
+      .length;
+
+
+  const labLeak=
+    lab()
+      .filter(
+        r=>
+          r?.version===
+          TEAM_SHADOW_VERSION
+      )
+      .length;
+
+
+  const betsLeak=
+    bets()
+      .filter(
+        r=>
+          r?.version===
+          TEAM_SHADOW_VERSION
+      )
+      .length;
+
+
+  const primaryMap=
+    new Map();
+
+
+  for(
+    const row
+    of rows
+  ){
+
+    if(
+      row?.primaryCase===false
+    ){
+      continue;
+    }
+
+
+    const key=
+      String(
+        row?.gamePk || ''
+      );
+
+
+    primaryMap.set(
+      key,
+      (
+        primaryMap.get(key) ||
+        0
+      )+1
+    );
+
+  }
+
+
+  const isolationTests=[
+
+    {
+      name:
+        'Release oficial V7.8.6 / Motor V7.0',
+
+      ok:
+        APP_VERSION==='V7.8.6' &&
+        MODEL_VERSION==='V7.0'
+    },
+
+
+    {
+      name:
+        'Storage Shadow separado',
+
+      ok:
+        TEAM_SHADOW_STORE_KEY===
+          'mlb_v786_team_shadow_lab' &&
+        TEAM_SHADOW_SQL_KEY===
+          'team_shadow_v1'
+    },
+
+
+    {
+      name:
+        'Censo oficial sin Shadow',
+
+      ok:
+        censusLeak===0
+    },
+
+
+    {
+      name:
+        'LAB oficial sin Shadow',
+
+      ok:
+        labLeak===0
+    },
+
+
+    {
+      name:
+        'Apuestas oficiales sin Shadow',
+
+      ok:
+        betsLeak===0
+    },
+
+
+    {
+      name:
+        'Filas Shadow READ ONLY',
+
+      ok:
+        rows.every(
+          r=>
+            r?.experimental===true &&
+            r?.readOnly===true
+        )
+    },
+
+
+    {
+      name:
+        'Team Score dentro de -3/+3',
+
+      ok:
+        rows.every(
+          r=>
+            Number.isFinite(
+              Number(r?.teamScore)
+            ) &&
+            Number(r.teamScore)>=-3 &&
+            Number(r.teamScore)<=3
+        )
+    },
+
+
+    {
+      name:
+        'Un PRIMARY por juego',
+
+      ok:
+        [
+          ...primaryMap.values()
+        ].every(
+          n=>n<=1
+        )
+    }
+
+  ];
+
+
+  const isolationPassed=
+    isolationTests
+      .filter(
+        x=>x.ok
+      )
+      .length;
+
+
+  const passed=
+    gating.passed+
+    settlement.passed+
+    dashboard.passed+
+    isolationPassed;
+
+
+  const total=
+    gating.total+
+    settlement.total+
+    dashboard.total+
+    isolationTests.length;
+
+
+  return{
+
+    ok:
+      gating.ok &&
+      settlement.ok &&
+      dashboard.ok &&
+      isolationPassed===
+        isolationTests.length,
+
+    passed,
+    total,
+
+    gating,
+
+    settlement,
+
+    dashboard,
+
+    isolation:{
+
+      passed:
+        isolationPassed,
+
+      total:
+        isolationTests.length,
+
+      tests:
+        isolationTests
+
+    },
+
+    leaks:{
+
+      census:
+        censusLeak,
+
+      lab:
+        labLeak,
+
+      bets:
+        betsLeak
+
+    }
+
+  };
+
+}
+
+function teamShadowIntegrityHtml(){
+
+  const x=
+    teamShadowIntegritySelfTest();
+
+
+  const cls=
+    x.ok
+      ?'okbox'
+      :'danger';
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        Shadow Integrity Suite
+      </h3>
+
+
+      <div class="${cls}">
+
+        <b>
+
+          ${
+            x.ok
+              ?'PASS'
+              :'FAIL'
+          }
+
+        </b>
+
+        ·
+        ${x.passed}/${x.total}
+        comprobaciones
+
+      </div>
+
+
+      <div
+        class="cards"
+        style="margin-top:10px"
+      >
+
+        <div class="card">
+
+          <small>
+            GATING
+          </small>
+
+          <div class="big">
+            ${x.gating.passed}/${x.gating.total}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            SETTLEMENT
+          </small>
+
+          <div class="big">
+            ${x.settlement.passed}/${x.settlement.total}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            DASHBOARD
+          </small>
+
+          <div class="big">
+            ${x.dashboard.passed}/${x.dashboard.total}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <small>
+            ISOLATION
+          </small>
+
+          <div class="big">
+            ${x.isolation.passed}/${x.isolation.total}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="smalltxt"
+        style="margin-top:9px"
+      >
+
+        Official leak:
+        Censo ${x.leaks.census}
+        · LAB ${x.leaks.lab}
+        · Bets ${x.leaks.bets}
+        · Motor ${esc(MODEL_VERSION)}
+
+      </div>
+
+
+      <div
+        class="warn"
+        style="margin-top:9px"
+      >
+
+        <b>
+          EXPERIMENTAL — READ ONLY.
+        </b>
+
+        Un FAIL en Isolation invalida
+        el experimento hasta revisar
+        la separación del sistema.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+function renderShadowIntegrity(){
+
+  const root=
+    document.getElementById(
+      'shadowIntegrity'
+    );
+
+
+  if(!root){
+    return;
+  }
+
+
+  try{
+
+    root.innerHTML=
+      teamShadowIntegrityHtml();
+
+  }catch(e){
+
+    console.error(
+      'TEAM SHADOW integrity',
+      e
+    );
+
+
+    root.innerHTML=`
+
+      <div class="danger">
+
+        Shadow Integrity no pudo
+        ejecutarse:
+        ${esc(
+          e?.message ||
+          String(e)
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);let shadowCapture=null;try{shadowCapture=teamShadowCaptureOfficial(g,ev,built,best)}catch(shadowError){console.warn('TEAM SHADOW capture',shadowError)}$('#results').innerHTML=resultHtml(g,built,ev,best,N)+teamShadowAnalysisCardHtml(g,best,shadowCapture?.row||null);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
 function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
 function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,
@@ -10837,7 +14768,1100 @@ function teamDirectionalReliabilityPanelHtml(
   `;
 }
 
-function renderTeamDetail(team,versionScope='CURRENT'){const host=$('#teamDetail');if(!host||!team)return;const all=teamStatRows(teamRows(team,versionScope)),grade=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope)),home=teamStatRows(teamMarketRows(team,'HOME',versionScope)),away=teamStatRows(teamMarketRows(team,'AWAY',versionScope)),lineup=teamStatRows(teamMarketRows(team,'LINEUP',versionScope)),proxy=teamStatRows(teamMarketRows(team,'PROXY',versionScope)),recent=teamRows(team,versionScope).filter(r=>r.status!=='PENDING').sort((a,b)=>labTime(b)-labTime(a)).slice(0,40);host.innerHTML=`<div class="section"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3 style="margin-bottom:4px">${esc(teamDisplayName(team))}</h3><div class="team-muted">${teamSampleLabel(all.games)} · ${all.games} juegos Full Game · ${all.n} pronósticos liquidados · ${all.pending} pendientes · ${all.push} pushes</div></div><span class="team-status ${grade.cls}"><span class="team-dot ${grade.cls}"></span>${esc(grade.label)}</span></div><div class="team-detail-grid" style="margin-top:12px">${teamMetricBox('General Full Game',total)}${teamMetricBox('Picks Over',over)}${teamMetricBox('Picks Under',under)}${teamMetricBox('Equipo como local',home)}${teamMetricBox('Equipo como visitante',away)}${teamMetricBox('Lineup confirmado',lineup)}${teamMetricBox('Lineup proxy',proxy)}</div><div class="note" style="margin-top:10px">Sesgo positivo real−proj = ocurrieron más carreras de las proyectadas; negativo = el modelo proyectó de más. El semáforo usa Brier suavizado como métrica principal y exige muestra antes de clasificar.</div></div>${teamReliabilityPanelHtml(team,versionScope)}${teamDirectionalReliabilityPanelHtml(team,versionScope)}${recent.length?`<div class="section team-table-wrap"><h3>Últimos Full Game con ${esc(team.abbr||team.name)}</h3><table><thead><tr><th>Fecha</th><th>Juego</th><th>Pick</th><th>Prob.</th><th>Resultado</th><th>Brier</th><th>Total real / Proy.</th></tr></thead><tbody>${recent.map(r=>{const pred=teamPredictedRuns(r),res=r.status==='PUSH'?'PUSH':r.y===1?'WIN':'LOSS';return`<tr><td>${esc(r.date)}</td><td>${esc(r.away)} @ ${esc(r.home)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td class="${res==='WIN'?'team-good':res==='LOSS'?'team-bad':'team-neutral'}">${res}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'} / ${fix(pred,1)}</td></tr>`}).join('')}</tbody></table></div>`:''}`}
+
+/* V7.8.6 SHADOW S1 TEAM DNA + PERSISTENCE */
+
+const TEAM_SHADOW_STORE_KEY='mlb_v786_team_shadow_lab';
+const TEAM_SHADOW_SQL_KEY='team_shadow_v1';
+const TEAM_SHADOW_VERSION='V7.8.6_TEAM_SHADOW_1';
+const TEAM_SHADOW_NOTICE='EXPERIMENTAL — READ ONLY. Esta capa no modifica motores, probabilidades ni picks oficiales.';
+
+function teamShadowDefault(){
+
+  const now=
+    new Date().toISOString();
+
+  return{
+    version:TEAM_SHADOW_VERSION,
+    schema:1,
+    createdAt:now,
+    updatedAt:now,
+    rows:[]
+  };
+
+}
+
+function teamShadowNormalizeState(data){
+
+  const src=
+    data &&
+    typeof data==='object'
+      ?data
+      :{};
+
+  return{
+    version:TEAM_SHADOW_VERSION,
+    schema:1,
+
+    createdAt:
+      src.createdAt ||
+      new Date().toISOString(),
+
+    updatedAt:
+      src.updatedAt ||
+      new Date().toISOString(),
+
+    rows:
+      Array.isArray(src.rows)
+        ?src.rows
+        :[]
+  };
+
+}
+
+function teamShadowState(){
+
+  try{
+
+    const raw=
+      STORE.getItem(
+        TEAM_SHADOW_STORE_KEY
+      );
+
+    if(!raw){
+      return teamShadowDefault();
+    }
+
+    return teamShadowNormalizeState(
+      JSON.parse(raw)
+    );
+
+  }catch{
+
+    return teamShadowDefault();
+
+  }
+
+}
+
+function teamShadowRowKey(row={}){
+
+  if(row.id){
+    return String(row.id);
+  }
+
+  return[
+    row.gamePk ?? '',
+    row.date ?? '',
+    row.officialSide ?? row.side ?? '',
+    row.line ?? '',
+    row.created ?? ''
+  ].join('|');
+
+}
+
+function teamShadowRowTime(row={}){
+
+  const candidates=[
+    row.updated,
+    row.settled,
+    row.created
+  ];
+
+  for(const value of candidates){
+
+    const t=
+      Date.parse(
+        value || ''
+      );
+
+    if(Number.isFinite(t)){
+      return t;
+    }
+
+  }
+
+  return 0;
+
+}
+
+function teamShadowStatusRank(row={}){
+
+  const status=
+    String(
+      row.status || ''
+    ).toUpperCase();
+
+  if(status==='FINAL'){
+    return 3;
+  }
+
+  if(status==='PUSH'){
+    return 2;
+  }
+
+  if(status==='PENDING'){
+    return 1;
+  }
+
+  return 0;
+
+}
+
+function teamShadowMergeRows(a,b){
+
+  const map=
+    new Map();
+
+
+  const ingest=rows=>{
+
+    for(
+      const row
+      of Array.isArray(rows)
+        ?rows
+        :[]
+    ){
+
+      if(
+        !row ||
+        typeof row!=='object'
+      ){
+        continue;
+      }
+
+
+      const key=
+        teamShadowRowKey(row);
+
+      const previous=
+        map.get(key);
+
+
+      if(!previous){
+
+        map.set(
+          key,
+          {...row}
+        );
+
+        continue;
+
+      }
+
+
+      const oldRank=
+        teamShadowStatusRank(
+          previous
+        );
+
+      const newRank=
+        teamShadowStatusRank(
+          row
+        );
+
+
+      const oldTime=
+        teamShadowRowTime(
+          previous
+        );
+
+      const newTime=
+        teamShadowRowTime(
+          row
+        );
+
+
+      if(
+        newRank>oldRank ||
+        (
+          newRank===oldRank &&
+          newTime>=oldTime
+        )
+      ){
+
+        map.set(
+          key,
+          {
+            ...previous,
+            ...row,
+
+            created:
+              previous.created ||
+              row.created
+          }
+        );
+
+      }
+
+    }
+
+  };
+
+
+  ingest(a);
+  ingest(b);
+
+
+  return[
+    ...map.values()
+  ].sort(
+    (x,y)=>
+      teamShadowRowTime(x)-
+      teamShadowRowTime(y)
+  );
+
+}
+
+function saveTeamShadowData(data){
+
+  const safe=
+    teamShadowNormalizeState(
+      data
+    );
+
+  safe.updatedAt=
+    new Date().toISOString();
+
+
+  STORE.setItem(
+    TEAM_SHADOW_STORE_KEY,
+    JSON.stringify(safe)
+  );
+
+
+  if(
+    window.MLBDB?.ready &&
+    typeof window.MLBDB?.setKV==='function'
+  ){
+
+    window.MLBDB
+      .setKV(
+        TEAM_SHADOW_SQL_KEY,
+        JSON.stringify(safe)
+      )
+      .catch(
+        e=>console.warn(
+          'TEAM SHADOW SQLite',
+          e
+        )
+      );
+
+  }
+
+
+  return safe;
+
+}
+
+async function teamShadowWaitForDatabase(
+  timeout=5000
+){
+
+  const start=
+    Date.now();
+
+
+  while(
+    !window.MLBDB?.ready &&
+    Date.now()-start<timeout
+  ){
+
+    await new Promise(
+      resolve=>
+        setTimeout(
+          resolve,
+          100
+        )
+    );
+
+  }
+
+
+  return(
+    window.MLBDB?.ready===true
+  );
+
+}
+
+async function initTeamShadowPersistence(){
+
+  await teamShadowWaitForDatabase();
+
+
+  let local=null;
+  let native=null;
+
+
+  try{
+
+    const raw=
+      STORE.getItem(
+        TEAM_SHADOW_STORE_KEY
+      );
+
+    if(raw){
+
+      local=
+        teamShadowNormalizeState(
+          JSON.parse(raw)
+        );
+
+    }
+
+  }catch{}
+
+
+  try{
+
+    if(
+      window.MLBDB?.ready &&
+      typeof window.MLBDB?.getKV==='function'
+    ){
+
+      const raw=
+        await window.MLBDB.getKV(
+          TEAM_SHADOW_SQL_KEY
+        );
+
+
+      if(raw){
+
+        native=
+          teamShadowNormalizeState(
+            JSON.parse(raw)
+          );
+
+      }
+
+    }
+
+  }catch(e){
+
+    console.warn(
+      'TEAM SHADOW restore',
+      e
+    );
+
+  }
+
+
+  let chosen;
+
+
+  if(local && native){
+
+    chosen={
+      ...local,
+
+      rows:
+        teamShadowMergeRows(
+          local.rows,
+          native.rows
+        )
+    };
+
+  }else{
+
+    chosen=
+      local ||
+      native ||
+      teamShadowDefault();
+
+  }
+
+
+  chosen=
+    teamShadowNormalizeState(
+      chosen
+    );
+
+
+  STORE.setItem(
+    TEAM_SHADOW_STORE_KEY,
+    JSON.stringify(chosen)
+  );
+
+
+  if(
+    window.MLBDB?.ready &&
+    typeof window.MLBDB?.setKV==='function'
+  ){
+
+    await window.MLBDB.setKV(
+      TEAM_SHADOW_SQL_KEY,
+      JSON.stringify(chosen)
+    );
+
+  }
+
+
+  return chosen;
+
+}
+
+function teamShadowResidualSummary(rows=[]){
+
+  const errors=[];
+
+
+  for(
+    const r
+    of Array.isArray(rows)
+      ?rows
+      :[]
+  ){
+
+    if(
+      String(
+        r?.status || ''
+      ).toUpperCase()!=='FINAL'
+    ){
+      continue;
+    }
+
+
+    const actual=
+      Number(r?.actual);
+
+    const predicted=
+      Number(r?.mean);
+
+
+    if(
+      !Number.isFinite(actual) ||
+      !Number.isFinite(predicted)
+    ){
+      continue;
+    }
+
+
+    errors.push(
+      actual-predicted
+    );
+
+  }
+
+
+  if(!errors.length){
+
+    return{
+      n:0,
+      bias:NaN,
+      mae:NaN,
+      rmse:NaN,
+      sd:NaN
+    };
+
+  }
+
+
+  const bias=
+    errors.reduce(
+      (a,b)=>a+b,
+      0
+    )/errors.length;
+
+
+  const mae=
+    errors.reduce(
+      (a,b)=>
+        a+Math.abs(b),
+      0
+    )/errors.length;
+
+
+  const rmse=
+    Math.sqrt(
+      errors.reduce(
+        (a,b)=>
+          a+b*b,
+        0
+      )/errors.length
+    );
+
+
+  const variance=
+    errors.length>1
+
+      ?errors.reduce(
+          (a,b)=>
+            a+
+            Math.pow(
+              b-bias,
+              2
+            ),
+          0
+        )/(errors.length-1)
+
+      :NaN;
+
+
+  return{
+    n:errors.length,
+    bias,
+    mae,
+    rmse,
+
+    sd:
+      Number.isFinite(variance)
+        ?Math.sqrt(variance)
+        :NaN
+  };
+
+}
+
+function teamShadowResidualProfile(
+  team,
+  versionScope='CURRENT'
+){
+
+  return teamShadowResidualSummary(
+    teamRows(
+      team,
+      versionScope
+    )
+  );
+
+}
+
+function teamShadowGlobalResidualProfile(
+  versionScope='CURRENT'
+){
+
+  return teamShadowResidualSummary(
+    teamRowsBase(
+      versionScope
+    )
+  );
+
+}
+
+function teamShadowReliability(
+  team,
+  versionScope='CURRENT'
+){
+
+  const residual=
+    teamShadowResidualProfile(
+      team,
+      versionScope
+    );
+
+
+  const grade=
+    teamGrade(
+      team,
+      versionScope
+    );
+
+
+  let letter='D';
+
+
+  if(residual.n>=10){
+
+    if(
+      residual.n>=25 &&
+      grade.cls==='strong'
+    ){
+
+      letter='A';
+
+
+    }else if(
+      residual.n>=15 &&
+      grade.cls!=='weak'
+    ){
+
+      letter='B';
+
+
+    }else if(
+      grade.cls==='weak'
+    ){
+
+      letter='D';
+
+
+    }else{
+
+      letter='C';
+
+    }
+
+  }
+
+
+  return{
+    letter,
+    n:residual.n,
+    grade:grade.cls,
+
+    label:
+      letter==='A'
+        ?'Alta'
+        :letter==='B'
+          ?'Buena'
+          :letter==='C'
+            ?'En observación'
+            :'Baja / muestra insuficiente'
+  };
+
+}
+
+function teamShadowDna(
+  team,
+  versionScope='CURRENT'
+){
+
+  const residual=
+    teamShadowResidualProfile(
+      team,
+      versionScope
+    );
+
+
+  const global=
+    teamShadowGlobalResidualProfile(
+      versionScope
+    );
+
+
+  const grade=
+    teamGrade(
+      team,
+      versionScope
+    );
+
+
+  const reliability=
+    teamShadowReliability(
+      team,
+      versionScope
+    );
+
+
+  let dna=
+    'CALIBRADO';
+
+
+  if(residual.n>=10){
+
+    if(
+      Number.isFinite(residual.bias) &&
+      residual.bias>=0.75
+    ){
+
+      dna=
+        'UNDERPROJECTED';
+
+
+    }else if(
+      Number.isFinite(residual.bias) &&
+      residual.bias<=-0.75
+    ){
+
+      dna=
+        'OVERPROJECTED';
+
+
+    }else{
+
+      const globalSd=
+        Number.isFinite(global.sd)
+          ?global.sd
+          :3;
+
+
+      const highVariance=
+        Number.isFinite(residual.sd) &&
+        residual.sd>=
+          Math.max(
+            3,
+            globalSd*1.20
+          );
+
+
+      if(highVariance){
+
+        dna=
+          'HIGH VARIANCE';
+
+
+      }else if(
+        grade.cls==='weak'
+      ){
+
+        dna=
+          'MODEL MISMATCH';
+
+      }
+
+    }
+
+  }
+
+
+  return{
+    dna,
+
+    reliability:
+      reliability.letter,
+
+    reliabilityLabel:
+      reliability.label,
+
+    n:residual.n,
+    bias:residual.bias,
+    mae:residual.mae,
+    rmse:residual.rmse,
+    sd:residual.sd,
+    globalSd:global.sd,
+    grade:grade.cls
+  };
+
+}
+
+function teamShadowContribution(
+  profile,
+  side
+){
+
+  const pickSide=
+    String(
+      side || ''
+    ).toUpperCase();
+
+
+  const reliabilityWeight=({
+    A:1,
+    B:.80,
+    C:.55,
+    D:.25
+  })[
+    profile?.reliability
+  ] || .25;
+
+
+  let base=0;
+
+
+  switch(profile?.dna){
+
+    case 'UNDERPROJECTED':
+
+      base=
+        pickSide==='OVER'
+          ?1.5
+          :-1.5;
+
+      break;
+
+
+    case 'OVERPROJECTED':
+
+      base=
+        pickSide==='UNDER'
+          ?1.5
+          :-1.5;
+
+      break;
+
+
+    case 'HIGH VARIANCE':
+
+      base=-.75;
+      break;
+
+
+    case 'MODEL MISMATCH':
+
+      base=-1.25;
+      break;
+
+
+    case 'CALIBRADO':
+
+    default:
+
+      base=
+        (
+          profile?.reliability==='A' ||
+          profile?.reliability==='B'
+        )
+          ?.5
+          :0;
+
+      break;
+
+  }
+
+
+  return(
+    base*
+    reliabilityWeight
+  );
+
+}
+
+function teamShadowEntityFromGame(
+  g,
+  which,
+  versionScope='CURRENT'
+){
+
+  const tm=
+    g?.teams?.[which]?.team ||
+    {};
+
+
+  const key=
+    teamEntityKey(
+      tm.name
+    );
+
+
+  const found=
+    teamEntities(
+      versionScope
+    ).find(
+      t=>t.key===key
+    );
+
+
+  return found || {
+    key,
+    name:String(tm.name || ''),
+    id:tm.id || null,
+    abbr:tm.abbreviation || ''
+  };
+
+}
+
+function teamShadowScoreForGame(
+  g,
+  side,
+  versionScope='CURRENT'
+){
+
+  const away=
+    teamShadowDna(
+      teamShadowEntityFromGame(
+        g,
+        'away',
+        versionScope
+      ),
+      versionScope
+    );
+
+
+  const home=
+    teamShadowDna(
+      teamShadowEntityFromGame(
+        g,
+        'home',
+        versionScope
+      ),
+      versionScope
+    );
+
+
+  const awayContribution=
+    teamShadowContribution(
+      away,
+      side
+    );
+
+
+  const homeContribution=
+    teamShadowContribution(
+      home,
+      side
+    );
+
+
+  const raw=
+    awayContribution+
+    homeContribution;
+
+
+  const rounded=
+    raw>=0
+      ?Math.floor(raw+.5)
+      :Math.ceil(raw-.5);
+
+
+  const score=
+    clamp(
+      rounded,
+      -3,
+      3
+    );
+
+
+  const labels={
+    3:'Strong Confirm',
+    2:'Confirm',
+    1:'Mild Confirm',
+    0:'Neutral',
+    '-1':'Mild Conflict',
+    '-2':'Conflict',
+    '-3':'Strong Conflict'
+  };
+
+
+  return{
+    score,
+    raw,
+
+    signal:
+      score>=1
+        ?'CONFIRM'
+        :score<=-1
+          ?'CONFLICT'
+          :'NEUTRAL',
+
+    label:
+      labels[score] ||
+      'Neutral',
+
+    away,
+    home
+  };
+
+}
+
+function teamShadowTeamPanelHtml(
+  team,
+  versionScope='CURRENT'
+){
+
+  const x=
+    teamShadowDna(
+      team,
+      versionScope
+    );
+
+
+  const dnaClass=
+    x.dna==='CALIBRADO'
+      ?'bp-good'
+      :(
+          x.dna==='MODEL MISMATCH' ||
+          x.dna==='HIGH VARIANCE'
+        )
+        ?'bp-bad'
+        :'bp-mid';
+
+
+  const reliabilityClass=
+    x.reliability==='A' ||
+    x.reliability==='B'
+      ?'bp-good'
+      :x.reliability==='C'
+        ?'bp-mid'
+        :'bp-bad';
+
+
+  return`
+
+    <div class="section">
+
+      <h3>
+        TEAM SHADOW · Perfil experimental
+      </h3>
+
+      <div class="warn">
+
+        <b>
+          ${TEAM_SHADOW_NOTICE}
+        </b>
+
+      </div>
+
+      <div
+        class="cards"
+        style="margin-top:10px"
+      >
+
+        <div class="card">
+
+          <small>
+            TEAM DNA
+          </small>
+
+          <div class="big ${dnaClass}">
+            ${esc(x.dna)}
+          </div>
+
+          <div class="smalltxt">
+
+            n=${x.n}
+            · sesgo
+            ${
+              Number.isFinite(x.bias)
+                ?(
+                    x.bias>=0
+                      ?'+'
+                      :''
+                  )+
+                  fix(x.bias,2)
+                :'—'
+            }
+            carreras
+
+          </div>
+
+        </div>
+
+        <div class="card">
+
+          <small>
+            RELIABILITY
+          </small>
+
+          <div class="big ${reliabilityClass}">
+            ${esc(x.reliability)}
+          </div>
+
+          <div class="smalltxt">
+
+            ${esc(x.reliabilityLabel)}
+            · σ
+            ${
+              Number.isFinite(x.sd)
+                ?fix(x.sd,2)
+                :'—'
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="note">
+
+        TEAM DNA y Reliability son
+        exclusivamente observacionales.
+
+        No participan en el Motor V7.0,
+        ensamble, probabilidades,
+        thresholds, Ranking ni Censo oficial.
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+window.initTeamShadowPersistence=initTeamShadowPersistence;
+
+function renderTeamDetail(team,versionScope='CURRENT'){const host=$('#teamDetail');if(!host||!team)return;const all=teamStatRows(teamRows(team,versionScope)),grade=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope)),home=teamStatRows(teamMarketRows(team,'HOME',versionScope)),away=teamStatRows(teamMarketRows(team,'AWAY',versionScope)),lineup=teamStatRows(teamMarketRows(team,'LINEUP',versionScope)),proxy=teamStatRows(teamMarketRows(team,'PROXY',versionScope)),recent=teamRows(team,versionScope).filter(r=>r.status!=='PENDING').sort((a,b)=>labTime(b)-labTime(a)).slice(0,40);host.innerHTML=`<div class="section"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3 style="margin-bottom:4px">${esc(teamDisplayName(team))}</h3><div class="team-muted">${teamSampleLabel(all.games)} · ${all.games} juegos Full Game · ${all.n} pronósticos liquidados · ${all.pending} pendientes · ${all.push} pushes</div></div><span class="team-status ${grade.cls}"><span class="team-dot ${grade.cls}"></span>${esc(grade.label)}</span></div><div class="team-detail-grid" style="margin-top:12px">${teamMetricBox('General Full Game',total)}${teamMetricBox('Picks Over',over)}${teamMetricBox('Picks Under',under)}${teamMetricBox('Equipo como local',home)}${teamMetricBox('Equipo como visitante',away)}${teamMetricBox('Lineup confirmado',lineup)}${teamMetricBox('Lineup proxy',proxy)}</div><div class="note" style="margin-top:10px">Sesgo positivo real−proj = ocurrieron más carreras de las proyectadas; negativo = el modelo proyectó de más. El semáforo usa Brier suavizado como métrica principal y exige muestra antes de clasificar.</div></div>${teamReliabilityPanelHtml(team,versionScope)}${teamDirectionalReliabilityPanelHtml(team,versionScope)}${teamShadowTeamPanelHtml(team,versionScope)}${recent.length?`<div class="section team-table-wrap"><h3>Últimos Full Game con ${esc(team.abbr||team.name)}</h3><table><thead><tr><th>Fecha</th><th>Juego</th><th>Pick</th><th>Prob.</th><th>Resultado</th><th>Brier</th><th>Total real / Proy.</th></tr></thead><tbody>${recent.map(r=>{const pred=teamPredictedRuns(r),res=r.status==='PUSH'?'PUSH':r.y===1?'WIN':'LOSS';return`<tr><td>${esc(r.date)}</td><td>${esc(r.away)} @ ${esc(r.home)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td class="${res==='WIN'?'team-good':res==='LOSS'?'team-bad':'team-neutral'}">${res}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'} / ${fix(pred,1)}</td></tr>`}).join('')}</tbody></table></div>`:''}`}
 /* V7.8D1 GLOBAL TEAM RELIABILITY RANKING ENGINE */
 
 function teamGlobalReliabilityRanking(
@@ -28029,8 +33053,8 @@ function importJson(file){
 }
 
 
-$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history'){renderHistory();renderRollingBackupDashboard();}if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
-$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;
+$$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history'){renderHistory();renderRollingBackupDashboard();}if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='shadow'){renderShadowIntegrity();renderShadowLab();}if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
+$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#shadowSettleNow').onclick=()=>{const r=teamShadowSettleFromOfficial();renderShadowLab();status('TEAM SHADOW · '+r.settled+' nuevos liquidados · '+r.pending+' pendientes.','ok')};$('#shadowRefresh').onclick=()=>{renderShadowIntegrity();renderShadowLab()};$('#shadowExport').onclick=exportTeamShadowCsv;
 /* V7.8.5A2 SAFE RESET HANDLER */
 
 $('#resetAll').onclick=async()=>{
@@ -28192,5 +33216,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.
 </script>
 <script src="./database.js"></script>
 <script>window.addEventListener("DOMContentLoaded",()=>{window.MLBDB?.init();});</script>
+<script>window.addEventListener("DOMContentLoaded",()=>{window.initTeamShadowPersistence?.().catch(e=>console.warn("TEAM SHADOW boot",e));});</script>
+<script>window.addEventListener("DOMContentLoaded",()=>{window.teamShadowStartSettlementWatcher?.();});</script>
 </body>
 </html>
