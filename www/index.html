@@ -5753,6 +5753,988 @@ strong{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM TEAMS E2A
+   TEAM INTELLIGENCE FOUNDATION
+   CSS ONLY
+   ========================================== */
+
+
+/* INTRO / HERO */
+
+#teamContent > .okbox:first-child{
+  position:relative;
+
+  overflow:hidden;
+
+  margin-bottom:13px!important;
+
+  padding:
+    40px 15px 14px!important;
+
+  border:
+    1px solid #215b78!important;
+
+  border-left:
+    1px solid #215b78!important;
+
+  border-radius:20px!important;
+
+  color:#9bb5ca!important;
+
+  background:
+    radial-gradient(
+      circle at 88% 15%,
+      rgba(39,150,255,.15),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      #082239,
+      #061724
+    )!important;
+
+  box-shadow:
+    0 15px 38px
+    rgba(0,0,0,.22);
+}
+
+
+#teamContent > .okbox:first-child::before{
+  content:"TEAM INTELLIGENCE";
+
+  position:absolute;
+
+  top:13px;
+  left:15px;
+
+  color:#edf7ff;
+
+  font-size:1.05rem;
+
+  font-weight:950;
+
+  letter-spacing:-.02em;
+}
+
+
+#teamContent > .okbox:first-child::after{
+  content:"FULL GAME O/U · OBSERVACIÓN POR EQUIPO";
+
+  position:absolute;
+
+  top:14px;
+  right:15px;
+
+  color:#58a6d5;
+
+  font-size:.42rem;
+
+  font-weight:950;
+
+  letter-spacing:.08em;
+}
+
+
+#teamContent > .okbox:first-child b{
+  color:#80d8ff;
+}
+
+
+/* ==========================================
+   TOOLBAR
+   ========================================== */
+
+#teamContent .team-toolbar{
+  display:grid;
+
+  grid-template-columns:
+    minmax(0,1.25fr)
+    minmax(0,1fr)
+    minmax(0,1fr)
+    auto;
+
+  gap:8px;
+
+  align-items:end;
+
+  margin-bottom:13px;
+
+  padding:12px;
+
+  border:
+    1px solid #1d4562;
+
+  border-radius:17px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #081d30,
+      #061522
+    );
+}
+
+
+#teamContent .team-toolbar .field{
+  min-width:0;
+}
+
+
+#teamContent .team-toolbar label{
+  margin-bottom:2px;
+
+  color:#718ca5;
+
+  font-size:.43rem;
+
+  font-weight:950;
+
+  letter-spacing:.06em;
+}
+
+
+#teamContent .team-toolbar select{
+  width:100%;
+
+  min-height:42px;
+
+  border:
+    1px solid #285471;
+
+  border-radius:11px;
+
+  background:#071a2b;
+
+  color:#e0edf7;
+
+  font-size:.58rem;
+
+  font-weight:750;
+}
+
+
+#teamContent #teamApply{
+  min-height:42px;
+
+  padding:
+    8px 14px;
+
+  border:
+    1px solid #2b6d91;
+
+  border-radius:11px;
+
+  color:#eaf7ff;
+
+  background:
+    linear-gradient(
+      145deg,
+      #13548a,
+      #0b3559
+    );
+
+  font-size:.57rem;
+
+  font-weight:950;
+}
+
+
+/* ==========================================
+   KPI INTELLIGENCE CARDS
+   ========================================== */
+
+#teamContent .team-kpis{
+  display:grid;
+
+  grid-template-columns:
+    repeat(6,minmax(0,1fr));
+
+  gap:7px;
+
+  margin-bottom:13px;
+}
+
+
+#teamContent .team-kpis .card{
+  position:relative;
+
+  min-width:0;
+
+  padding:
+    11px 9px;
+
+  overflow:hidden;
+
+  border:
+    1px solid #1b405c;
+
+  border-radius:15px;
+
+  background:
+    radial-gradient(
+      circle at 95% 0,
+      rgba(42,126,191,.10),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #081d30,
+      #061522
+    );
+}
+
+
+#teamContent .team-kpis .card::after{
+  content:"";
+
+  position:absolute;
+
+  left:9px;
+  right:9px;
+  bottom:6px;
+
+  height:2px;
+
+  border-radius:99px;
+
+  opacity:.55;
+
+  background:
+    linear-gradient(
+      90deg,
+      #299ddd,
+      transparent
+    );
+}
+
+
+#teamContent .team-kpis small{
+  display:block;
+
+  min-height:2.25em;
+
+  color:#6f8ba3;
+
+  font-size:.40rem;
+
+  font-weight:900;
+
+  line-height:1.15;
+
+  letter-spacing:.035em;
+}
+
+
+#teamContent .team-kpis .big{
+  margin-top:5px;
+
+  color:#edf6fd;
+
+  font-size:1.18rem;
+
+  font-weight:950;
+}
+
+
+#teamContent .team-kpis .team-good{
+  color:#42df98;
+}
+
+
+#teamContent .team-kpis .team-bad{
+  color:#ff7788;
+}
+
+
+/* ==========================================
+   RANKING GLOBAL RELIABILITY
+   ========================================== */
+
+#teamContent .section{
+  border-color:#1c425e;
+
+  background:
+    linear-gradient(
+      145deg,
+      #081d30,
+      #061522
+    );
+}
+
+
+#teamContent .section h3{
+  color:#eaf4fc;
+
+  font-weight:950;
+
+  letter-spacing:-.015em;
+}
+
+
+/* ==========================================
+   TEAM PERFORMANCE TABLE
+   ========================================== */
+
+#teamContent .team-table-wrap{
+  overflow:hidden;
+
+  padding:0;
+
+  border-radius:18px;
+}
+
+
+#teamContent .team-table-wrap > h3{
+  margin:0;
+
+  padding:
+    13px 14px;
+
+  border-bottom:
+    1px solid #1b3e58;
+
+  background:
+    rgba(8,31,50,.70);
+}
+
+
+#teamContent .team-table-wrap table{
+  margin:0;
+}
+
+
+#teamContent .team-table-wrap th{
+  padding:
+    9px 7px;
+
+  color:#718ca5;
+
+  background:#07192a;
+
+  font-size:.43rem;
+}
+
+
+#teamContent .team-table-wrap td{
+  padding:
+    10px 7px;
+
+  border-bottom:
+    1px solid #17364d;
+
+  color:#dce8f2;
+
+  font-size:.59rem;
+}
+
+
+#teamContent .team-table-wrap tbody tr{
+  transition:
+    background .15s ease;
+}
+
+
+#teamContent .team-table-wrap tbody tr:hover{
+  background:
+    rgba(28,71,101,.18);
+}
+
+
+#teamContent .team-rank{
+  color:#6b8aa2;
+
+  font-weight:950;
+}
+
+
+#teamContent .team-row-btn{
+  display:inline-flex;
+
+  align-items:center;
+
+  gap:6px;
+
+  padding:0;
+
+  border:0;
+
+  color:#eaf4fb;
+
+  background:transparent;
+
+  font-weight:950;
+}
+
+
+#teamContent .team-dot{
+  box-shadow:
+    0 0 0 3px
+    rgba(255,255,255,.025);
+}
+
+
+#teamContent .team-status{
+  border-radius:999px;
+
+  font-weight:950;
+}
+
+
+/* ==========================================
+   TEAM DETAIL
+   ========================================== */
+
+#teamContent #teamDetail{
+  margin-top:13px;
+}
+
+
+#teamContent #teamDetail > .section:first-child{
+  position:relative;
+
+  overflow:hidden;
+
+  border:
+    1px solid #255879;
+
+  border-radius:20px;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(49,131,205,.14),
+      transparent 36%
+    ),
+    linear-gradient(
+      145deg,
+      #082138,
+      #061522
+    );
+}
+
+
+#teamContent #teamDetail
+.team-muted{
+  color:#7893a9;
+
+  font-size:.55rem;
+}
+
+
+#teamContent .team-detail-grid{
+  display:grid;
+
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  gap:7px;
+}
+
+
+#teamContent .team-detail-grid
+.card,
+#teamContent .team-detail-grid
+.metric{
+  min-width:0;
+
+  border:
+    1px solid #1b405b;
+
+  border-radius:13px;
+
+  background:
+    rgba(4,19,31,.58);
+}
+
+
+/* ==========================================
+   OBSERVATIONAL NOTICE
+   ========================================== */
+
+#teamContent .note{
+  color:#718ba1;
+}
+
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media(max-width:720px){
+
+  #teamContent > .okbox:first-child{
+    padding:
+      38px 11px 11px!important;
+
+    border-radius:17px!important;
+
+    font-size:.60rem!important;
+  }
+
+
+  #teamContent > .okbox:first-child::before{
+    top:11px;
+    left:11px;
+
+    font-size:.88rem;
+  }
+
+
+  #teamContent > .okbox:first-child::after{
+    top:13px;
+    right:11px;
+
+    max-width:47%;
+
+    overflow:hidden;
+
+    font-size:.34rem;
+
+    white-space:nowrap;
+
+    text-overflow:ellipsis;
+  }
+
+
+  #teamContent .team-toolbar{
+    grid-template-columns:
+      1fr 1fr;
+
+    padding:9px;
+
+    border-radius:15px;
+  }
+
+
+  #teamContent .team-toolbar
+  .field:first-child{
+    grid-column:
+      1 / -1;
+  }
+
+
+  #teamContent #teamApply{
+    width:100%;
+  }
+
+
+  #teamContent .team-kpis{
+    grid-template-columns:
+      repeat(3,minmax(0,1fr));
+  }
+
+
+  #teamContent .team-kpis .card{
+    padding:
+      9px 7px;
+  }
+
+
+  #teamContent .team-kpis small{
+    font-size:.34rem;
+  }
+
+
+  #teamContent .team-kpis .big{
+    font-size:.92rem;
+  }
+
+
+  #teamContent .team-detail-grid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+
+  /*
+   * La tabla conserva TODAS las métricas.
+   * Permitimos scroll horizontal en móvil
+   * en vez de borrar columnas.
+   */
+
+  #teamContent .team-table-wrap{
+    overflow-x:auto;
+
+    -webkit-overflow-scrolling:touch;
+  }
+
+
+  #teamContent .team-table-wrap table{
+    min-width:760px;
+  }
+
+
+  #teamContent .team-table-wrap > h3{
+    position:sticky;
+
+    left:0;
+
+    min-width:100vw;
+
+    font-size:.72rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #teamContent .team-kpis{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+
+  #teamContent .team-toolbar{
+    grid-template-columns:1fr;
+  }
+
+
+  #teamContent .team-toolbar
+  .field:first-child{
+    grid-column:auto;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM TEAMS E2B2
+   TEAM DETAIL VISUAL LAYER
+   CSS ONLY
+   ========================================== */
+
+
+/* OVERVIEW */
+
+#teamDetail .team-premium-overview{
+  overflow:hidden;
+  padding:13px!important;
+
+  border:1px solid #286587!important;
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(35,145,220,.15),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      #08233a,
+      #061623
+    )!important;
+}
+
+#teamDetail .team-premium-overview h3{
+  color:#f1f8fd!important;
+  font-size:1.05rem!important;
+  font-weight:950!important;
+}
+
+#teamDetail .team-premium-overview
+.team-detail-grid{
+  margin-top:11px!important;
+}
+
+#teamDetail .team-premium-overview
+.team-detail-grid > *{
+  min-height:82px;
+
+  padding:9px;
+
+  border:1px solid #1e465f;
+  border-radius:13px;
+
+  background:
+    rgba(4,20,33,.58);
+}
+
+
+/* RELIABILITY GENERAL */
+
+#teamDetail .team-premium-reliability{
+  position:relative;
+  overflow:hidden;
+
+  padding:
+    39px 11px 11px!important;
+
+  border:
+    1px solid #26684e!important;
+
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(39,197,127,.12),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #08251f,
+      #061a20
+    )!important;
+}
+
+#teamDetail .team-premium-reliability::before{
+  content:"RELIABILITY";
+
+  position:absolute;
+
+  top:11px;
+  left:11px;
+
+  color:#65e3a4;
+
+  font-size:.52rem;
+  font-weight:950;
+
+  letter-spacing:.09em;
+}
+
+#teamDetail .team-premium-reliability::after{
+  content:"CONFIANZA HISTÓRICA";
+
+  position:absolute;
+
+  top:12px;
+  right:11px;
+
+  color:#608d79;
+
+  font-size:.34rem;
+  font-weight:900;
+}
+
+
+/* RELIABILITY OVER / UNDER */
+
+#teamDetail .team-premium-directional{
+  position:relative;
+  overflow:hidden;
+
+  padding:
+    39px 11px 11px!important;
+
+  border:
+    1px solid #27516f!important;
+
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(38,136,219,.12),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #081f34,
+      #061522
+    )!important;
+}
+
+#teamDetail .team-premium-directional::before{
+  content:"OVER / UNDER RELIABILITY";
+
+  position:absolute;
+
+  top:11px;
+  left:11px;
+
+  color:#74c5f5;
+
+  font-size:.50rem;
+  font-weight:950;
+
+  letter-spacing:.07em;
+}
+
+#teamDetail .team-premium-directional::after{
+  content:"DIRECCIONAL";
+
+  position:absolute;
+
+  top:12px;
+  right:11px;
+
+  color:#6689a2;
+
+  font-size:.33rem;
+  font-weight:950;
+}
+
+
+/* TEAM SHADOW */
+
+#teamDetail .team-premium-shadow{
+  overflow:hidden;
+
+  padding:11px!important;
+
+  border:
+    1px solid #745e24!important;
+
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(203,157,38,.10),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #211d0d,
+      #0a1720 48%,
+      #061522
+    )!important;
+}
+
+#teamDetail .team-premium-shadow::before{
+  content:"TEAM SHADOW LAB · EXPERIMENTAL — READ ONLY";
+
+  display:block;
+
+  margin:
+    -11px -11px 11px;
+
+  padding:
+    10px 11px;
+
+  border-bottom:
+    1px solid #665321;
+
+  color:#f2cb62;
+
+  background:
+    rgba(107,78,12,.18);
+
+  font-size:.46rem;
+  font-weight:950;
+
+  letter-spacing:.055em;
+}
+
+#teamDetail .team-premium-shadow .card{
+  border-color:#514824!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(39,35,16,.63),
+      rgba(5,23,34,.72)
+    )!important;
+}
+
+#teamDetail .team-premium-shadow .big{
+  font-weight:950!important;
+}
+
+#teamDetail .team-premium-shadow .warn{
+  border-color:#6c5924!important;
+
+  color:#d8bf71!important;
+
+  background:
+    rgba(65,48,12,.26)!important;
+}
+
+
+/* HISTORY */
+
+#teamDetail .team-premium-history{
+  overflow-x:auto;
+
+  border-radius:17px;
+
+  -webkit-overflow-scrolling:touch;
+}
+
+
+/* COLOR SEMANTICS */
+
+#teamDetail .team-good,
+#teamDetail .bp-good{
+  color:#43df98!important;
+}
+
+#teamDetail .team-bad,
+#teamDetail .bp-bad{
+  color:#ff7888!important;
+}
+
+#teamDetail .team-neutral,
+#teamDetail .bp-mid{
+  color:#f0c861!important;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  #teamDetail .team-premium-overview{
+    padding:10px!important;
+  }
+
+  #teamDetail .team-premium-overview h3{
+    font-size:.90rem!important;
+  }
+
+  #teamDetail .team-premium-reliability,
+  #teamDetail .team-premium-directional{
+    padding:
+      36px 9px 9px!important;
+  }
+
+  #teamDetail .team-premium-reliability::before,
+  #teamDetail .team-premium-directional::before{
+    top:9px;
+    left:9px;
+
+    font-size:.42rem;
+  }
+
+  #teamDetail .team-premium-reliability::after,
+  #teamDetail .team-premium-directional::after{
+    top:10px;
+    right:9px;
+
+    font-size:.28rem;
+  }
+
+  #teamDetail .team-premium-shadow{
+    padding:9px!important;
+  }
+
+  #teamDetail .team-premium-shadow::before{
+    margin:
+      -9px -9px 9px;
+
+    padding:9px;
+
+    font-size:.38rem;
+  }
+
+}
+
+@media(max-width:390px){
+
+  #teamDetail .team-premium-reliability::after,
+  #teamDetail .team-premium-directional::after{
+    display:none;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -20499,6 +21481,90 @@ function teamShadowTeamPanelHtml(
 window.initTeamShadowPersistence=initTeamShadowPersistence;
 
 function renderTeamDetail(team,versionScope='CURRENT'){const host=$('#teamDetail');if(!host||!team)return;const all=teamStatRows(teamRows(team,versionScope)),grade=teamGrade(team,versionScope),total=teamStatRows(teamMarketRows(team,'TOTAL',versionScope)),over=teamStatRows(teamMarketRows(team,'OVER',versionScope)),under=teamStatRows(teamMarketRows(team,'UNDER',versionScope)),home=teamStatRows(teamMarketRows(team,'HOME',versionScope)),away=teamStatRows(teamMarketRows(team,'AWAY',versionScope)),lineup=teamStatRows(teamMarketRows(team,'LINEUP',versionScope)),proxy=teamStatRows(teamMarketRows(team,'PROXY',versionScope)),recent=teamRows(team,versionScope).filter(r=>r.status!=='PENDING').sort((a,b)=>labTime(b)-labTime(a)).slice(0,40);host.innerHTML=`<div class="section"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3 style="margin-bottom:4px">${esc(teamDisplayName(team))}</h3><div class="team-muted">${teamSampleLabel(all.games)} · ${all.games} juegos Full Game · ${all.n} pronósticos liquidados · ${all.pending} pendientes · ${all.push} pushes</div></div><span class="team-status ${grade.cls}"><span class="team-dot ${grade.cls}"></span>${esc(grade.label)}</span></div><div class="team-detail-grid" style="margin-top:12px">${teamMetricBox('General Full Game',total)}${teamMetricBox('Picks Over',over)}${teamMetricBox('Picks Under',under)}${teamMetricBox('Equipo como local',home)}${teamMetricBox('Equipo como visitante',away)}${teamMetricBox('Lineup confirmado',lineup)}${teamMetricBox('Lineup proxy',proxy)}</div><div class="note" style="margin-top:10px">Sesgo positivo real−proj = ocurrieron más carreras de las proyectadas; negativo = el modelo proyectó de más. El semáforo usa Brier suavizado como métrica principal y exige muestra antes de clasificar.</div></div>${teamReliabilityPanelHtml(team,versionScope)}${teamDirectionalReliabilityPanelHtml(team,versionScope)}${teamShadowTeamPanelHtml(team,versionScope)}${recent.length?`<div class="section team-table-wrap"><h3>Últimos Full Game con ${esc(team.abbr||team.name)}</h3><table><thead><tr><th>Fecha</th><th>Juego</th><th>Pick</th><th>Prob.</th><th>Resultado</th><th>Brier</th><th>Total real / Proy.</th></tr></thead><tbody>${recent.map(r=>{const pred=teamPredictedRuns(r),res=r.status==='PUSH'?'PUSH':r.y===1?'WIN':'LOSS';return`<tr><td>${esc(r.date)}</td><td>${esc(r.away)} @ ${esc(r.home)}</td><td>${esc(r.side)} ${fix(r.line,1)}</td><td>${pct(r.ensembleP)}</td><td class="${res==='WIN'?'team-good':res==='LOSS'?'team-bad':'team-neutral'}">${res}</td><td>${fix(labPickBrierRow(r),3)}</td><td>${Number.isFinite(+r.actual)?fix(r.actual,1):'—'} / ${fix(pred,1)}</td></tr>`}).join('')}</tbody></table></div>`:''}`}
+
+/* V7.8.6 PREMIUM TEAMS E2B1 */
+
+function premiumTeamDetailEnhance(){
+
+  const root=
+    document.getElementById('teamDetail');
+
+  if(!root)return;
+
+  [...root.children]
+    .filter(x=>x?.classList?.contains('section'))
+    .forEach((section,index)=>{
+
+      const text=
+        String(section.textContent||'')
+          .toUpperCase();
+
+      if(index===0){
+        section.classList.add(
+          'team-premium-overview'
+        );
+        return;
+      }
+
+      if(
+        text.includes('TEAM DNA') ||
+        (
+          text.includes('EXPERIMENTAL') &&
+          text.includes('READ ONLY')
+        )
+      ){
+        section.classList.add(
+          'team-premium-shadow'
+        );
+        return;
+      }
+
+      if(
+        text.includes('RELIABILITY') &&
+        text.includes('OVER') &&
+        text.includes('UNDER')
+      ){
+        section.classList.add(
+          'team-premium-directional'
+        );
+        return;
+      }
+
+      if(text.includes('RELIABILITY')){
+        section.classList.add(
+          'team-premium-reliability'
+        );
+        return;
+      }
+
+      if(
+        text.includes('ÚLTIMOS') ||
+        text.includes('HISTORIAL')
+      ){
+        section.classList.add(
+          'team-premium-history'
+        );
+      }
+
+    });
+
+}
+
+const __premiumRenderTeamDetailOfficial=
+  renderTeamDetail;
+
+renderTeamDetail=function(){
+
+  const result=
+    __premiumRenderTeamDetailOfficial
+      .apply(this,arguments);
+
+  premiumTeamDetailEnhance();
+
+  return result;
+};
+
+
 /* V7.8D1 GLOBAL TEAM RELIABILITY RANKING ENGINE */
 
 function teamGlobalReliabilityRanking(
