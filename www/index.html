@@ -23127,6 +23127,7 @@ function premiumHomeLiveHtml(){
 
 /* V7.8.6 PREMIUM UI 2A2 RANKING HELPER */
 
+/* V7.8.6 R2D2 HOME RANKING SIGNAL SOURCE FIX */
 function premiumHomeRankingHtml(){
 
   const rows=
@@ -23177,8 +23178,12 @@ function premiumHomeRankingHtml(){
         ?String(ev.line)
         :'—';
 
+    const signalIsPass=
+      String(sig?.cls || '')
+        .toLowerCase()==='pass';
+
     const pickText=
-      p.pass
+      signalIsPass
         ?'PASS'
         :side+' '+line;
 
@@ -23211,7 +23216,7 @@ function premiumHomeRankingHtml(){
 
       '<div class="premium-rank-pick ' +
         (
-          p.pass
+          signalIsPass
             ?'pass'
             :side==='OVER'
               ?'over'
