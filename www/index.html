@@ -4669,6 +4669,1090 @@ tbody tr:active{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM RANKING R2B
+   ========================================== */
+
+.premium-ranking-host{
+  display:block!important;
+
+  padding:0!important;
+
+  background:transparent!important;
+
+  border:0!important;
+}
+
+
+.premium-ranking-v1{
+  display:grid;
+
+  gap:12px;
+
+  margin-top:10px;
+}
+
+
+/* TOP PICK */
+
+.premium-rank-hero{
+  overflow:hidden;
+
+  padding:15px;
+
+  border:
+    1px solid #246381;
+
+  border-radius:20px;
+
+  background:
+    radial-gradient(
+      circle at 85% 8%,
+      rgba(47,119,255,.15),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #081f34,
+      #061522
+    );
+
+  box-shadow:
+    0 16px 36px
+    rgba(0,0,0,.25);
+}
+
+
+.premium-rank-hero-head{
+  display:flex;
+
+  align-items:center;
+
+  justify-content:
+    space-between;
+
+  gap:10px;
+}
+
+
+.premium-top-badge{
+  display:inline-flex;
+
+  align-items:center;
+
+  gap:7px;
+
+  color:#a9bfd4;
+
+  font-size:.56rem;
+
+  font-weight:950;
+
+  letter-spacing:.06em;
+}
+
+
+.premium-top-badge span{
+  width:30px;
+  height:30px;
+
+  display:grid;
+
+  place-items:center;
+
+  border:
+    1px solid #ae8425;
+
+  border-radius:50%;
+
+  color:#ffdc67;
+
+  background:
+    rgba(121,84,11,.20);
+
+  font-size:.72rem;
+}
+
+
+.premium-rank-hero-match{
+  margin-top:17px;
+
+  color:#f1f7fc;
+
+  font-size:1.48rem;
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+}
+
+
+.premium-rank-hero-match span{
+  margin:
+    0 5px;
+
+  color:#718da6;
+
+  font-size:.82rem;
+}
+
+
+.premium-rank-hero-pick{
+  margin-top:6px;
+
+  font-size:1.05rem;
+
+  font-weight:950;
+}
+
+
+.premium-rank-hero-pick.over,
+.premium-rank-side.over{
+  color:#ff7c89;
+}
+
+
+.premium-rank-hero-pick.under,
+.premium-rank-side.under{
+  color:#2dd5bd;
+}
+
+
+.premium-rank-hero-pick.pass,
+.premium-rank-side.pass{
+  color:#f1cd70;
+}
+
+
+.premium-rank-hero-stats{
+  display:grid;
+
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  margin-top:15px;
+
+  overflow:hidden;
+
+  border:
+    1px solid #193d57;
+
+  border-radius:13px;
+
+  background:
+    rgba(3,14,25,.42);
+}
+
+
+.premium-rank-hero-stats > div{
+  min-width:0;
+
+  padding:
+    10px 8px;
+
+  border-right:
+    1px solid #193d57;
+}
+
+
+.premium-rank-hero-stats > div:last-child{
+  border-right:0;
+}
+
+
+.premium-rank-hero-stats small{
+  display:block;
+
+  color:#7490a9;
+
+  font-size:.44rem;
+
+  font-weight:850;
+
+  text-transform:uppercase;
+}
+
+
+.premium-rank-hero-stats strong{
+  display:block;
+
+  margin-top:4px;
+
+  overflow:hidden;
+
+  color:#e8f4ff;
+
+  font-size:.68rem;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+
+.premium-rank-hero-stats
+> div:nth-child(1)
+strong,
+.premium-rank-hero-stats
+> div:nth-child(2)
+strong{
+  color:#46df97;
+}
+
+
+.premium-rank-hero-foot{
+  display:flex;
+
+  align-items:center;
+
+  gap:6px;
+
+  margin-top:10px;
+
+  color:#69869f;
+
+  font-size:.46rem;
+}
+
+
+.premium-rank-hero-foot
+.ui-icon{
+  width:14px;
+  height:14px;
+
+  color:#44d796;
+}
+
+
+/* SIGNAL */
+
+.premium-rank-signal{
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  min-width:56px;
+
+  padding:
+    5px 8px;
+
+  border:
+    1px solid #45647c;
+
+  border-radius:999px;
+
+  color:#a7bbcd;
+
+  background:
+    rgba(28,49,68,.42);
+
+  font-size:.47rem;
+
+  font-weight:950;
+}
+
+
+.premium-rank-signal.play{
+  border-color:#277856;
+
+  color:#45e29a;
+
+  background:
+    rgba(17,83,57,.23);
+}
+
+
+.premium-rank-signal.lean{
+  border-color:#806825;
+
+  color:#f4cd68;
+
+  background:
+    rgba(96,74,15,.20);
+}
+
+
+.premium-rank-signal.pass{
+  border-color:#4b6175;
+
+  color:#98aabb;
+}
+
+
+/* LIST */
+
+.premium-rank-list{
+  overflow:hidden;
+
+  border:
+    1px solid #1b3d58;
+
+  border-radius:18px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #071b2c,
+      #061521
+    );
+}
+
+
+.premium-rank-list-title{
+  display:flex;
+
+  align-items:center;
+
+  justify-content:
+    space-between;
+
+  padding:
+    10px 12px;
+
+  border-bottom:
+    1px solid #19374f;
+}
+
+
+.premium-rank-list-title span{
+  color:#91aac2;
+
+  font-size:.54rem;
+
+  font-weight:950;
+
+  letter-spacing:.06em;
+}
+
+
+.premium-rank-list-title small{
+  color:#579ed1;
+
+  font-size:.48rem;
+}
+
+
+.premium-rank-list-row{
+  display:grid;
+
+  grid-template-columns:
+    32px
+    minmax(0,1fr)
+    auto
+    auto;
+
+  align-items:center;
+
+  gap:9px;
+
+  padding:
+    10px 11px;
+
+  border-bottom:
+    1px solid #17364e;
+}
+
+
+.premium-rank-list-row:last-child{
+  border-bottom:0;
+}
+
+
+.premium-rank-position{
+  width:29px;
+  height:29px;
+
+  display:grid;
+
+  place-items:center;
+
+  border:
+    1px solid #385b76;
+
+  border-radius:50%;
+
+  color:#cad9e7;
+
+  font-size:.58rem;
+
+  font-weight:950;
+}
+
+
+.premium-rank-match{
+  min-width:0;
+}
+
+
+.premium-rank-match b{
+  display:block;
+
+  overflow:hidden;
+
+  color:#e2edf6;
+
+  font-size:.67rem;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+
+.premium-rank-side{
+  display:block;
+
+  margin-top:3px;
+
+  font-size:.57rem;
+
+  font-weight:950;
+}
+
+
+.premium-rank-numbers{
+  display:grid;
+
+  grid-template-columns:
+    repeat(2,auto);
+
+  gap:10px;
+
+  text-align:right;
+}
+
+
+.premium-rank-numbers small{
+  display:block;
+
+  color:#617d96;
+
+  font-size:.37rem;
+}
+
+
+.premium-rank-numbers b{
+  display:block;
+
+  margin-top:2px;
+
+  color:#dceaf5;
+
+  font-size:.54rem;
+}
+
+
+.premium-ranking-empty{
+  min-height:230px;
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:8px;
+
+  border:
+    1px solid #1b3d58;
+
+  border-radius:18px;
+
+  color:#728ba3;
+
+  background:
+    linear-gradient(
+      145deg,
+      #071b2c,
+      #061521
+    );
+
+  text-align:center;
+}
+
+
+.premium-ranking-empty
+.ui-icon{
+  width:35px;
+  height:35px;
+
+  color:#315f80;
+}
+
+
+.premium-ranking-empty b{
+  color:#a7bdcf;
+
+  font-size:.74rem;
+}
+
+
+.premium-ranking-empty small{
+  max-width:230px;
+
+  color:#72889d;
+
+  font-size:.55rem;
+
+  line-height:1.45;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  .premium-rank-hero{
+    padding:12px;
+  }
+
+
+  .premium-rank-hero-match{
+    margin-top:14px;
+
+    font-size:1.24rem;
+  }
+
+
+  .premium-rank-hero-pick{
+    font-size:.90rem;
+  }
+
+
+  .premium-rank-hero-stats{
+    margin-top:12px;
+  }
+
+
+  .premium-rank-hero-stats > div{
+    padding:
+      8px 5px;
+  }
+
+
+  .premium-rank-hero-stats small{
+    font-size:.37rem;
+  }
+
+
+  .premium-rank-hero-stats strong{
+    font-size:.56rem;
+  }
+
+
+  .premium-rank-list-row{
+    grid-template-columns:
+      27px
+      minmax(0,1fr)
+      auto
+      auto;
+
+    gap:6px;
+
+    padding:
+      9px 8px;
+  }
+
+
+  .premium-rank-position{
+    width:25px;
+    height:25px;
+
+    font-size:.50rem;
+  }
+
+
+  .premium-rank-match b{
+    font-size:.57rem;
+  }
+
+
+  .premium-rank-side{
+    font-size:.49rem;
+  }
+
+
+  .premium-rank-numbers{
+    gap:6px;
+  }
+
+
+  .premium-rank-numbers small{
+    font-size:.32rem;
+  }
+
+
+  .premium-rank-numbers b{
+    font-size:.47rem;
+  }
+
+
+  .premium-rank-signal{
+    min-width:47px;
+
+    padding:
+      4px 5px;
+
+    font-size:.39rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  .premium-rank-numbers
+  > div:nth-child(2){
+    display:none;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM RANKING R2C
+   HEADER + HISTORY CONTROLS
+   CSS ONLY
+   ========================================== */
+
+#rankContent{
+  display:block;
+}
+
+#rankContent > .warn{
+  margin-bottom:10px;
+  border-radius:14px;
+  font-size:.58rem;
+  line-height:1.45;
+}
+
+
+/* HEADER */
+
+#rankContent .rank-head{
+  position:relative;
+
+  display:grid;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    auto;
+
+  align-items:center;
+
+  gap:12px;
+
+  margin:0 0 10px;
+
+  padding:28px 14px 13px;
+
+  overflow:hidden;
+
+  border:1px solid #20516f;
+
+  border-radius:18px;
+
+  background:
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(53,120,255,.13),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      #081f33,
+      #061522
+    );
+
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.20);
+}
+
+
+#rankContent .rank-head::before{
+  content:"RANKING OFICIAL · V7.8.6";
+
+  position:absolute;
+
+  top:10px;
+  left:14px;
+
+  color:#688da9;
+
+  font-size:.44rem;
+
+  font-weight:950;
+
+  letter-spacing:.09em;
+}
+
+
+#rankContent .rank-head::after{
+  content:"";
+
+  position:absolute;
+
+  width:110px;
+  height:110px;
+
+  top:-60px;
+  right:-28px;
+
+  border-radius:50%;
+
+  background:rgba(45,143,255,.07);
+
+  pointer-events:none;
+}
+
+
+#rankContent .rank-head > div:first-child{
+  min-width:0;
+}
+
+
+#rankContent .rank-head > div:first-child > b{
+  display:block;
+
+  color:#eef7ff;
+
+  font-size:1.16rem;
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+}
+
+
+#rankContent .rank-snapshot{
+  display:flex;
+
+  align-items:center;
+
+  flex-wrap:wrap;
+
+  gap:5px;
+
+  margin-top:6px;
+
+  color:#718ca5;
+
+  font-size:.53rem;
+}
+
+
+#rankContent .rank-snapshot .tag{
+  display:inline-flex;
+
+  align-items:center;
+
+  min-height:23px;
+
+  padding:4px 8px;
+
+  border-radius:999px;
+
+  font-size:.44rem;
+
+  font-weight:950;
+}
+
+
+#rankContent .rank-snapshot .tag.live{
+  border:1px solid #277659;
+
+  color:#43df99;
+
+  background:rgba(16,82,57,.24);
+}
+
+
+#rankContent .rank-snapshot .tag.census{
+  border:1px solid #385e82;
+
+  color:#75bdf0;
+
+  background:rgba(25,64,99,.28);
+}
+
+
+/* BOTÓN CENSO */
+
+#rankContent .rank-head .actions{
+  position:relative;
+
+  z-index:1;
+
+  display:flex;
+
+  gap:7px;
+}
+
+
+#rankContent #openCensus{
+  min-height:38px!important;
+
+  padding:7px 11px!important;
+
+  border:1px solid #28628b!important;
+
+  border-radius:11px!important;
+
+  color:#b9ddf5!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      #103858,
+      #09243b
+    )!important;
+
+  font-size:.54rem!important;
+
+  font-weight:900!important;
+
+  box-shadow:none!important;
+}
+
+
+#rankContent #openCensus::before{
+  content:"▦";
+
+  margin-right:5px;
+
+  color:#70bce9;
+}
+
+
+/* HISTÓRICO */
+
+#rankContent .rank-head + .section{
+  margin:0 0 11px!important;
+
+  padding:11px!important;
+
+  border:1px solid #1c405a!important;
+
+  border-radius:15px!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(7,29,47,.97),
+      rgba(5,20,33,.97)
+    )!important;
+}
+
+
+#rankContent .rank-head + .section .field{
+  display:grid!important;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    auto!important;
+
+  align-items:end!important;
+
+  gap:8px!important;
+
+  min-width:0!important;
+}
+
+
+#rankContent .rank-head + .section label{
+  display:block;
+
+  margin-bottom:5px;
+
+  color:#7f9bb5;
+
+  font-size:.46rem;
+
+  font-weight:900;
+
+  letter-spacing:.055em;
+
+  text-transform:uppercase;
+}
+
+
+#rankContent #rankArchiveDate{
+  width:100%;
+
+  min-height:39px;
+
+  padding:7px 30px 7px 10px;
+
+  border:1px solid #28516e;
+
+  border-radius:10px;
+
+  color:#dcecf8;
+
+  background:#071c2d;
+
+  font-size:.59rem;
+
+  font-weight:700;
+}
+
+
+#rankContent #openArchivedRank{
+  min-height:39px;
+
+  padding:7px 11px!important;
+
+  border:1px solid #305e7e!important;
+
+  border-radius:10px!important;
+
+  color:#b9d8ed!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      #0d324e,
+      #09243a
+    )!important;
+
+  font-size:.52rem!important;
+
+  font-weight:900!important;
+}
+
+
+#rankContent .rank-head + .section .smalltxt{
+  margin-top:8px!important;
+
+  padding-top:7px;
+
+  border-top:1px solid #16354d;
+
+  color:#607c95!important;
+
+  font-size:.45rem!important;
+
+  line-height:1.4;
+}
+
+
+/* AUDITORÍA */
+
+#rankContent > .warn{
+  border:1px solid #775e24;
+
+  color:#d6bd74;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(68,49,12,.58),
+      rgba(35,29,16,.68)
+    );
+}
+
+
+#rankContent .premium-ranking-v1{
+  margin-top:0;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  #rankContent .rank-head{
+    gap:8px;
+
+    padding:25px 10px 10px;
+
+    border-radius:16px;
+  }
+
+
+  #rankContent .rank-head::before{
+    top:8px;
+    left:10px;
+
+    font-size:.38rem;
+  }
+
+
+  #rankContent .rank-head > div:first-child > b{
+    font-size:.94rem;
+  }
+
+
+  #rankContent .rank-snapshot{
+    margin-top:4px;
+
+    font-size:.44rem;
+  }
+
+
+  #rankContent #openCensus{
+    min-height:34px!important;
+
+    padding:6px 8px!important;
+
+    font-size:.45rem!important;
+  }
+
+
+  #rankContent .rank-head + .section{
+    padding:9px!important;
+  }
+
+
+  #rankContent .rank-head + .section .field{
+    grid-template-columns:
+      minmax(0,1fr)
+      auto!important;
+  }
+
+
+  #rankContent #rankArchiveDate{
+    min-height:36px;
+
+    font-size:.50rem;
+  }
+
+
+  #rankContent #openArchivedRank{
+    min-height:36px;
+
+    font-size:.45rem!important;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #rankContent .rank-head{
+    grid-template-columns:
+      minmax(0,1fr);
+  }
+
+
+  #rankContent .rank-head .actions{
+    width:100%;
+  }
+
+
+  #rankContent #openCensus{
+    width:100%;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -30041,6 +31125,512 @@ function rankArchiveDates(){const a=new Set;for(const [d,x] of Object.entries(ra
 function rankViewForDate(date){const live=S.loadedDay===date?currentRankingRows():[];if(live.length){const rows=currentRankViewRows(live,false);const pre=currentRankViewRows(live,true);if(pre.length){saveRankDraft(date,pre);syncRankingCensus(date,pre)}const day=censusDay(date);return{kind:'LIVE',rows:day?.rows?.length?day.rows:rows,when:day?.updated||new Date().toISOString()}}const day=censusDay(date);if(day?.rows?.length)return{kind:'CENSUS',rows:day.rows.map((r,i)=>({...r,rank:r.rank||i+1,signalClass:r.signalClass||censusSignalClass(r.signal),pass:r.pass??r.signal==='PASS'})),when:day.updated||day.created};const draft=rankDraft(date);if(draft?.rows?.length){syncRankingCensus(date,draft.rows);const c=censusDay(date);return{kind:'CENSUS',rows:c?.rows||draft.rows,when:c?.updated||draft.savedAt}}return{kind:'EMPTY',rows:[],when:null}}
 function rankingDirectionAudit(rows=[]){const live=rows.filter(r=>String(r.signal||'').toUpperCase()!=='PASS'&&(r.side==='OVER'||r.side==='UNDER')),nn=live.length;if(!nn)return{n:0,over:0,under:0,share:0,side:''};const over=live.filter(r=>r.side==='OVER').length,under=nn-over,share=Math.max(over,under)/nn,side=over>=under?'OVER':'UNDER';return{n:nn,over,under,share,side}}
 function renderRanking(){const date=$('#date').value,view=rankViewForDate(date),rows=view.rows||[],dates=rankArchiveDates(),mode=view.kind==='LIVE'?'Análisis actual · guardado en Censo':view.kind==='CENSUS'?'Censo persistente · disponible sin internet':'Sin ranking guardado',modeCls=view.kind==='CENSUS'?'live':'',time=view.when?new Date(view.when).toLocaleString('es-MX'):'—',dir=rankingDirectionAudit(rows),biasWarn=dir.n>=8&&dir.share>=.80?`<div class="warn" style="margin:10px 0"><b>Auditoría direccional:</b> ${Math.round(dir.share*100)}% de los picks no-PASS son ${dir.side}. No se fuerza equilibrio; esta alerta sólo detecta una posible inclinación para revisar.</div>`:'';$('#rankContent').innerHTML=`${biasWarn}<div class="rank-head"><div><b>Ranking del día</b><div class="rank-snapshot"><span class="tag ${modeCls}">${esc(mode)}</span> ${rows.length?`· ${rows.length} picks · ${esc(time)}`:''}</div></div><div class="actions"><button class="btn primary small" id="openCensus">Abrir Censo</button></div></div>${dates.length?`<div class="section" style="padding:10px;margin-bottom:10px"><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div class="field" style="min-width:180px;flex:1"><label>Historial permanente</label><select id="rankArchiveDate">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(d)}${censusDay(d)?' · censado':' · respaldo'}</option>`).join('')}</select></div><button class="btn small" id="openArchivedRank">Abrir fecha guardada</button></div><div class="smalltxt" style="margin-top:7px">El Ranking entra automáticamente al Censo. No hay botón de congelar ni depende de tener internet para volver a verlo.</div></div>`:''}${rows.length?`<div class="rank">${rows.map((r,i)=>{const sigCls=r.signalClass||censusSignalClass(r.signal),sigTxt=r.signal||'LAB',o=Number.isFinite(+r.odds)?{valid:true,decimal:+r.odds}:{valid:false};return`<div class="rankrow"><div class="num">${r.rank||i+1}</div><div><b>${esc(r.awayAbbr)} @ ${esc(r.homeAbbr)} · ${esc(r.side)} ${r.line} <span class="signalchip ${sigCls}">${esc(sigTxt)}</span></b><div class="meta">${esc(r.label||r.market)} · decisión ${pct(r.p)} · push ${pct(n(r.pushProb))} · ${sourceLabel(r.lineSource)} ${Number.isFinite(+r.edge)?`· edge ${pct(+r.edge)}`:''} ${o.valid?`· ${oddsBoth(o.decimal)}`:'· sin momio'}</div></div><div class="kpi ${r.pass?'pre pass':r.side==='OVER'?'pre over':'pre under'}">${pct(r.p)}</div></div>`}).join('')}</div>`:'<div class="empty">Todavía no hay ranking para esta fecha. En cuanto el modelo produzca uno, quedará censado automáticamente y no desaparecerá al perder conexión.</div>'}`;$('#openCensus').onclick=()=>document.querySelector('.tab[data-tab="census"]')?.click();const b=$('#openArchivedRank');if(b)b.onclick=()=>{const v=$('#rankArchiveDate')?.value;if(!v)return;$('#date').value=v;S.loadedDay='';renderRanking();renderCensus();status(`Ranking censado de ${v} abierto sin depender de conexión.`,'ok')}}
+
+/* V7.8.6 PREMIUM RANKING R2B */
+function premiumRankingBodyHtml(rows=[]){
+
+  const list=
+    Array.isArray(rows)
+      ?rows
+      :[];
+
+
+  if(!list.length){
+
+    return `
+      <div class="premium-ranking-empty">
+
+        <span
+          class="ui-icon"
+          style="--icon:url('assets/icons/trophy.svg')"
+        ></span>
+
+        <b>
+          Ranking aún vacío
+        </b>
+
+        <small>
+          Ejecuta Escaneo LAB para
+          generar el Ranking oficial.
+        </small>
+
+      </div>
+    `;
+
+  }
+
+
+  const signalOf=r=>{
+
+    return{
+
+      cls:
+        r?.signalClass ||
+        censusSignalClass(
+          r?.signal
+        ) ||
+        'pass',
+
+      text:
+        String(
+          r?.signal ||
+          'LAB'
+        )
+
+    };
+
+  };
+
+
+  const teamsOf=r=>{
+
+    const away=
+      r?.awayAbbr ||
+      r?.away ||
+      'AWAY';
+
+    const home=
+      r?.homeAbbr ||
+      r?.home ||
+      'HOME';
+
+    return{
+      away,
+      home
+    };
+
+  };
+
+
+  const pickOf=r=>{
+
+    const side=
+      String(
+        r?.side ||
+        ''
+      ).toUpperCase();
+
+    const line=
+      Number.isFinite(+r?.line)
+        ?Number(r.line)
+        :'—';
+
+    if(
+      side!=='OVER' &&
+      side!=='UNDER'
+    ){
+      return{
+        side:'PASS',
+        line,
+        text:'PASS'
+      };
+    }
+
+    return{
+      side,
+      line,
+      text:
+        side+' '+line
+    };
+
+  };
+
+
+  const probOf=r=>
+    Number.isFinite(+r?.p)
+      ?pct(+r.p)
+      :'—';
+
+
+  const edgeOf=r=>
+    Number.isFinite(+r?.edge)
+      ?pct(+r.edge)
+      :'—';
+
+
+  const pushOf=r=>
+    Number.isFinite(+r?.pushProb)
+      ?pct(+r.pushProb)
+      :'—';
+
+
+  const sourceOf=r=>{
+
+    try{
+
+      return r?.lineSource
+        ?sourceLabel(
+            r.lineSource
+          )
+        :'—';
+
+    }catch{
+
+      return String(
+        r?.lineSource ||
+        '—'
+      );
+
+    }
+
+  };
+
+
+  const top=list[0];
+
+  const topTeams=
+    teamsOf(top);
+
+  const topPick=
+    pickOf(top);
+
+  const topSignal=
+    signalOf(top);
+
+
+  const otherRows=
+    list
+      .slice(1)
+      .map(
+        (r,i)=>{
+
+          const teams=
+            teamsOf(r);
+
+          const pick=
+            pickOf(r);
+
+          const sig=
+            signalOf(r);
+
+          return`
+
+            <div class="premium-rank-list-row">
+
+              <div class="premium-rank-position">
+                ${i+2}
+              </div>
+
+
+              <div class="premium-rank-match">
+
+                <b>
+                  ${esc(teams.away)}
+                  @
+                  ${esc(teams.home)}
+                </b>
+
+                <span
+                  class="
+                    premium-rank-side
+                    ${pick.side.toLowerCase()}
+                  "
+                >
+                  ${esc(pick.text)}
+                </span>
+
+              </div>
+
+
+              <div class="premium-rank-numbers">
+
+                <div>
+                  <small>
+                    PROB
+                  </small>
+
+                  <b>
+                    ${probOf(r)}
+                  </b>
+                </div>
+
+                <div>
+                  <small>
+                    EDGE
+                  </small>
+
+                  <b>
+                    ${edgeOf(r)}
+                  </b>
+                </div>
+
+              </div>
+
+
+              <span
+                class="
+                  premium-rank-signal
+                  ${esc(sig.cls)}
+                "
+              >
+                ${esc(sig.text)}
+              </span>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join('');
+
+
+  return`
+
+    <div class="premium-ranking-v1">
+
+
+      <section class="premium-rank-hero">
+
+        <div class="premium-rank-hero-head">
+
+          <div class="premium-top-badge">
+
+            <span>
+              #1
+            </span>
+
+            TOP PICK
+
+          </div>
+
+
+          <span
+            class="
+              premium-rank-signal
+              ${esc(topSignal.cls)}
+            "
+          >
+            ${esc(topSignal.text)}
+          </span>
+
+        </div>
+
+
+        <div class="premium-rank-hero-match">
+
+          ${esc(topTeams.away)}
+
+          <span>
+            @
+          </span>
+
+          ${esc(topTeams.home)}
+
+        </div>
+
+
+        <div
+          class="
+            premium-rank-hero-pick
+            ${topPick.side.toLowerCase()}
+          "
+        >
+
+          ${esc(topPick.text)}
+
+        </div>
+
+
+        <div class="premium-rank-hero-stats">
+
+          <div>
+
+            <small>
+              Probabilidad
+            </small>
+
+            <strong>
+              ${probOf(top)}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <small>
+              Edge
+            </small>
+
+            <strong>
+              ${edgeOf(top)}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <small>
+              Push
+            </small>
+
+            <strong>
+              ${pushOf(top)}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <small>
+              Línea
+            </small>
+
+            <strong>
+              ${esc(sourceOf(top))}
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <div class="premium-rank-hero-foot">
+
+          <span
+            class="ui-icon"
+            style="--icon:url('assets/icons/shield-check.svg')"
+          ></span>
+
+          Orden oficial V7.8.6 ·
+          presentación Premium
+
+        </div>
+
+      </section>
+
+
+      ${
+        otherRows
+          ?`
+            <section class="premium-rank-list">
+
+              <div class="premium-rank-list-title">
+
+                <span>
+                  SIGUIENTES POSICIONES
+                </span>
+
+                <small>
+                  ${list.length} picks
+                </small>
+
+              </div>
+
+              ${otherRows}
+
+            </section>
+          `
+          :''
+      }
+
+
+    </div>
+
+  `;
+
+}
+
+function premiumRankingEnhance(){
+
+  const root=
+    document.querySelector(
+      '#rankContent'
+    );
+
+  if(!root){
+    return;
+  }
+
+
+  const date=
+    document.querySelector(
+      '#date'
+    )?.value;
+
+
+  const view=
+    rankViewForDate(
+      date
+    );
+
+
+  const rows=
+    Array.isArray(
+      view?.rows
+    )
+      ?view.rows
+      :[];
+
+
+  let host=
+    root.querySelector(
+      '.rank'
+    );
+
+
+  if(!host){
+
+    const empty=
+      root.querySelector(
+        '.empty'
+      );
+
+    if(!empty){
+      return;
+    }
+
+
+    host=
+      document.createElement(
+        'div'
+      );
+
+    host.className=
+      'rank premium-ranking-host';
+
+
+    empty.replaceWith(
+      host
+    );
+
+  }else{
+
+    host.classList.add(
+      'premium-ranking-host'
+    );
+
+  }
+
+
+  host.innerHTML=
+    premiumRankingBodyHtml(
+      rows
+    );
+
+}
+
+const __premiumRenderRankingOfficial=
+  renderRanking;
+
+renderRanking=function(){
+
+  const result=
+    __premiumRenderRankingOfficial
+      .apply(
+        this,
+        arguments
+      );
+
+  premiumRankingEnhance();
+
+  return result;
+
+};
+
 
 function cardSummary(g){const a=S.analyses.get(g.gamePk),q=S.odds.get(g.gamePk);if(!a)return{pick:'Sin analizar',cls:'pass',prob:'—',mean:'—',line:q?.line||'—',total:null};const total=a.ev.find(x=>x.market==='TOTAL'),summ=x=>{if(!x)return null;const p=pickMarket(x),sig=signalLabel(p,x.source);return{pick:`${p.side} ${x.line}`,p:p.p,push:x.push,sig,source:x.source}};const p=a.best.pick,e=a.best.ev;return{pick:p.pass?'PASS':`${p.side} ${e.line}`,cls:p.pass?'pass':p.side==='OVER'?'over':'under',prob:pct(p.p),mean:fix(a.built.mean.total,2),line:e.line,total:summ(total)}}
 function teamRecordText(side={}){const r=side.leagueRecord||side.record||side.team?.record||{};const w=r.wins,l=r.losses;if(Number.isFinite(+w)&&Number.isFinite(+l))return `${w}-${l}`;return r.pct?`${r.pct}`:'Récord —'}
