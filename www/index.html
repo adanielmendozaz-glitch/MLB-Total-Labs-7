@@ -4457,6 +4457,218 @@ tbody tr:active{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 2F SAFE AREA STATUS
+   CSS ONLY
+   ========================================== */
+
+
+/*
+ * Android edge-to-edge:
+ * crea una pequeña superficie fija detrás
+ * de la barra de estado del sistema.
+ */
+
+@media(max-width:720px){
+
+  html{
+    scroll-padding-top:34px;
+  }
+
+
+  body::before{
+    content:"";
+
+    position:fixed;
+
+    z-index:999;
+
+    top:0;
+    left:0;
+    right:0;
+
+    height:
+      max(
+        env(safe-area-inset-top),
+        28px
+      );
+
+    pointer-events:none;
+
+    background:
+      linear-gradient(
+        180deg,
+        rgba(4,15,27,.98) 0%,
+        rgba(4,15,27,.94) 72%,
+        rgba(4,15,27,0) 100%
+      );
+  }
+
+
+  /*
+   * Estado operacional normal:
+   * una franja secundaria y compacta.
+   */
+
+  #status.status{
+    min-height:38px;
+
+    margin:
+      7px 0 9px;
+
+    padding:
+      7px 10px;
+
+    border-radius:12px;
+
+    font-size:.61rem;
+
+    line-height:1.25;
+
+    background:
+      linear-gradient(
+        145deg,
+        rgba(6,22,36,.93),
+        rgba(5,17,29,.93)
+      );
+  }
+
+
+  #status.status > span:first-child{
+    display:block;
+
+    overflow:hidden;
+
+    white-space:nowrap;
+
+    text-overflow:ellipsis;
+  }
+
+
+  #status.status #statusRight{
+    max-width:42%;
+
+    overflow:hidden;
+
+    font-size:.54rem;
+
+    white-space:nowrap;
+
+    text-overflow:ellipsis;
+
+    opacity:.82;
+  }
+
+
+  /*
+   * Éxito normal:
+   * visible pero no protagonista.
+   */
+
+  #status.status.ok{
+    border-color:#245a49;
+
+    color:#9edbc0;
+
+    background:
+      linear-gradient(
+        145deg,
+        rgba(7,39,31,.72),
+        rgba(5,24,25,.82)
+      );
+  }
+
+
+  /*
+   * Un error sí debe llamar la atención.
+   */
+
+  #status.status.err{
+    min-height:46px;
+
+    padding:
+      10px 11px;
+
+    border-color:#894450;
+
+    color:#ffd0d6;
+
+    background:
+      linear-gradient(
+        145deg,
+        rgba(71,20,31,.91),
+        rgba(39,16,27,.94)
+      );
+
+    font-size:.70rem;
+
+    line-height:1.35;
+  }
+
+
+  #status.status.err > span:first-child{
+    overflow:visible;
+
+    white-space:normal;
+
+    text-overflow:clip;
+  }
+
+
+  /*
+   * Cuando está cargando, permitimos
+   * texto completo para ver el paso.
+   */
+
+  #status.status:has(.loader)
+  > span:first-child{
+    overflow:visible;
+
+    white-space:normal;
+
+    text-overflow:clip;
+  }
+
+
+  /*
+   * Un poco más de aire entre
+   * status y dashboard.
+   */
+
+  #status.status + .premium-shortcuts{
+    margin-top:0;
+  }
+
+
+  /*
+   * Evita que botones/dialogs anclados
+   * queden pegados al borde superior.
+   */
+
+  dialog{
+    scroll-margin-top:34px;
+  }
+
+}
+
+
+/* Teléfonos muy estrechos */
+
+@media(max-width:390px){
+
+  #status.status{
+    font-size:.58rem;
+  }
+
+
+  #status.status #statusRight{
+    display:none;
+  }
+
+}
+
 </style>
 </head>
 <body>
