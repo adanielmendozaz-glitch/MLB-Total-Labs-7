@@ -6735,6 +6735,63 @@ strong{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM TEAMS E2C
+   FINAL VISUAL POLISH · CSS ONLY
+   ========================================== */
+
+
+/* encabezado compacto */
+
+#teamContent > .okbox:first-child::after{
+  content:"FULL GAME O/U · TEAM DATA";
+}
+
+
+/* ya existe la cinta superior READ ONLY;
+   evitamos repetir el mismo aviso dentro */
+
+#teamDetail
+.team-premium-shadow
+.warn{
+  display:none!important;
+}
+
+
+/* mantenemos visible la explicación inferior
+   de que TEAM DNA / Reliability son observacionales */
+
+#teamDetail
+.team-premium-shadow
+.note,
+#teamDetail
+.team-premium-shadow
+.smalltxt{
+  display:block;
+}
+
+
+/* aire suficiente sobre navegación inferior */
+
+@media(max-width:720px){
+
+  #teamContent{
+    padding-bottom:165px;
+  }
+
+  #teamDetail{
+    padding-bottom:20px;
+  }
+
+  #teamContent
+  .team-table-wrap{
+    scroll-padding-bottom:150px;
+  }
+
+}
+
 </style>
 </head>
 <body>
