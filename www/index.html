@@ -1478,14 +1478,1967 @@ tbody tr:active{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 1A HEADER CONTROL CENTER
+   ========================================== */
+
+:root{
+  --premium-bg:#03101c;
+  --premium-card:#071827;
+  --premium-card-2:#0a2033;
+  --premium-border:#1e4160;
+  --premium-border-soft:#17344d;
+  --premium-blue:#32a8ff;
+  --premium-cyan:#24d4ff;
+  --premium-green:#22db91;
+  --premium-violet:#7658ff;
+  --premium-muted:#8ba4bd;
+  --premium-shadow:
+    0 18px 50px rgba(0,0,0,.34);
+}
+
+
+/* SVG local icons */
+
+.ui-icon{
+  --icon:none;
+
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+
+  display:inline-block;
+
+  background:currentColor;
+
+  -webkit-mask:
+    var(--icon)
+    center / contain
+    no-repeat;
+
+  mask:
+    var(--icon)
+    center / contain
+    no-repeat;
+}
+
+
+/* Header */
+
+.hero.premium-hero{
+  position:relative;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  gap:14px;
+
+  min-height:118px;
+
+  padding:18px 20px;
+
+  border:
+    1px solid
+    var(--premium-border);
+
+  border-radius:24px;
+
+  background:
+    radial-gradient(
+      circle at 9% 50%,
+      rgba(33,143,255,.15),
+      transparent 23%
+    ),
+    linear-gradient(
+      135deg,
+      #071a2c 0%,
+      #051421 58%,
+      #06111d 100%
+    );
+
+  box-shadow:
+    var(--premium-shadow);
+
+  overflow:hidden;
+}
+
+
+.hero.premium-hero::after{
+  content:"";
+
+  position:absolute;
+  inset:0;
+
+  pointer-events:none;
+
+  background:
+    linear-gradient(
+      110deg,
+      rgba(255,255,255,.028),
+      transparent 34%
+    );
+}
+
+
+.premium-brand{
+  position:relative;
+  z-index:1;
+
+  display:flex;
+  align-items:center;
+
+  gap:15px;
+
+  min-width:0;
+}
+
+
+.premium-ball{
+  width:72px;
+  height:72px;
+
+  flex:0 0 72px;
+
+  display:grid;
+  place-items:center;
+
+  border-radius:50%;
+
+  font-size:2.6rem;
+
+  background:
+    radial-gradient(
+      circle at 45% 35%,
+      #ffffff 0 32%,
+      #dce8f2 58%,
+      #9eafbe 100%
+    );
+
+  border:
+    2px solid
+    #43baff;
+
+  box-shadow:
+    0 0 0 5px rgba(31,154,255,.11),
+    0 0 27px rgba(20,155,255,.66),
+    inset 0 -5px 12px rgba(0,0,0,.18);
+}
+
+
+.premium-brand-copy{
+  min-width:0;
+}
+
+
+.hero.premium-hero h1{
+  margin:0;
+
+  font-size:
+    clamp(
+      1.55rem,
+      4.8vw,
+      2.55rem
+    );
+
+  line-height:1.02;
+
+  font-weight:950;
+
+  letter-spacing:-.05em;
+}
+
+
+.premium-version{
+  color:#23c9a2;
+
+  white-space:nowrap;
+}
+
+
+.premium-motor{
+  margin-top:7px;
+
+  color:#77a9dc;
+
+  font-size:1rem;
+
+  font-weight:650;
+}
+
+
+.premium-live-badge{
+  position:relative;
+  z-index:1;
+
+  display:flex;
+  align-items:center;
+
+  gap:8px;
+
+  padding:9px 13px;
+
+  color:#cde8ff;
+
+  font-size:.72rem;
+
+  font-weight:900;
+
+  letter-spacing:.04em;
+
+  white-space:nowrap;
+
+  border:
+    1px solid
+    #1d405e;
+
+  border-radius:13px;
+
+  background:
+    rgba(4,18,30,.72);
+
+  box-shadow:
+    inset 0 0 18px
+    rgba(21,124,191,.08);
+}
+
+
+.premium-engine-version{
+  display:none;
+}
+
+
+/* Main control panel */
+
+.toolbar.premium-toolbar{
+  position:static;
+
+  display:block;
+
+  margin:13px 0;
+
+  padding:14px;
+
+  border:
+    1px solid
+    var(--premium-border);
+
+  border-radius:22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(7,25,41,.97),
+      rgba(4,17,29,.98)
+    );
+
+  box-shadow:
+    0 14px 36px rgba(0,0,0,.24);
+
+  backdrop-filter:none;
+}
+
+
+.premium-control-top{
+  display:grid;
+
+  grid-template-columns:
+    48px
+    minmax(180px,1.45fr)
+    48px
+    minmax(180px,1fr);
+
+  gap:10px;
+
+  align-items:end;
+}
+
+
+.premium-arrow{
+  height:52px;
+
+  display:grid;
+  place-items:center;
+
+  padding:0;
+
+  border-radius:15px;
+
+  font-size:2rem;
+
+  line-height:1;
+
+  color:#c8d8e8;
+
+  background:#081a2a;
+
+  border-color:#284d6c;
+}
+
+
+.premium-arrow:active{
+  transform:scale(.96);
+}
+
+
+.premium-field{
+  min-width:0;
+}
+
+
+.premium-field label,
+.premium-live-rate label{
+  margin-left:4px;
+
+  color:#8ea8c1;
+
+  font-size:.65rem;
+
+  font-weight:850;
+
+  letter-spacing:.06em;
+
+  text-transform:uppercase;
+}
+
+
+.premium-input-shell{
+  position:relative;
+
+  display:flex;
+  align-items:center;
+
+  gap:9px;
+
+  height:52px;
+
+  padding:0 11px;
+
+  border:
+    1px solid
+    #294e6f;
+
+  border-radius:15px;
+
+  background:
+    #061522;
+
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+
+.premium-input-shell:focus-within{
+  border-color:
+    var(--premium-blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(50,168,255,.11);
+}
+
+
+.premium-input-shell .ui-icon{
+  color:#91a9c3;
+}
+
+
+.premium-input-shell input,
+.premium-input-shell select{
+  width:100%;
+  height:100%;
+
+  padding:0;
+
+  border:0;
+
+  border-radius:0;
+
+  background:transparent;
+
+  box-shadow:none;
+
+  font-size:.95rem;
+}
+
+
+.premium-input-shell input:focus,
+.premium-input-shell select:focus{
+  border:0;
+
+  box-shadow:none;
+}
+
+
+/* Main action buttons */
+
+.premium-action-grid{
+  display:grid;
+
+  grid-template-columns:
+    repeat(6,minmax(0,1fr));
+
+  gap:10px;
+
+  margin-top:12px;
+}
+
+
+.premium-action{
+  min-height:58px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  gap:9px;
+
+  padding:10px 12px;
+
+  border-radius:15px;
+
+  font-size:.86rem;
+
+  font-weight:900;
+
+  letter-spacing:-.01em;
+
+  transition:
+    transform .12s ease,
+    filter .12s ease,
+    border-color .12s ease;
+}
+
+
+.premium-action:active{
+  transform:
+    scale(.975);
+}
+
+
+.premium-action .ui-icon{
+  width:22px;
+  height:22px;
+
+  flex-basis:22px;
+}
+
+
+.action-refresh,
+.action-load,
+.action-quick{
+  grid-column:span 2;
+}
+
+
+.action-lab,
+.action-live{
+  grid-column:span 3;
+}
+
+
+.action-refresh{
+  background:
+    linear-gradient(
+      135deg,
+      #087c4d,
+      #0a5d3f
+    );
+
+  border-color:#18ad70;
+}
+
+
+.action-load{
+  background:
+    linear-gradient(
+      135deg,
+      #168dff,
+      #7052ef
+    );
+
+  border-color:#528dff;
+}
+
+
+.action-quick,
+.action-lab{
+  background:
+    linear-gradient(
+      145deg,
+      #0d2c49,
+      #092039
+    );
+
+  border-color:#2b5a83;
+}
+
+
+.action-live{
+  background:
+    linear-gradient(
+      135deg,
+      #09804d,
+      #087040
+    );
+
+  border-color:#23b876;
+}
+
+
+.premium-live-rate{
+  grid-column:span 6;
+
+  display:flex;
+  align-items:center;
+
+  gap:8px;
+
+  padding:
+    7px 10px;
+
+  border:
+    1px solid
+    var(--premium-border-soft);
+
+  border-radius:12px;
+
+  background:
+    rgba(4,18,30,.68);
+}
+
+
+.premium-live-rate > .ui-icon{
+  color:#6f8da8;
+}
+
+
+.premium-live-rate .field{
+  width:100%;
+
+  display:grid;
+
+  grid-template-columns:auto 1fr;
+
+  align-items:center;
+
+  gap:10px;
+}
+
+
+.premium-live-rate select{
+  padding:6px 9px;
+
+  border-radius:9px;
+
+  font-size:.75rem;
+}
+
+
+/* Mobile target = selected mockup */
+
+@media(max-width:720px){
+
+  .app{
+    padding:
+      max(8px,env(safe-area-inset-top))
+      8px
+      calc(
+        92px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  .hero.premium-hero{
+    min-height:104px;
+
+    padding:14px;
+
+    border-radius:21px;
+  }
+
+
+  .premium-ball{
+    width:59px;
+    height:59px;
+
+    flex-basis:59px;
+
+    font-size:2.15rem;
+  }
+
+
+  .premium-brand{
+    gap:11px;
+  }
+
+
+  .hero.premium-hero h1{
+    font-size:
+      clamp(
+        1.32rem,
+        6vw,
+        1.75rem
+      );
+  }
+
+
+  .premium-motor{
+    margin-top:5px;
+
+    font-size:.86rem;
+  }
+
+
+  .premium-live-badge{
+    position:absolute;
+
+    top:12px;
+    right:12px;
+
+    padding:7px 9px;
+
+    font-size:.62rem;
+  }
+
+
+  .premium-brand-copy{
+    padding-right:5px;
+  }
+
+
+  .toolbar.premium-toolbar{
+    padding:11px;
+
+    border-radius:20px;
+  }
+
+
+  .premium-control-top{
+    grid-template-columns:
+      42px
+      minmax(0,1.35fr)
+      42px
+      minmax(0,1fr);
+
+    gap:7px;
+  }
+
+
+  .premium-arrow{
+    height:50px;
+
+    border-radius:13px;
+
+    font-size:1.7rem;
+  }
+
+
+  .premium-input-shell{
+    height:50px;
+
+    border-radius:13px;
+
+    padding:0 8px;
+  }
+
+
+  .premium-input-shell .ui-icon{
+    width:17px;
+    height:17px;
+
+    flex-basis:17px;
+  }
+
+
+  .premium-input-shell input,
+  .premium-input-shell select{
+    font-size:.78rem;
+  }
+
+
+  .premium-field label{
+    font-size:.56rem;
+  }
+
+
+  .premium-action-grid{
+    gap:8px;
+
+    margin-top:10px;
+  }
+
+
+  .premium-action{
+    min-height:55px;
+
+    padding:9px 8px;
+
+    border-radius:13px;
+
+    font-size:.75rem;
+  }
+
+
+  .premium-action .ui-icon{
+    width:20px;
+    height:20px;
+
+    flex-basis:20px;
+  }
+
+
+  .premium-live-rate{
+    padding:5px 8px;
+  }
+
+}
+
+
+@media(max-width:470px){
+
+  .premium-live-badge{
+    top:9px;
+    right:9px;
+  }
+
+
+  .premium-live-badge span:last-child{
+    font-size:.56rem;
+  }
+
+
+  .premium-control-top{
+    grid-template-columns:
+      38px
+      minmax(0,1.28fr)
+      38px
+      minmax(0,.92fr);
+
+    gap:6px;
+  }
+
+
+  .premium-arrow{
+    height:47px;
+  }
+
+
+  .premium-input-shell{
+    height:47px;
+  }
+
+
+  .premium-input-shell input,
+  .premium-input-shell select{
+    font-size:.71rem;
+  }
+
+
+  .premium-action{
+    min-height:53px;
+
+    font-size:.68rem;
+  }
+
+
+  .premium-action{
+    flex-direction:column;
+
+    gap:4px;
+  }
+
+
+  .premium-action .ui-icon{
+    width:19px;
+    height:19px;
+  }
+
+
+  .premium-live-rate .field{
+    grid-template-columns:1fr;
+    gap:3px;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 1B KPI CARDS
+   ========================================== */
+
+.home-kpis{
+  display:grid;
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  gap:10px;
+
+  margin-top:12px;
+}
+
+
+/* Base card */
+
+.home-kpi{
+  position:relative;
+
+  min-width:0;
+  min-height:126px;
+
+  padding:15px 14px 13px;
+
+  overflow:hidden;
+
+  border:
+    1px solid
+    #1b3c58;
+
+  border-radius:18px;
+
+  background:
+    linear-gradient(
+      155deg,
+      rgba(9,31,50,.98),
+      rgba(4,17,29,.99)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 10px 25px rgba(0,0,0,.19);
+}
+
+
+/* Override old decorative bubble */
+
+.home-kpi::after{
+  content:"";
+
+  position:absolute;
+
+  top:-34px;
+  right:-31px;
+
+  width:92px;
+  height:92px;
+
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(60,154,255,.10),
+      rgba(60,154,255,.02) 58%,
+      transparent 70%
+    );
+
+  pointer-events:none;
+}
+
+
+/* Accent line */
+
+.home-kpi::before{
+  content:"";
+
+  position:absolute;
+
+  left:12px;
+  right:12px;
+  top:0;
+
+  height:2px;
+
+  border-radius:99px;
+
+  opacity:.58;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #27bfff,
+      transparent
+    );
+}
+
+
+/* Label */
+
+.home-kpi-label{
+  position:relative;
+  z-index:2;
+
+  display:flex;
+  align-items:center;
+
+  gap:6px;
+
+  color:#8ea6bd;
+
+  font-size:.61rem;
+
+  font-weight:900;
+
+  letter-spacing:.075em;
+
+  line-height:1.2;
+
+  text-transform:uppercase;
+}
+
+
+.home-kpi-label::before{
+  content:"";
+
+  display:inline-block;
+
+  width:15px;
+  height:15px;
+
+  flex:0 0 15px;
+
+  background:#8fa9c4;
+
+  -webkit-mask-size:contain;
+  -webkit-mask-position:center;
+  -webkit-mask-repeat:no-repeat;
+
+  mask-size:contain;
+  mask-position:center;
+  mask-repeat:no-repeat;
+}
+
+
+/* JUEGOS */
+
+.home-kpi:nth-child(1)
+.home-kpi-label::before{
+  -webkit-mask-image:
+    url('assets/icons/activity.svg');
+
+  mask-image:
+    url('assets/icons/activity.svg');
+}
+
+
+/* LÍNEAS */
+
+.home-kpi:nth-child(2)
+.home-kpi-label::before{
+  -webkit-mask-image:
+    url('assets/icons/chart-no-axes-column-increasing.svg');
+
+  mask-image:
+    url('assets/icons/chart-no-axes-column-increasing.svg');
+}
+
+
+/* JUGABLES */
+
+.home-kpi:nth-child(3)
+.home-kpi-label::before{
+  -webkit-mask-image:
+    url('assets/icons/target.svg');
+
+  mask-image:
+    url('assets/icons/target.svg');
+}
+
+
+/* ANALIZADOS */
+
+.home-kpi:nth-child(4)
+.home-kpi-label::before{
+  -webkit-mask-image:
+    url('assets/icons/scan-line.svg');
+
+  mask-image:
+    url('assets/icons/scan-line.svg');
+}
+
+
+/* Main number */
+
+.home-kpi-value{
+  position:relative;
+  z-index:2;
+
+  margin-top:12px;
+
+  color:#f4f9ff;
+
+  font-size:
+    clamp(
+      1.8rem,
+      5vw,
+      2.45rem
+    );
+
+  font-weight:950;
+
+  line-height:.95;
+
+  letter-spacing:-.05em;
+
+  text-shadow:
+    0 5px 18px rgba(0,0,0,.32);
+}
+
+
+/* Existing semantic colors preserved */
+
+.home-kpi.lines
+.home-kpi-value{
+  color:#4aaeff;
+}
+
+.home-kpi.play
+.home-kpi-value{
+  color:#28df91;
+}
+
+
+/* Small information */
+
+.home-kpi-note{
+  position:relative;
+  z-index:2;
+
+  margin-top:8px;
+
+  max-width:62%;
+
+  color:#718ba4;
+
+  font-size:.59rem;
+
+  line-height:1.25;
+}
+
+
+/* Decorative sparklines.
+   Purely visual: no statistical meaning. */
+
+.home-kpi{
+  background-repeat:
+    no-repeat,
+    no-repeat;
+
+  background-position:
+    right 9px bottom 11px,
+    center;
+
+  background-size:
+    43% 30px,
+    auto;
+}
+
+
+/* Juegos */
+
+.home-kpi:nth-child(1){
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 30'%3E%3Cpath d='M2 22 L10 18 L17 20 L24 14 L32 17 L39 10 L47 14 L55 9 L63 12 L71 6 L79 11 L87 7 L95 10 L104 5 L118 8' fill='none' stroke='%2326baff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(
+      155deg,
+      rgba(9,31,50,.98),
+      rgba(4,17,29,.99)
+    );
+}
+
+
+/* Líneas */
+
+.home-kpi:nth-child(2){
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 30'%3E%3Cpath d='M2 21 L12 15 L21 19 L30 11 L39 16 L48 8 L57 13 L66 9 L75 14 L84 6 L94 11 L104 8 L118 12' fill='none' stroke='%239260ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(
+      155deg,
+      rgba(10,29,50,.98),
+      rgba(5,17,30,.99)
+    );
+}
+
+
+/* Jugables */
+
+.home-kpi:nth-child(3){
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 30'%3E%3Cpath d='M2 24 L12 22 L20 18 L30 20 L40 15 L50 17 L60 11 L70 13 L80 9 L91 10 L103 5 L118 7' fill='none' stroke='%2324df8b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(
+      155deg,
+      rgba(7,34,39,.98),
+      rgba(4,18,29,.99)
+    );
+}
+
+
+/* Analizados */
+
+.home-kpi:nth-child(4){
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 30'%3E%3Cpath d='M2 23 L12 19 L21 22 L31 14 L41 16 L51 11 L61 15 L71 8 L81 12 L91 5 L103 9 L118 4' fill='none' stroke='%2328d3e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(
+      155deg,
+      rgba(7,30,46,.98),
+      rgba(4,17,28,.99)
+    );
+}
+
+
+/* Tablet */
+
+@media(max-width:720px){
+
+  .home-kpis{
+    grid-template-columns:
+      repeat(4,minmax(0,1fr));
+
+    gap:7px;
+
+    margin-top:9px;
+  }
+
+
+  .home-kpi{
+    min-height:105px;
+
+    padding:
+      11px 8px 9px;
+
+    border-radius:15px;
+
+    background-size:
+      55% 22px,
+      auto;
+
+    background-position:
+      right 5px bottom 8px,
+      center;
+  }
+
+
+  .home-kpi-label{
+    gap:4px;
+
+    font-size:.51rem;
+
+    letter-spacing:.045em;
+  }
+
+
+  .home-kpi-label::before{
+    width:12px;
+    height:12px;
+
+    flex-basis:12px;
+  }
+
+
+  .home-kpi-value{
+    margin-top:10px;
+
+    font-size:
+      clamp(
+        1.45rem,
+        7vw,
+        2rem
+      );
+  }
+
+
+  .home-kpi-note{
+    max-width:72%;
+
+    margin-top:7px;
+
+    font-size:.50rem;
+  }
+
+}
+
+
+/* Narrow Android */
+
+@media(max-width:390px){
+
+  .home-kpis{
+    gap:5px;
+  }
+
+
+  .home-kpi{
+    min-height:98px;
+
+    padding:
+      9px 6px 8px;
+
+    border-radius:13px;
+  }
+
+
+  .home-kpi-label{
+    font-size:.46rem;
+  }
+
+
+  .home-kpi-label::before{
+    display:none;
+  }
+
+
+  .home-kpi-value{
+    font-size:1.42rem;
+  }
+
+
+  .home-kpi-note{
+    font-size:.45rem;
+  }
+
+}
+
+
+
+/* =========================================
+   V7.8.6 PREMIUM UI 1C NAVIGATION
+   ========================================= */
+
+
+/* Remove legacy pseudo-icons */
+
+.premium-bottom-nav .tab::before,
+.premium-shortcuts .tab::before{
+  content:none!important;
+  display:none!important;
+}
+
+
+/* =========================
+   QUICK MODULE BAR
+   ========================= */
+
+.premium-shortcuts{
+  display:grid;
+
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  gap:7px;
+
+  padding:7px;
+
+  border:
+    1px solid #173a56;
+
+  border-radius:16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(7,24,39,.97),
+      rgba(4,15,26,.98)
+    );
+
+  box-shadow:
+    0 12px 32px rgba(0,0,0,.28);
+}
+
+
+.premium-shortcut{
+  min-width:0;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  gap:7px;
+
+  padding:10px 7px;
+
+  border:
+    1px solid #1d3d59;
+
+  border-radius:12px;
+
+  color:#9fb5ca;
+
+  background:
+    linear-gradient(
+      150deg,
+      #0b2236,
+      #071724
+    );
+
+  font-size:.68rem;
+
+  font-weight:850;
+}
+
+
+.premium-shortcut .ui-icon{
+  width:18px;
+  height:18px;
+
+  flex-basis:18px;
+}
+
+
+.premium-shortcut.active{
+  color:#eaf6ff;
+
+  border-color:#3177aa;
+
+  background:
+    linear-gradient(
+      150deg,
+      #12436c,
+      #0b2945
+    );
+
+  box-shadow:
+    inset 0 0 20px
+    rgba(42,161,255,.10);
+}
+
+
+/* =========================
+   MAIN BOTTOM NAV
+   ========================= */
+
+.tabs.premium-bottom-nav{
+  display:grid;
+
+  grid-template-columns:
+    repeat(5,minmax(0,1fr));
+
+  gap:3px;
+
+  padding:6px;
+
+  overflow:visible;
+
+  border:
+    1px solid #173a56;
+
+  border-radius:20px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(6,23,38,.97),
+      rgba(3,14,24,.99)
+    );
+
+  box-shadow:
+    0 -9px 35px rgba(0,0,0,.45);
+
+  backdrop-filter:
+    blur(18px);
+}
+
+
+.premium-nav-item{
+  min-width:0!important;
+
+  height:65px;
+
+  display:flex!important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+
+  gap:5px;
+
+  padding:5px 3px!important;
+
+  border:
+    1px solid transparent!important;
+
+  border-radius:15px!important;
+
+  color:#7f98b2!important;
+
+  background:
+    transparent!important;
+
+  font-size:.58rem!important;
+
+  font-weight:850!important;
+
+  transition:
+    background .16s ease,
+    color .16s ease,
+    transform .12s ease;
+}
+
+
+.premium-nav-item .ui-icon{
+  width:23px;
+  height:23px;
+
+  flex-basis:23px;
+}
+
+
+.premium-nav-item.active{
+  color:#ffffff!important;
+
+  border-color:
+    rgba(59,163,235,.45)!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      #176096,
+      #0d365b
+    )!important;
+
+  box-shadow:
+    inset 0 0 24px
+    rgba(73,177,255,.18),
+    0 5px 16px
+    rgba(0,0,0,.22);
+}
+
+
+.premium-nav-item.active
+.ui-icon{
+  filter:
+    drop-shadow(
+      0 0 6px
+      rgba(91,194,255,.48)
+    );
+}
+
+
+.premium-nav-item:active,
+.premium-shortcut:active{
+  transform:scale(.96);
+}
+
+
+/* =========================
+   ANDROID / MOBILE
+   ========================= */
+
+@media(max-width:720px){
+
+  body{
+    padding-bottom:
+      calc(
+        151px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  .app{
+    padding-bottom:
+      calc(
+        156px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+
+  .premium-shortcuts{
+    position:fixed;
+
+    left:8px;
+    right:8px;
+
+    bottom:
+      calc(
+        82px +
+        env(safe-area-inset-bottom)
+      );
+
+    z-index:39;
+
+    padding:5px;
+
+    border-radius:15px;
+
+    backdrop-filter:
+      blur(18px);
+  }
+
+
+  .premium-shortcut{
+    min-height:44px;
+
+    flex-direction:row;
+
+    gap:5px;
+
+    padding:6px 4px;
+
+    font-size:.57rem;
+  }
+
+
+  .premium-shortcut .ui-icon{
+    width:16px;
+    height:16px;
+
+    flex-basis:16px;
+  }
+
+
+  .tabs.premium-bottom-nav{
+    position:fixed;
+
+    left:8px;
+    right:8px;
+
+    bottom:
+      max(
+        7px,
+        env(safe-area-inset-bottom)
+      );
+
+    z-index:40;
+
+    margin:0;
+
+    padding:5px;
+
+    border-radius:19px;
+
+    overflow:visible;
+  }
+
+
+  .premium-nav-item{
+    height:65px;
+
+    min-width:0!important;
+
+    font-size:.55rem!important;
+  }
+
+
+  .premium-nav-item .ui-icon{
+    width:22px;
+    height:22px;
+
+    flex-basis:22px;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  .premium-shortcut{
+    font-size:.50rem;
+  }
+
+
+  .premium-shortcut .ui-icon{
+    width:14px;
+    height:14px;
+
+    flex-basis:14px;
+  }
+
+
+  .premium-nav-item{
+    font-size:.51rem!important;
+  }
+
+
+  .premium-nav-item .ui-icon{
+    width:20px;
+    height:20px;
+
+    flex-basis:20px;
+  }
+
+}
+
 </style>
 </head>
 <body>
 <div class="app">
-<header class="hero"><div><h1>⚾ MLB Totals Lab V7.8.6</h1><div class="sub"><b>Un solo mercado: Over/Under de juego completo.</b> El motor conserva el mismo análisis profundo: lineup real → splits por mano → PA/Markov-24 → hook dinámico del abridor → bullpen situacional → Monte Carlo, reforzado con Statcast, Negative Binomial, Poisson-Lognormal, COM-Poisson y calibración local. F5 y team totals quedan fuera del Ranking, LAB, Censo, Equipos y Apuestas.</div><div class="badges" style="margin-top:12px"><span class="badge live">Un solo HTML</span><span class="badge">PA + Markov-24</span><span class="badge">Starter survival</span><span class="badge live">Bullpen Intelligence automático</span><span class="badge live">Lineup Intelligence</span><span class="badge live">Platoon L/R</span><span class="badge live">Statcast xwOBA</span><span class="badge">Hook dinámico</span><span class="badge">Bullpen situacional</span><span class="badge live">Integridad estadística</span><span class="badge">NegBin</span><span class="badge">Poisson-Lognormal</span><span class="badge">COM-Poisson</span><span class="badge">Calibración bayesiana</span><span class="badge live">Brier visible</span><span class="badge">Momio dual</span><span class="badge">Push correcto</span><span class="badge">9ª y extras reales</span><span class="badge">RNG reproducible</span><span class="badge">PASS automático</span><span class="badge live">Historial V4 compatible</span><span class="badge live">Censo permanente del Ranking</span><span class="badge live">Rendimiento por equipo Full Game</span><span class="badge live">FULL GAME O/U ONLY</span></div></div><div class="version" style="text-align:right"><div class="meta">PRECISION ENGINE</div><div style="font-size:1.55rem;font-weight:1000">V7.8.5</div></div></header>
-<div class="toolbar"><button class="btn ghost" id="prev">←</button><div class="field"><label>Fecha MLB</label><input id="date" type="date"></div><button class="btn ghost" id="next">→</button><div class="field"><label>Simulaciones</label><select id="sims"><option value="3000">3,000 rápido</option><option value="8000" selected>8,000 balanceado</option><option value="15000">15,000 profundo</option><option value="30000">30,000 agresivo</option></select></div><button class="btn green" id="refreshAll">↻ Actualizar todo</button><button class="btn primary" id="load">Cargar jornada</button><button class="btn" id="scanDay">Vista rápida</button><button class="btn" id="scanLab">Escaneo LAB</button><div class="field"><label>Refresco live</label><select id="liveEvery"><option value="30">30 segundos</option><option value="60" selected>60 segundos</option><option value="120">2 minutos</option></select></div><button class="btn green" id="liveToggle"><span class="pulse"></span> En vivo ON</button></div>
+
+<!-- V7.8.6 PREMIUM UI 1A HEADER CONTROL CENTER -->
+
+<header class="hero premium-hero">
+
+  <div class="premium-brand">
+
+    <div class="premium-ball">
+      ⚾
+    </div>
+
+    <div class="premium-brand-copy">
+
+      <h1>
+        MLB Totals Lab
+        <span class="premium-version">
+          V7.8.6
+        </span>
+      </h1>
+
+      <div class="premium-motor">
+        Motor V7.0
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="premium-live-badge">
+
+    <span class="pulse"></span>
+
+    <span>
+      EN VIVO
+    </span>
+
+  </div>
+
+  <div class="version premium-engine-version">
+    V7.8.6
+  </div>
+
+</header>
+
+
+<div class="toolbar premium-toolbar">
+
+  <div class="premium-control-top">
+
+    <button
+      class="btn ghost premium-arrow"
+      id="prev"
+      aria-label="Día anterior"
+    >
+      ‹
+    </button>
+
+
+    <div class="field premium-field">
+
+      <label>
+        Fecha MLB
+      </label>
+
+      <div class="premium-input-shell">
+
+        <span
+          class="ui-icon"
+          style="--icon:url('assets/icons/calendar-days.svg')"
+        ></span>
+
+        <input
+          id="date"
+          type="date"
+        >
+
+      </div>
+
+    </div>
+
+
+    <button
+      class="btn ghost premium-arrow"
+      id="next"
+      aria-label="Día siguiente"
+    >
+      ›
+    </button>
+
+
+    <div class="field premium-field">
+
+      <label>
+        Simulaciones
+      </label>
+
+      <div class="premium-input-shell">
+
+        <span
+          class="ui-icon"
+          style="--icon:url('assets/icons/activity.svg')"
+        ></span>
+
+        <select id="sims">
+
+          <option value="3000">
+            3,000 rápido
+          </option>
+
+          <option
+            value="8000"
+            selected
+          >
+            8,000 balanceado
+          </option>
+
+          <option value="15000">
+            15,000 profundo
+          </option>
+
+          <option value="30000">
+            30,000 agresivo
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="premium-action-grid">
+
+    <button
+      class="btn green premium-action action-refresh"
+      id="refreshAll"
+    >
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/refresh-cw.svg')"
+      ></span>
+
+      <span>
+        Actualizar todo
+      </span>
+
+    </button>
+
+
+    <button
+      class="btn primary premium-action action-load"
+      id="load"
+    >
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/cloud-download.svg')"
+      ></span>
+
+      <span>
+        Cargar jornada
+      </span>
+
+    </button>
+
+
+    <button
+      class="btn premium-action action-quick"
+      id="scanDay"
+    >
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/eye.svg')"
+      ></span>
+
+      <span>
+        Vista rápida
+      </span>
+
+    </button>
+
+
+    <button
+      class="btn premium-action action-lab"
+      id="scanLab"
+    >
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/scan-line.svg')"
+      ></span>
+
+      <span>
+        Escaneo LAB
+      </span>
+
+    </button>
+
+
+    <button
+      class="btn green premium-action action-live"
+      id="liveToggle"
+    >
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/radio.svg')"
+      ></span>
+
+      <span>
+        En vivo ON
+      </span>
+
+    </button>
+
+
+    <div class="premium-live-rate">
+
+      <span
+        class="ui-icon"
+        style="--icon:url('assets/icons/activity.svg')"
+      ></span>
+
+      <div class="field">
+
+        <label>
+          Refresco live
+        </label>
+
+        <select id="liveEvery">
+
+          <option value="30">
+            30 segundos
+          </option>
+
+          <option
+            value="60"
+            selected
+          >
+            60 segundos
+          </option>
+
+          <option value="120">
+            2 minutos
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
 <div id="originWarning" class="origin-warning hidden"></div><div id="status" class="status"><span>Preparando jornada…</span><span id="statusRight"></span></div>
-<div class="tabs"><button class="tab active" data-tab="daily">Jornada</button><button class="tab" data-tab="ranking">Ranking</button><button class="tab" data-tab="census">Censo</button><button class="tab" data-tab="teams">Equipos</button><button class="tab" data-tab="shadow">Shadow Lab</button><button class="tab" data-tab="history">Apuestas</button><button class="tab" data-tab="bank">Bank</button><button class="tab" data-tab="lab">Brier LAB</button><button class="tab" data-tab="settings">Ajustes</button></div>
+
+<!-- V7.8.6 PREMIUM UI 1C NAVIGATION -->
+
+<div class="premium-shortcuts">
+
+  <button
+    class="tab premium-shortcut"
+    data-tab="census"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/database.svg')"
+    ></span>
+    <span>Censo</span>
+  </button>
+
+  <button
+    class="tab premium-shortcut"
+    data-tab="history"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/ticket.svg')"
+    ></span>
+    <span>Apuestas</span>
+  </button>
+
+  <button
+    class="tab premium-shortcut"
+    data-tab="bank"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/wallet.svg')"
+    ></span>
+    <span>Bank</span>
+  </button>
+
+  <button
+    class="tab premium-shortcut"
+    data-tab="lab"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/flask-conical.svg')"
+    ></span>
+    <span>Brier LAB</span>
+  </button>
+
+</div>
+
+
+<div class="tabs premium-bottom-nav">
+
+  <button
+    class="tab premium-nav-item active"
+    data-tab="daily"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/house.svg')"
+    ></span>
+    <span>Jornada</span>
+  </button>
+
+  <button
+    class="tab premium-nav-item"
+    data-tab="ranking"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/chart-no-axes-column-increasing.svg')"
+    ></span>
+    <span>Ranking</span>
+  </button>
+
+  <button
+    class="tab premium-nav-item"
+    data-tab="teams"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/users.svg')"
+    ></span>
+    <span>Equipos</span>
+  </button>
+
+  <button
+    class="tab premium-nav-item"
+    data-tab="shadow"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/ghost.svg')"
+    ></span>
+    <span>Shadow</span>
+  </button>
+
+  <button
+    class="tab premium-nav-item"
+    data-tab="settings"
+  >
+    <span
+      class="ui-icon"
+      style="--icon:url('assets/icons/settings.svg')"
+    ></span>
+    <span>Ajustes</span>
+  </button>
+
+</div>
 <section id="daily" class="panel"><div id="homeDashboard"></div><div id="games" class="games"></div></section>
 <section id="ranking" class="panel hidden"><div id="rankContent"></div></section>
 <section id="census" class="panel hidden"><div id="censusContent"></div></section>
