@@ -3064,6 +3064,1078 @@ tbody tr:active{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 2A3 HOME CENTER
+   ========================================== */
+
+.premium-home-center{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+
+.premium-center-card{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #1b3d59;
+  border-radius:18px;
+  background:
+    linear-gradient(
+      155deg,
+      rgba(8,29,47,.98),
+      rgba(4,16,27,.99)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 12px 30px rgba(0,0,0,.22);
+}
+
+.premium-center-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:11px 12px 9px;
+  border-bottom:1px solid #18364f;
+}
+
+.premium-center-kicker{
+  color:#9eb8d0;
+  font-size:.65rem;
+  font-weight:950;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+}
+
+.premium-live-mini{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 8px;
+  border:1px solid #287457;
+  border-radius:999px;
+  color:#5ee5a3;
+  background:rgba(8,61,41,.30);
+  font-size:.53rem;
+  font-weight:950;
+}
+
+.premium-live-mini .pulse{
+  width:6px;
+  height:6px;
+}
+
+.premium-rank-count{
+  color:#56baff;
+  font-size:.53rem;
+  font-weight:950;
+}
+
+.premium-center-body{
+  min-height:174px;
+  padding:6px 10px;
+}
+
+.premium-center-foot{
+  padding:8px 10px 9px;
+  border-top:1px solid #17334b;
+  color:#718aa1;
+  font-size:.51rem;
+  text-align:center;
+}
+
+
+/* LIVE */
+
+.premium-live-game{
+  position:relative;
+  padding:7px 0;
+  border-bottom:1px solid #16344d;
+}
+
+.premium-live-game:last-child{
+  border-bottom:0;
+}
+
+.premium-live-team{
+  display:grid;
+  grid-template-columns:27px minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+  min-height:31px;
+}
+
+.premium-team-mark{
+  width:25px;
+  height:25px;
+  display:grid;
+  place-items:center;
+  border:1px solid #315b7c;
+  border-radius:50%;
+  color:#d4e9fa;
+  background:
+    linear-gradient(
+      145deg,
+      #123755,
+      #092138
+    );
+  font-size:.47rem;
+  font-weight:950;
+}
+
+.premium-team-copy{
+  min-width:0;
+}
+
+.premium-team-copy b{
+  display:block;
+  overflow:hidden;
+  color:#eaf5ff;
+  font-size:.68rem;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.premium-team-copy small{
+  display:block;
+  margin-top:1px;
+  color:#657f98;
+  font-size:.45rem;
+}
+
+.premium-live-team strong{
+  color:#f5fbff;
+  font-size:1rem;
+  font-weight:950;
+}
+
+.premium-inning{
+  margin-top:4px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+  color:#728ca5;
+  font-size:.44rem;
+}
+
+.premium-inning .pulse{
+  width:5px;
+  height:5px;
+}
+
+
+/* RANKING */
+
+.premium-rank-mini{
+  display:grid;
+  grid-template-columns:25px minmax(0,1fr) auto 7px;
+  align-items:center;
+  gap:7px;
+  min-height:42px;
+  padding:6px 0;
+  border-bottom:1px solid #16344d;
+}
+
+.premium-rank-mini:last-child{
+  border-bottom:0;
+}
+
+.premium-rank-num{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border:1px solid #45627d;
+  border-radius:50%;
+  color:#dcecff;
+  font-size:.56rem;
+  font-weight:950;
+}
+
+.premium-rank-mini:first-child
+.premium-rank-num{
+  color:#ffdc61;
+  border-color:#99761e;
+}
+
+.premium-rank-copy{
+  min-width:0;
+}
+
+.premium-rank-copy b{
+  display:block;
+  overflow:hidden;
+  color:#dce9f5;
+  font-size:.59rem;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.premium-rank-pick{
+  margin-top:3px;
+  font-size:.53rem;
+  font-weight:950;
+}
+
+.premium-rank-pick.over{
+  color:#ff7889;
+}
+
+.premium-rank-pick.under{
+  color:#2bd4bd;
+}
+
+.premium-rank-pick.pass{
+  color:#f0ca67;
+}
+
+.premium-rank-meta{
+  text-align:right;
+}
+
+.premium-rank-meta strong{
+  display:block;
+  color:#55e292;
+  font-size:.56rem;
+}
+
+.premium-rank-meta small{
+  display:block;
+  margin-top:2px;
+  color:#7892aa;
+  font-size:.43rem;
+}
+
+.premium-signal-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#72889e;
+}
+
+.premium-signal-dot.play{
+  background:#33de8c;
+  box-shadow:0 0 7px rgba(51,222,140,.45);
+}
+
+.premium-signal-dot.lean{
+  background:#ffd06a;
+}
+
+.premium-signal-dot.pass{
+  background:#71879b;
+}
+
+
+/* EMPTY */
+
+.premium-center-empty{
+  min-height:158px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  text-align:center;
+  color:#718aa2;
+}
+
+.premium-center-empty .ui-icon{
+  width:27px;
+  height:27px;
+  color:#315d7e;
+}
+
+.premium-center-empty b{
+  color:#a6bbce;
+  font-size:.64rem;
+}
+
+.premium-center-empty small{
+  max-width:170px;
+  color:#697f94;
+  font-size:.50rem;
+  line-height:1.4;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  .premium-home-center{
+    gap:7px;
+    margin-top:9px;
+  }
+
+  .premium-center-head{
+    padding:9px 8px 8px;
+  }
+
+  .premium-center-kicker{
+    font-size:.51rem;
+  }
+
+  .premium-live-mini,
+  .premium-rank-count{
+    font-size:.44rem;
+  }
+
+  .premium-center-body{
+    min-height:160px;
+    padding:5px 7px;
+  }
+
+  .premium-center-foot{
+    padding:7px;
+    font-size:.44rem;
+  }
+
+  .premium-live-team{
+    grid-template-columns:22px minmax(0,1fr) auto;
+    gap:5px;
+  }
+
+  .premium-team-mark{
+    width:21px;
+    height:21px;
+    font-size:.39rem;
+  }
+
+  .premium-team-copy b{
+    font-size:.55rem;
+  }
+
+  .premium-team-copy small{
+    font-size:.39rem;
+  }
+
+  .premium-live-team strong{
+    font-size:.84rem;
+  }
+
+  .premium-rank-mini{
+    grid-template-columns:21px minmax(0,1fr) auto 6px;
+    gap:5px;
+  }
+
+  .premium-rank-num{
+    width:20px;
+    height:20px;
+    font-size:.47rem;
+  }
+
+  .premium-rank-copy b{
+    font-size:.50rem;
+  }
+
+  .premium-rank-pick{
+    font-size:.45rem;
+  }
+
+  .premium-rank-meta strong{
+    font-size:.48rem;
+  }
+
+  .premium-rank-meta small{
+    font-size:.38rem;
+  }
+
+}
+
+@media(max-width:350px){
+
+  .premium-home-center{
+    grid-template-columns:1fr;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 2B STATUS STRIP
+   ========================================== */
+
+.premium-status-strip{
+  display:grid;
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  gap:1px;
+
+  margin-top:10px;
+
+  overflow:hidden;
+
+  border:
+    1px solid #1c3d59;
+
+  border-radius:15px;
+
+  background:#17344d;
+}
+
+
+.premium-status-item{
+  min-width:0;
+
+  display:flex;
+  align-items:center;
+
+  gap:9px;
+
+  padding:
+    10px 12px;
+
+  background:
+    linear-gradient(
+      150deg,
+      #081d30,
+      #061522
+    );
+}
+
+
+.premium-status-item
+.ui-icon{
+  width:22px;
+  height:22px;
+
+  flex:0 0 22px;
+
+  color:#8ba9c7;
+}
+
+
+.premium-status-item:nth-child(1)
+.ui-icon{
+  color:#a9bdd1;
+}
+
+
+.premium-status-item:nth-child(2)
+.ui-icon{
+  color:#87a8c8;
+}
+
+
+.premium-status-item:nth-child(3)
+.ui-icon{
+  color:#9cb3cb;
+}
+
+
+.premium-status-item:nth-child(4)
+.ui-icon{
+  color:#28c6ed;
+}
+
+
+.premium-status-item div{
+  min-width:0;
+}
+
+
+.premium-status-item small{
+  display:block;
+
+  overflow:hidden;
+
+  color:#829bb4;
+
+  font-size:.50rem;
+
+  font-weight:850;
+
+  letter-spacing:.035em;
+
+  text-transform:uppercase;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+
+.premium-status-item b{
+  display:block;
+
+  margin-top:3px;
+
+  overflow:hidden;
+
+  color:#eaf5ff;
+
+  font-size:.67rem;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  .premium-status-strip{
+    margin-top:8px;
+  }
+
+
+  .premium-status-item{
+    gap:5px;
+
+    padding:
+      8px 6px;
+  }
+
+
+  .premium-status-item
+  .ui-icon{
+    width:17px;
+    height:17px;
+
+    flex-basis:17px;
+  }
+
+
+  .premium-status-item small{
+    font-size:.40rem;
+  }
+
+
+  .premium-status-item b{
+    font-size:.51rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  .premium-status-item
+  .ui-icon{
+    display:none;
+  }
+
+
+  .premium-status-item{
+    padding:
+      8px 5px;
+  }
+
+
+  .premium-status-item small{
+    font-size:.37rem;
+  }
+
+
+  .premium-status-item b{
+    font-size:.48rem;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 2C SHADOW COMPACT
+   ========================================== */
+
+.premium-shadow-compact{
+  margin-top:10px;
+  overflow:hidden;
+  border:1px solid #1c4b68;
+  border-radius:18px;
+  background:
+    linear-gradient(
+      145deg,
+      #061b2d,
+      #06131f
+    );
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.25);
+}
+
+.premium-shadow-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid #173a52;
+}
+
+.premium-shadow-title{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.premium-shadow-title .ui-icon{
+  width:18px;
+  height:18px;
+  color:#27c8ff;
+}
+
+.premium-shadow-title b{
+  color:#35c8ff;
+  font-size:.72rem;
+  font-weight:950;
+}
+
+.premium-shadow-readonly{
+  padding:4px 7px;
+  border:1px solid #82404b;
+  border-radius:6px;
+  color:#ff818e;
+  background:rgba(94,24,35,.22);
+  font-size:.45rem;
+  font-weight:950;
+  white-space:nowrap;
+}
+
+.premium-shadow-open{
+  border:0;
+  color:#58baff;
+  background:transparent;
+  font-size:.55rem;
+  font-weight:900;
+}
+
+.premium-shadow-main{
+  display:grid;
+  grid-template-columns:1.3fr .9fr;
+}
+
+.premium-shadow-primary{
+  display:grid;
+  grid-template-columns:.75fr .9fr 1.35fr;
+  min-width:0;
+}
+
+.premium-shadow-cell{
+  min-width:0;
+  padding:12px;
+  border-right:1px solid #17374f;
+}
+
+.premium-shadow-cell small,
+.premium-shadow-stats small,
+.premium-shadow-meta small{
+  display:block;
+  color:#819bb4;
+  font-size:.45rem;
+  font-weight:850;
+  text-transform:uppercase;
+}
+
+.premium-shadow-cell strong{
+  display:block;
+  margin-top:7px;
+  color:#e8f5ff;
+  font-size:1rem;
+  font-weight:950;
+}
+
+.premium-shadow-cell strong.confirm{
+  color:#37e18f;
+}
+
+.premium-shadow-cell strong.neutral{
+  color:#ffd36e;
+}
+
+.premium-shadow-cell strong.conflict{
+  color:#ff7886;
+}
+
+.premium-shadow-cell.action strong{
+  font-size:.76rem;
+}
+
+.premium-shadow-cell.action span{
+  display:block;
+  margin-top:4px;
+  color:#708aa2;
+  font-size:.43rem;
+}
+
+.premium-shadow-stats{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+}
+
+.premium-shadow-stats > div{
+  padding:10px;
+  border-left:1px solid #17374f;
+  border-bottom:1px solid #17374f;
+}
+
+.premium-shadow-stats b{
+  display:block;
+  margin-top:4px;
+  color:#e8f5ff;
+  font-size:.87rem;
+}
+
+.premium-shadow-stats .good{
+  color:#38df91;
+}
+
+.premium-shadow-stats .bad{
+  color:#ff7886;
+}
+
+.premium-shadow-meta{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr;
+  border-top:1px solid #17374f;
+}
+
+.premium-shadow-meta > div{
+  min-width:0;
+  padding:9px 12px;
+  border-right:1px solid #17374f;
+}
+
+.premium-shadow-meta > div:last-child{
+  border-right:0;
+}
+
+.premium-shadow-meta b{
+  display:block;
+  margin-top:4px;
+  overflow:hidden;
+  color:#e5f1fb;
+  font-size:.57rem;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.premium-shadow-notice{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  margin:8px;
+  padding:7px;
+  border:1px solid #765b22;
+  border-radius:8px;
+  color:#e3bd59;
+  background:rgba(80,57,10,.18);
+  font-size:.48rem;
+  line-height:1.3;
+  text-align:center;
+}
+
+.premium-shadow-notice .ui-icon{
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  .premium-shadow-main{
+    grid-template-columns:1.15fr .85fr;
+  }
+
+  .premium-shadow-head{
+    padding:8px;
+  }
+
+  .premium-shadow-title b{
+    font-size:.60rem;
+  }
+
+  .premium-shadow-readonly{
+    font-size:.37rem;
+  }
+
+  .premium-shadow-open{
+    font-size:.46rem;
+  }
+
+  .premium-shadow-primary{
+    grid-template-columns:.72fr .85fr 1.43fr;
+  }
+
+  .premium-shadow-cell{
+    padding:8px 6px;
+  }
+
+  .premium-shadow-cell small,
+  .premium-shadow-stats small,
+  .premium-shadow-meta small{
+    font-size:.36rem;
+  }
+
+  .premium-shadow-cell strong{
+    margin-top:5px;
+    font-size:.78rem;
+  }
+
+  .premium-shadow-cell.action strong{
+    font-size:.57rem;
+  }
+
+  .premium-shadow-cell.action span{
+    font-size:.35rem;
+  }
+
+  .premium-shadow-stats > div{
+    padding:7px 5px;
+  }
+
+  .premium-shadow-stats b{
+    font-size:.68rem;
+  }
+
+  .premium-shadow-meta > div{
+    padding:7px 6px;
+  }
+
+  .premium-shadow-meta b{
+    font-size:.46rem;
+  }
+
+  .premium-shadow-notice{
+    font-size:.39rem;
+  }
+}
+
+
+@media(max-width:390px){
+
+  .premium-shadow-main{
+    grid-template-columns:1fr;
+  }
+
+  .premium-shadow-stats{
+    border-top:1px solid #17374f;
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .premium-shadow-stats > div{
+    border-left:0;
+    border-right:1px solid #17374f;
+  }
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM UI 2D INTEGRITY COMPACT
+   ========================================== */
+
+.premium-integrity-compact{
+  width:100%;
+
+  display:grid;
+
+  grid-template-columns:
+    auto
+    minmax(0,1.6fr)
+    minmax(64px,.7fr)
+    minmax(64px,.7fr)
+    auto;
+
+  align-items:center;
+
+  gap:10px;
+
+  margin-top:9px;
+
+  padding:10px 12px;
+
+  border:
+    1px solid #24516a;
+
+  border-radius:14px;
+
+  color:#dff2ff;
+
+  background:
+    linear-gradient(
+      145deg,
+      #071d2d,
+      #061522
+    );
+
+  text-align:left;
+
+  box-shadow:
+    0 10px 26px
+    rgba(0,0,0,.20);
+}
+
+
+.premium-integrity-compact.pass{
+  border-color:#21664f;
+}
+
+
+.premium-integrity-compact.fail{
+  border-color:#7b3f49;
+}
+
+
+.premium-integrity-icon{
+  width:32px;
+  height:32px;
+
+  display:grid;
+  place-items:center;
+
+  border:
+    1px solid #226a53;
+
+  border-radius:10px;
+
+  color:#31df94;
+
+  background:
+    rgba(16,87,62,.22);
+}
+
+
+.premium-integrity-icon
+.ui-icon{
+  width:19px;
+  height:19px;
+}
+
+
+.premium-integrity-copy,
+.premium-integrity-family,
+.premium-integrity-engine{
+  min-width:0;
+}
+
+
+.premium-integrity-compact small{
+  display:block;
+
+  color:#7994ad;
+
+  font-size:.43rem;
+
+  font-weight:850;
+
+  letter-spacing:.04em;
+
+  text-transform:uppercase;
+}
+
+
+.premium-integrity-compact b{
+  display:block;
+
+  margin-top:3px;
+
+  overflow:hidden;
+
+  color:#eaf6ff;
+
+  font-size:.65rem;
+
+  font-weight:950;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+
+.premium-integrity-copy b{
+  color:#40df97;
+
+  font-size:.74rem;
+}
+
+
+.premium-integrity-compact.fail
+.premium-integrity-copy b{
+  color:#ff7786;
+}
+
+
+.premium-integrity-chevron{
+  color:#59b8f8;
+
+  font-size:1.3rem;
+
+  font-weight:500;
+}
+
+
+.premium-integrity-compact:active{
+  transform:scale(.988);
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  .premium-integrity-compact{
+    grid-template-columns:
+      auto
+      minmax(0,1fr)
+      auto
+      auto;
+
+    gap:7px;
+
+    padding:8px;
+  }
+
+
+  .premium-integrity-engine{
+    display:none;
+  }
+
+
+  .premium-integrity-icon{
+    width:28px;
+    height:28px;
+  }
+
+
+  .premium-integrity-icon
+  .ui-icon{
+    width:17px;
+    height:17px;
+  }
+
+
+  .premium-integrity-compact small{
+    font-size:.36rem;
+  }
+
+
+  .premium-integrity-compact b{
+    font-size:.53rem;
+  }
+
+
+  .premium-integrity-copy b{
+    font-size:.62rem;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -20365,6 +21437,709 @@ function predictionSnapshotAuditPanelHtml(rows=[]){
 
 function renderLab(){const repaired=repairLabHistory(),scope='SPORTSBOOK',picks=labPickRows('TOTAL',null,scope,true).filter(r=>teamVersionNumber(r.modelVersion)>=604),fin=picks.filter(x=>x.status==='FINAL'),globalBs=ensembleBrier(fin),skill=brierSkill(fin),total=labPickSummary('TOTAL'),totalErr=labErrorSummary('TOTAL'),lineupB=lineupSubsetBrier(true),proxyB=lineupSubsetBrier(false),over=labDirectionSummary('OVER',scope),under=labDirectionSummary('UNDER',scope),recent=[...picks].sort((a,b)=>labTime(b)-labTime(a)).slice(0,100),w=learnedWeights('TOTAL'),e=$('#labContent');e.innerHTML=`<div class="okbox" style="margin-bottom:12px"><b>Sportsbook LAB · Full Game únicamente:</b> un pronóstico oficial por partido contra la línea real del Total. F5 y team totals anteriores quedan fuera del aprendizaje y de esta vista.${repaired.removed?` Se repararon ${repaired.removed} duplicados.`:''}</div><div class="cards" style="margin-bottom:12px"><div class="card"><small>Picks oficiales</small><div class="big">${picks.length}</div></div><div class="card"><small>Brier global</small><div class="big">${fix(globalBs,3)}</div><div class="smalltxt">${brierReading(globalBs)}</div></div><div class="card"><small>Brier Skill</small><div class="big">${Number.isFinite(skill)?pct(skill):'—'}</div></div><div class="card"><small>Acierto</small><div class="big">${pct(total.hit)}</div><div class="smalltxt">${total.wins}-${total.losses} · ${total.n} liquidados</div></div><div class="card"><small>MAE Total</small><div class="big">${fix(totalErr.mae,2)}</div><div class="smalltxt">Sesgo modelo−real ${fix(totalErr.bias,2)} · RMSE ${fix(totalErr.rmse,2)}</div></div><div class="card"><small>Lineups confirmados</small><div class="big">${fix(lineupB.brier,3)}</div><div class="smalltxt">${lineupB.n} picks</div></div></div>${calibrationBucketPanelHtml()}${predictionSnapshotAuditPanelHtml(picks)}${dataQualityDashboardHtml(picks)}${gatePerformanceDashboardHtml(gatePerformanceCensusRows())}${closingLineDashboardHtml(picks)}${safeOddsRefreshDashboardHtml()}${segmentPerformanceDashboardHtml()}${segmentWatchlistDashboardHtml()}${rankAuditCleanDashboardHtml()}${decisionTraceDashboardHtml()}${policyCohortDashboardHtml()}${finalIntegrityDashboardHtml()}<div class="section"><h3>Control direccional · Over vs Under</h3><div class="grid4"><div class="card"><small>OVER</small><div class="big">${over.wins}-${over.losses}</div><div class="smalltxt">Acierto ${pct(over.hit)} · Brier ${fix(over.brier,3)} · n=${over.n}</div></div><div class="card"><small>UNDER</small><div class="big">${under.wins}-${under.losses}</div><div class="smalltxt">Acierto ${pct(under.hit)} · Brier ${fix(under.brier,3)} · n=${under.n}</div></div><div class="card"><small>Proxy de equipo</small><div class="big">${fix(proxyB.brier,3)}</div><div class="smalltxt">${proxyB.n} picks</div></div><div class="card"><small>Calibración</small><div class="big">Direccional</div><div class="smalltxt">Cuando hay ≥12 casos similares por lado; si no, usa el pool general Full Game.</div></div></div></div><div class="section"><h3>Pesos Full Game</h3><div class="grid4"><div class="card"><small>PA Markov</small><div class="big">${pct(w.struct)}</div><div class="smalltxt">Brier ${fix(brier(fin,'struct'),3)}</div></div><div class="card"><small>NegBin</small><div class="big">${pct(w.nb)}</div><div class="smalltxt">Brier ${fix(brier(fin,'nb'),3)}</div></div><div class="card"><small>Poisson-Lognormal</small><div class="big">${pct(w.pln)}</div><div class="smalltxt">Brier ${fix(brier(fin,'pln'),3)}</div></div><div class="card"><small>COM-Poisson</small><div class="big">${pct(w.com)}</div><div class="smalltxt">Brier ${fix(brier(fin,'com'),3)}</div></div></div><div class="note">Base 30/25/25/20. Con suficiente historial, los pesos se adaptan por Brier dentro de límites para evitar que un solo modelo domine.</div></div>${recentLabTable(recent,'Últimos pronósticos Full Game oficiales')}<div class="warn"><b>Objetivo único:</b> calibrar mejor la probabilidad de Over/Under del juego completo. Menor Brier y menor MAE son mejores.</div>`}
 
+
+/* V7.8.6 PREMIUM UI 2A1 LIVE HELPER */
+
+function premiumHomeLiveHtml(){
+
+  const games=Array.isArray(S.games)
+    ?S.games.filter(g=>gameMeta(g).live)
+    :[];
+
+  if(!games.length){
+    return [
+      '<div class="premium-center-empty">',
+      '<span class="ui-icon" style="--icon:url(\'assets/icons/radio.svg\')"></span>',
+      '<b>Sin partidos en vivo</b>',
+      '<small>Se mostrarán aquí automáticamente.</small>',
+      '</div>'
+    ].join('');
+  }
+
+  return games.slice(0,4).map(g=>{
+
+    const x=gameMeta(g);
+
+    const away=
+      g?.teams?.away?.team?.abbreviation ||
+      g?.teams?.away?.team?.name ||
+      'AWAY';
+
+    const home=
+      g?.teams?.home?.team?.abbreviation ||
+      g?.teams?.home?.team?.name ||
+      'HOME';
+
+    const inning=
+      [x.half,x.inning]
+        .filter(Boolean)
+        .join(' ') || x.state || 'LIVE';
+
+    return [
+      '<div class="premium-live-game">',
+
+      '<div class="premium-live-team">',
+      '<div class="premium-team-mark">' +
+        esc(String(away).slice(0,3)) +
+      '</div>',
+      '<div class="premium-team-copy">',
+      '<b>' + esc(away) + '</b>',
+      '<small>Visitante</small>',
+      '</div>',
+      '<strong>' + (x.has ? x.a : '—') + '</strong>',
+      '</div>',
+
+      '<div class="premium-live-team">',
+      '<div class="premium-team-mark">' +
+        esc(String(home).slice(0,3)) +
+      '</div>',
+      '<div class="premium-team-copy">',
+      '<b>' + esc(home) + '</b>',
+      '<small>Local</small>',
+      '</div>',
+      '<strong>' + (x.has ? x.h : '—') + '</strong>',
+      '</div>',
+
+      '<div class="premium-inning">',
+      '<span class="pulse"></span>' +
+      esc(inning),
+      '</div>',
+
+      '</div>'
+    ].join('');
+
+  }).join('');
+
+}
+
+
+/* V7.8.6 PREMIUM UI 2A2 RANKING HELPER */
+
+function premiumHomeRankingHtml(){
+
+  const rows=
+    currentRankingRows()
+      .slice(0,4);
+
+  if(!rows.length){
+
+    return [
+      '<div class="premium-center-empty">',
+      '<span class="ui-icon" style="--icon:url(\'assets/icons/trophy.svg\')"></span>',
+      '<b>Ranking aún vacío</b>',
+      '<small>Ejecuta Escaneo LAB para poblarlo.</small>',
+      '</div>'
+    ].join('');
+
+  }
+
+
+  return rows.map((r,i)=>{
+
+    const g=r.g || {};
+    const p=r.pick || {};
+    const ev=r.ev || {};
+
+    const away=
+      g?.teams?.away?.team?.abbreviation ||
+      g?.teams?.away?.team?.name ||
+      'AWAY';
+
+    const home=
+      g?.teams?.home?.team?.abbreviation ||
+      g?.teams?.home?.team?.name ||
+      'HOME';
+
+    const sig=
+      signalLabel(
+        p,
+        ev.source
+      );
+
+    const side=
+      String(p.side || '')
+        .toUpperCase();
+
+    const line=
+      Number.isFinite(+ev.line)
+        ?String(ev.line)
+        :'—';
+
+    const pickText=
+      p.pass
+        ?'PASS'
+        :side+' '+line;
+
+    const edge=
+      Number.isFinite(+p.edge)
+        ?pct(+p.edge)
+        :'—';
+
+    const probability=
+      Number.isFinite(+p.p)
+        ?pct(+p.p)
+        :'—';
+
+
+    return [
+
+      '<div class="premium-rank-mini">',
+
+      '<div class="premium-rank-num">',
+      String(i+1),
+      '</div>',
+
+      '<div class="premium-rank-copy">',
+
+      '<b>' +
+        esc(away) +
+        ' @ ' +
+        esc(home) +
+      '</b>',
+
+      '<div class="premium-rank-pick ' +
+        (
+          p.pass
+            ?'pass'
+            :side==='OVER'
+              ?'over'
+              :side==='UNDER'
+                ?'under'
+                :'pass'
+        ) +
+      '">' +
+        esc(pickText) +
+      '</div>',
+
+      '</div>',
+
+      '<div class="premium-rank-meta">',
+
+      '<strong>' +
+        edge +
+      '</strong>',
+
+      '<small>' +
+        probability +
+      '</small>',
+
+      '</div>',
+
+      '<span class="premium-signal-dot ' +
+        esc(sig?.cls || 'lab') +
+      '" title="' +
+        esc(sig?.txt || 'LAB') +
+      '"></span>',
+
+      '</div>'
+
+    ].join('');
+
+  }).join('');
+
+}
+
+
+/* V7.8.6 PREMIUM UI 2A3 HOME CENTER */
+
+function premiumHomeCenterHtml(){
+
+  const liveCount=Array.isArray(S.games)
+    ?S.games.filter(g=>gameMeta(g).live).length
+    :0;
+
+  const rankCount=
+    currentRankingRows().length;
+
+  return [
+
+    '<div class="premium-home-center">',
+
+    '<section class="premium-center-card">',
+
+      '<div class="premium-center-head">',
+
+        '<span class="premium-center-kicker">',
+          'Partidos en vivo',
+        '</span>',
+
+        '<span class="premium-live-mini">',
+          '<span class="pulse"></span>',
+          liveCount ? String(liveCount)+' LIVE' : 'EN VIVO',
+        '</span>',
+
+      '</div>',
+
+      '<div class="premium-center-body">',
+        premiumHomeLiveHtml(),
+      '</div>',
+
+      '<div class="premium-center-foot">',
+        'Marcadores MLB actuales',
+      '</div>',
+
+    '</section>',
+
+
+    '<section class="premium-center-card">',
+
+      '<div class="premium-center-head">',
+
+        '<span class="premium-center-kicker">',
+          'Ranking del día',
+        '</span>',
+
+        '<span class="premium-rank-count">',
+          'TOP '+String(Math.min(rankCount,4)),
+        '</span>',
+
+      '</div>',
+
+      '<div class="premium-center-body">',
+        premiumHomeRankingHtml(),
+      '</div>',
+
+      '<div class="premium-center-foot">',
+        'Ranking oficial · sin cálculo paralelo',
+      '</div>',
+
+    '</section>',
+
+    '</div>'
+
+  ].join('');
+
+}
+
+
+/* V7.8.6 PREMIUM UI 2B STATUS STRIP */
+
+function premiumHomeStatusStripHtml(){
+
+  const bm=bankMetrics();
+
+  const bankCurrent=
+    Number.isFinite(+bm.current)
+      ?bankMoney(bm.current,bm.cfg?.currency)
+      :'—';
+
+  const censusRows=Object.values(
+    rankCensus().days || {}
+  ).flatMap(d=>
+    Array.isArray(d?.rows)
+      ?d.rows
+      :[]
+  ).filter(r=>
+    !r.market || r.market==='TOTAL'
+  );
+
+  const betRows=bets().filter(r=>
+    !r.market || r.market==='TOTAL'
+  );
+
+  const lineCount=
+    S.odds instanceof Map
+      ?S.odds.size
+      :0;
+
+  return [
+
+    '<div class="premium-status-strip">',
+
+      '<div class="premium-status-item">',
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/wallet.svg\')"></span>',
+        '<div>',
+          '<small>Balance actual</small>',
+          '<b>'+esc(bankCurrent)+'</b>',
+        '</div>',
+      '</div>',
+
+      '<div class="premium-status-item">',
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/database.svg\')"></span>',
+        '<div>',
+          '<small>Censo procesado</small>',
+          '<b>'+String(censusRows.length)+' juegos</b>',
+        '</div>',
+      '</div>',
+
+      '<div class="premium-status-item">',
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/ticket.svg\')"></span>',
+        '<div>',
+          '<small>Apuestas cargadas</small>',
+          '<b>'+String(betRows.length)+' apuestas</b>',
+        '</div>',
+      '</div>',
+
+      '<div class="premium-status-item">',
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/activity.svg\')"></span>',
+        '<div>',
+          '<small>Líneas totales</small>',
+          '<b>'+String(lineCount)+' líneas</b>',
+        '</div>',
+      '</div>',
+
+    '</div>'
+
+  ].join('');
+
+}
+
+
+/* V7.8.6 PREMIUM UI 2C SHADOW COMPACT */
+
+function premiumGoShadow(){
+
+  const tab=document.querySelector(
+    '.tab[data-tab="shadow"]'
+  );
+
+  if(tab){
+    tab.click();
+  }
+
+}
+
+
+function premiumHomeShadowCompactHtml(){
+
+  const state=teamShadowState();
+
+  const rows=Array.isArray(state?.rows)
+    ?state.rows
+    :[];
+
+  const stats=
+    teamShadowStatsFromRows(rows);
+
+
+  const primary=rows
+    .filter(r=>r?.primaryCase!==false)
+    .slice()
+    .sort((a,b)=>{
+
+      const ta=Date.parse(
+        a?.capturedAt ||
+        a?.updatedAt ||
+        a?.createdAt ||
+        0
+      );
+
+      const tb=Date.parse(
+        b?.capturedAt ||
+        b?.updatedAt ||
+        b?.createdAt ||
+        0
+      );
+
+      return
+        (Number.isFinite(tb)?tb:0)-
+        (Number.isFinite(ta)?ta:0);
+
+    });
+
+
+  const row=primary[0] || null;
+
+  const score=Number(row?.teamScore);
+
+  const scoreText=
+    Number.isFinite(score)
+      ?(score>0?'+':'')+String(score)
+      :'—';
+
+
+  const teamSignal=String(
+    row?.teamSignal ||
+    'NEUTRAL'
+  ).toUpperCase();
+
+
+  const signalClass=
+    teamSignal==='CONFIRM'
+      ?'confirm'
+      :teamSignal==='CONFLICT'
+        ?'conflict'
+        :'neutral';
+
+
+  const officialSignal=String(
+    row?.officialSignal ||
+    '—'
+  );
+
+
+  const hypotheticalSignal=String(
+    row?.hypotheticalSignal ||
+    officialSignal
+  );
+
+
+  const gatingAction=String(
+    row?.gatingAction ||
+    'KEEP'
+  );
+
+
+  const awayDna=
+    row?.awayTeamDna ||
+    '—';
+
+  const homeDna=
+    row?.homeTeamDna ||
+    '—';
+
+  const awayRel=
+    row?.awayReliability ||
+    '—';
+
+  const homeRel=
+    row?.homeReliability ||
+    '—';
+
+
+  const net=Number(
+    stats?.netSaves || 0
+  );
+
+  const netText=
+    (net>0?'+':'')+String(net);
+
+
+  return [
+
+    '<section class="premium-shadow-compact">',
+
+      '<div class="premium-shadow-head">',
+
+        '<div class="premium-shadow-title">',
+
+          '<span class="ui-icon" style="--icon:url(\'assets/icons/flask-conical.svg\')"></span>',
+
+          '<b>SHADOW LAB</b>',
+
+          '<span class="premium-shadow-readonly">',
+            'EXPERIMENTAL — READ ONLY',
+          '</span>',
+
+        '</div>',
+
+        '<button type="button" class="premium-shadow-open" onclick="premiumGoShadow()">',
+          'Ver detalle ›',
+        '</button>',
+
+      '</div>',
+
+
+      '<div class="premium-shadow-main">',
+
+        '<div class="premium-shadow-primary">',
+
+          '<div class="premium-shadow-cell">',
+            '<small>Team Score</small>',
+            '<strong class="' + signalClass + '">' +
+              esc(scoreText) +
+            '</strong>',
+          '</div>',
+
+          '<div class="premium-shadow-cell">',
+            '<small>Señal</small>',
+            '<strong class="' + signalClass + '">' +
+              esc(teamSignal) +
+            '</strong>',
+          '</div>',
+
+          '<div class="premium-shadow-cell action">',
+            '<small>Acción hipotética</small>',
+            '<strong>' +
+              esc(hypotheticalSignal) +
+            '</strong>',
+            '<span>' +
+              esc(gatingAction) +
+              ' · oficial ' +
+              esc(officialSignal) +
+            '</span>',
+          '</div>',
+
+        '</div>',
+
+
+        '<div class="premium-shadow-stats">',
+
+          '<div>',
+            '<small>Casos observados</small>',
+            '<b>' + String(stats?.observed || 0) + '</b>',
+          '</div>',
+
+          '<div>',
+            '<small>Losses Avoided</small>',
+            '<b class="good">' + String(stats?.lossesAvoided || 0) + '</b>',
+          '</div>',
+
+          '<div>',
+            '<small>Winners Blocked</small>',
+            '<b class="bad">' + String(stats?.winnersBlocked || 0) + '</b>',
+          '</div>',
+
+          '<div>',
+            '<small>Net Saves</small>',
+            '<b class="' +
+              (net>0?'good':net<0?'bad':'') +
+            '">' +
+              esc(netText) +
+            '</b>',
+          '</div>',
+
+        '</div>',
+
+      '</div>',
+
+
+      '<div class="premium-shadow-meta">',
+
+        '<div>',
+          '<small>Team DNA</small>',
+          '<b>' +
+            esc(awayDna) +
+            ' / ' +
+            esc(homeDna) +
+          '</b>',
+        '</div>',
+
+        '<div>',
+          '<small>Reliability</small>',
+          '<b>' +
+            esc(awayRel) +
+            ' / ' +
+            esc(homeRel) +
+          '</b>',
+        '</div>',
+
+        '<div>',
+          '<small>LEAN → JUGABLE</small>',
+          '<b>' +
+            String(stats?.leanPromotedWin || 0) +
+            '-' +
+            String(stats?.leanPromotedLoss || 0) +
+          '</b>',
+        '</div>',
+
+      '</div>',
+
+
+      '<div class="premium-shadow-notice">',
+
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/shield-check.svg\')"></span>',
+
+        esc(TEAM_SHADOW_NOTICE),
+
+      '</div>',
+
+    '</section>'
+
+  ].join('');
+
+}
+
+
+/* V7.8.6 PREMIUM UI 2D INTEGRITY COMPACT */
+
+function premiumGoIntegrity(){
+
+  const tab=document.querySelector(
+    '.tab[data-tab="lab"]'
+  );
+
+  if(tab){
+    tab.click();
+  }
+
+}
+
+
+function premiumHomeIntegrityCompactHtml(){
+
+  const r=
+    window.__MLB_FINAL_INTEGRITY__ ||
+    finalIntegrityRunSuite();
+
+  const ok=r?.ok===true;
+
+  const passed=
+    Number.isFinite(+r?.passed)
+      ?+r.passed
+      :0;
+
+  const total=
+    Number.isFinite(+r?.total)
+      ?+r.total
+      :0;
+
+  const familyPass=
+    Number.isFinite(+r?.familyPass)
+      ?+r.familyPass
+      :0;
+
+  const familyTotal=
+    Number.isFinite(+r?.familyTotal)
+      ?+r.familyTotal
+      :0;
+
+  return [
+
+    '<button type="button" class="premium-integrity-compact ' +
+      (ok?'pass':'fail') +
+    '" onclick="premiumGoIntegrity()">',
+
+      '<span class="premium-integrity-icon">',
+
+        '<span class="ui-icon" style="--icon:url(\'assets/icons/shield-check.svg\')"></span>',
+
+      '</span>',
+
+      '<span class="premium-integrity-copy">',
+
+        '<small>Final Integrity Suite</small>',
+
+        '<b>' +
+          String(passed) +
+          '/' +
+          String(total) +
+          ' ' +
+          (ok?'PASS':'CHECK') +
+        '</b>',
+
+      '</span>',
+
+      '<span class="premium-integrity-family">',
+
+        '<small>Familias</small>',
+
+        '<b>' +
+          String(familyPass) +
+          '/' +
+          String(familyTotal) +
+        '</b>',
+
+      '</span>',
+
+      '<span class="premium-integrity-engine">',
+
+        '<small>Motor</small>',
+
+        '<b>' +
+          esc(r?.modelVersion || MODEL_VERSION) +
+        '</b>',
+
+      '</span>',
+
+      '<span class="premium-integrity-chevron">›</span>',
+
+    '</button>'
+
+  ].join('');
+
+}
+
 function renderHomeDashboard(){
 
   const el=
@@ -20541,7 +22316,12 @@ function renderHomeDashboard(){
       </div>
 
 
-      <div class="home-dashboard-foot">
+      ${premiumHomeCenterHtml()}
+${premiumHomeStatusStripHtml()}
+${premiumHomeShadowCompactHtml()}
+${premiumHomeIntegrityCompactHtml()}
+
+<div class="home-dashboard-foot">
 
         <span>
           App ${APP_VERSION}
