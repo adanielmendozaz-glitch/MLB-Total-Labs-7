@@ -43579,5 +43579,571 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- =========================================================
+ V7.8.6 PREMIUM BRIER B2C-3 HOME RANKING INTEGRITY GUARD
+ READ ONLY · POST-BOOT · NO DATA WRITES
+========================================================= -->
+
+<style>
+#b2c3HomeRankingGuard{
+  margin:12px 0 4px;
+  padding:12px 14px;
+  border:1px solid rgba(78,218,158,.30);
+  border-radius:17px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(7,31,39,.92),
+      rgba(7,22,35,.96)
+    );
+}
+
+.b2c3-guard-main{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.b2c3-guard-title{
+  color:#9db1c5;
+  font-size:.69rem;
+  font-weight:900;
+  letter-spacing:.065em;
+}
+
+.b2c3-guard-value{
+  margin-top:4px;
+  color:#77e6ad;
+  font-size:1rem;
+  font-weight:950;
+}
+
+.b2c3-guard-source{
+  color:#7790a7;
+  font-size:.69rem;
+  text-align:right;
+}
+
+#b2c3HomeRankingGuard.fail{
+  border-color:rgba(255,103,123,.40);
+}
+
+#b2c3HomeRankingGuard.fail
+.b2c3-guard-value{
+  color:#ff8291;
+}
+
+#b2c3HomeRankingGuard.wait{
+  border-color:rgba(255,207,104,.30);
+}
+
+#b2c3HomeRankingGuard.wait
+.b2c3-guard-value{
+  color:#f2ca75;
+}
+
+.b2c3-details{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+  margin-top:10px;
+}
+
+.b2c3-check{
+  padding:7px 5px;
+  text-align:center;
+  border-radius:10px;
+  border:1px solid rgba(116,151,184,.14);
+  background:rgba(5,17,28,.55);
+  color:#8299af;
+  font-size:.61rem;
+  font-weight:850;
+}
+
+.b2c3-check.ok{
+  color:#78dca8;
+}
+
+.b2c3-check.bad{
+  color:#ff8191;
+}
+
+@media(max-width:520px){
+  .b2c3-details{
+    grid-template-columns:1fr 1fr;
+  }
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+/*
+ * B2C-3:
+ * verifica exclusivamente que la información
+ * persistente y la presentación de Jornada
+ * sean coherentes.
+ *
+ * NO llama:
+ * saveRankDraft()
+ * syncRankingCensus()
+ * saveRankCensus()
+ * saveLab()
+ * saveCfg()
+ * evaluateMarket()
+ * buildModels()
+ */
+
+function b2c3NumberFromText(value){
+
+  const match=
+    String(value||'')
+      .match(/-?\d+/);
+
+  return match
+    ?Number(match[0])
+    :NaN;
+}
+
+
+function b2c3IntegrityReport(){
+
+  const root=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!root){
+
+    return{
+      applicable:false,
+      ok:true,
+      passed:0,
+      total:0,
+      reason:'HOME_NOT_READY',
+      tests:[]
+    };
+  }
+
+
+  let snap;
+
+  try{
+    snap=b2c2HomeSnapshot();
+  }catch(e){
+
+    return{
+      applicable:false,
+      ok:false,
+      passed:0,
+      total:0,
+      reason:'SNAPSHOT_ERROR',
+      error:String(e),
+      tests:[]
+    };
+  }
+
+
+  const rows=
+    Array.isArray(snap?.rows)
+      ?snap.rows
+      :[];
+
+
+  /*
+   * Un día todavía sin ranking no es fallo.
+   */
+  if(!rows.length){
+
+    return{
+      applicable:false,
+      ok:true,
+      passed:0,
+      total:0,
+      reason:'NO_RANKING_TODAY',
+      source:snap?.kind || 'EMPTY',
+      tests:[]
+    };
+  }
+
+
+  const persistent=
+    snap?.kind==='CENSUS' ||
+    snap?.kind==='DRAFT';
+
+
+  /*
+   * Valores esperados desde el snapshot.
+   */
+  const expectedAnalyzed=
+    rows.length;
+
+  const expectedPlayable=
+    rows.filter(
+      r=>!b2c2IsPass(r)
+    ).length;
+
+  const expectedTop=
+    Math.min(
+      rows.length,
+      4
+    );
+
+
+  /*
+   * Valores visibles en Jornada.
+   */
+  const kpis=
+    root.querySelectorAll(
+      '.home-kpi'
+    );
+
+  const actualPlayable=
+    b2c3NumberFromText(
+      kpis[2]
+        ?.querySelector(
+          '.home-kpi-value'
+        )
+        ?.textContent
+    );
+
+  const actualAnalyzed=
+    b2c3NumberFromText(
+      kpis[3]
+        ?.querySelector(
+          '.home-kpi-value'
+        )
+        ?.textContent
+    );
+
+
+  const card=
+    b2c2FindRankingCard();
+
+  const actualTop=
+    b2c3NumberFromText(
+      card
+        ?.querySelector(
+          '.premium-rank-count'
+        )
+        ?.textContent
+    );
+
+
+  const tests=[
+
+    {
+      id:'PERSISTENCE',
+      label:'Persistencia',
+      ok:persistent
+    },
+
+    {
+      id:'TOP',
+      label:'TOP',
+      ok:
+        actualTop===
+        expectedTop,
+      expected:expectedTop,
+      actual:actualTop
+    },
+
+    {
+      id:'ANALYZED',
+      label:'Analizados',
+      ok:
+        actualAnalyzed===
+        expectedAnalyzed,
+      expected:expectedAnalyzed,
+      actual:actualAnalyzed
+    },
+
+    {
+      id:'PLAYABLE',
+      label:'Jugables',
+      ok:
+        actualPlayable===
+        expectedPlayable,
+      expected:expectedPlayable,
+      actual:actualPlayable
+    }
+
+  ];
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    version:'B2C-3',
+
+    applicable:true,
+
+    ok:
+      passed===
+      tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    source:
+      snap?.kind || 'UNKNOWN',
+
+    date:
+      snap?.date || '',
+
+    expected:{
+      top:expectedTop,
+      analyzed:expectedAnalyzed,
+      playable:expectedPlayable
+    },
+
+    actual:{
+      top:actualTop,
+      analyzed:actualAnalyzed,
+      playable:actualPlayable
+    },
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function b2c3RenderIntegrity(){
+
+  const root=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!root)return;
+
+
+  const report=
+    b2c3IntegrityReport();
+
+
+  window.__MLB_HOME_RANKING_INTEGRITY__=
+    report;
+
+
+  let box=
+    document.getElementById(
+      'b2c3HomeRankingGuard'
+    );
+
+
+  if(!box){
+
+    box=
+      document.createElement(
+        'section'
+      );
+
+    box.id=
+      'b2c3HomeRankingGuard';
+
+    root.appendChild(
+      box
+    );
+  }
+
+
+  box.classList.remove(
+    'fail',
+    'wait'
+  );
+
+
+  if(!report.applicable){
+
+    box.classList.add(
+      'wait'
+    );
+
+    box.innerHTML=`
+      <div class="b2c3-guard-main">
+
+        <div>
+          <div class="b2c3-guard-title">
+            HOME ↔ RANKING PERSISTENCE
+          </div>
+
+          <div class="b2c3-guard-value">
+            EN ESPERA
+          </div>
+        </div>
+
+        <div class="b2c3-guard-source">
+          Sin ranking persistente<br>
+          para auditar hoy
+        </div>
+
+      </div>
+    `;
+
+    return;
+  }
+
+
+  if(!report.ok){
+    box.classList.add(
+      'fail'
+    );
+  }
+
+
+  const source=
+    report.source==='CENSUS'
+      ?'CENSO'
+      :report.source==='DRAFT'
+        ?'RESPALDO'
+        :report.source;
+
+
+  box.innerHTML=`
+    <div class="b2c3-guard-main">
+
+      <div>
+
+        <div class="b2c3-guard-title">
+          HOME ↔ RANKING PERSISTENCE
+        </div>
+
+        <div class="b2c3-guard-value">
+          ${report.passed}/${report.total}
+          ${report.ok?'PASS':'REVISAR'}
+        </div>
+
+      </div>
+
+      <div class="b2c3-guard-source">
+        Fuente: ${source}<br>
+        READ ONLY
+      </div>
+
+    </div>
+
+
+    <div class="b2c3-details">
+
+      ${report.tests.map(t=>`
+
+        <div
+          class="b2c3-check ${t.ok?'ok':'bad'}"
+        >
+          ${t.ok?'✓':'✕'}
+          ${t.label}
+        </div>
+
+      `).join('')}
+
+    </div>
+  `;
+}
+
+
+function b2c3Install(){
+
+  if(
+    typeof renderHomeDashboard!=='function'
+  ){
+    console.warn(
+      'B2C-3 · renderHomeDashboard no disponible'
+    );
+    return;
+  }
+
+
+  if(
+    renderHomeDashboard
+      .__b2c3Integrity===true
+  ){
+    return;
+  }
+
+
+  const previous=
+    renderHomeDashboard;
+
+
+  const wrapped=function(){
+
+    const result=
+      previous.apply(
+        this,
+        arguments
+      );
+
+    try{
+      b2c3RenderIntegrity();
+    }catch(e){
+      console.warn(
+        'B2C-3 HOME/RANKING',
+        e
+      );
+    }
+
+    return result;
+  };
+
+
+  wrapped.__b2c3Integrity=true;
+
+  renderHomeDashboard=
+    wrapped;
+
+
+  try{
+    window.renderHomeDashboard=
+      wrapped;
+  }catch(e){}
+
+
+  /*
+   * Primera lectura post-DOM.
+   * Si el Data Vault aún está arrancando,
+   * el refresh existente de Jornada
+   * volverá a ejecutar el guard después.
+   */
+  try{
+    b2c3RenderIntegrity();
+  }catch(e){}
+
+}
+
+
+if(document.readyState==='loading'){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c3Install,
+    {once:true}
+  );
+
+}else{
+
+  b2c3Install();
+
+}
+
+})();
+</script>
+
 </body>
 </html>
