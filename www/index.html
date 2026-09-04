@@ -44145,5 +44145,619 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- =========================================================
+ V7.8.6 PREMIUM BRIER B2C-3.1 RESTORE AWARE INTEGRITY FIX
+ READ ONLY · SELF CONTAINED
+========================================================= -->
+
+<script>
+(function(){
+'use strict';
+
+/*
+ * B2C-3.1
+ *
+ * Corrige únicamente el auditor B2C-3.
+ *
+ * No depende de funciones privadas de B2C-2.
+ * Lee directamente Censo / Draft existentes.
+ *
+ * NO guarda.
+ * NO sincroniza.
+ * NO ejecuta motores.
+ */
+
+function b2c31Date(){
+
+  const field=
+    document.getElementById('date');
+
+  if(
+    field &&
+    field.value
+  ){
+    return field.value;
+  }
+
+  try{
+    return typeof localDay==='function'
+      ?localDay()
+      :'';
+  }catch{
+    return '';
+  }
+}
+
+
+function b2c31Rows(){
+
+  const date=
+    b2c31Date();
+
+  if(!date){
+    return{
+      date:'',
+      source:'EMPTY',
+      rows:[]
+    };
+  }
+
+
+  /*
+   * Fuente primaria:
+   * CENSO permanente.
+   */
+  try{
+
+    if(
+      typeof censusDay==='function'
+    ){
+
+      const day=
+        censusDay(date);
+
+      if(
+        day &&
+        Array.isArray(day.rows) &&
+        day.rows.length
+      ){
+
+        return{
+          date,
+          source:'CENSUS',
+          rows:
+            day.rows.filter(
+              r=>
+                !r?.market ||
+                String(r.market)
+                  .toUpperCase()==='TOTAL'
+            )
+        };
+      }
+    }
+
+  }catch(e){
+
+    console.warn(
+      'B2C-3.1 Census read',
+      e
+    );
+
+  }
+
+
+  /*
+   * Segundo recurso:
+   * Draft persistente.
+   *
+   * Sólo lectura.
+   */
+  try{
+
+    if(
+      typeof rankDraft==='function'
+    ){
+
+      const draft=
+        rankDraft(date);
+
+      if(
+        draft &&
+        Array.isArray(draft.rows) &&
+        draft.rows.length
+      ){
+
+        return{
+          date,
+          source:'DRAFT',
+          rows:
+            draft.rows.filter(
+              r=>
+                !r?.market ||
+                String(r.market)
+                  .toUpperCase()==='TOTAL'
+            )
+        };
+      }
+    }
+
+  }catch(e){
+
+    console.warn(
+      'B2C-3.1 Draft read',
+      e
+    );
+
+  }
+
+
+  return{
+    date,
+    source:'EMPTY',
+    rows:[]
+  };
+}
+
+
+function b2c31IsPass(r){
+
+  if(r?.pass===true){
+    return true;
+  }
+
+  if(r?.pass===false){
+    return false;
+  }
+
+  return(
+    String(r?.signal||'')
+      .trim()
+      .toUpperCase()==='PASS'
+  );
+}
+
+
+function b2c31Int(v){
+
+  const m=
+    String(v||'')
+      .match(/-?\d+/);
+
+  return m
+    ?Number(m[0])
+    :NaN;
+}
+
+
+function b2c31RankingCard(){
+
+  const cards=
+    document.querySelectorAll(
+      '.premium-center-card'
+    );
+
+  for(const card of cards){
+
+    const title=
+      String(
+        card.querySelector(
+          '.premium-center-kicker'
+        )?.textContent || ''
+      )
+      .trim()
+      .toLowerCase();
+
+    if(
+      title.includes(
+        'ranking del día'
+      )
+    ){
+      return card;
+    }
+  }
+
+  return null;
+}
+
+
+function b2c31Report(){
+
+  const root=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!root){
+
+    return{
+      applicable:false,
+      ok:true,
+      reason:'HOME_NOT_READY',
+      tests:[]
+    };
+  }
+
+
+  const snap=
+    b2c31Rows();
+
+  const rows=
+    snap.rows || [];
+
+
+  if(!rows.length){
+
+    return{
+      applicable:false,
+      ok:true,
+      reason:'NO_PERSISTENT_RANK',
+      source:snap.source,
+      date:snap.date,
+      tests:[]
+    };
+  }
+
+
+  const expected={
+
+    analyzed:
+      rows.length,
+
+    playable:
+      rows.filter(
+        r=>!b2c31IsPass(r)
+      ).length,
+
+    top:
+      Math.min(
+        rows.length,
+        4
+      )
+
+  };
+
+
+  const kpis=
+    root.querySelectorAll(
+      '.home-kpi'
+    );
+
+
+  const actual={
+
+    playable:
+      b2c31Int(
+        kpis[2]
+          ?.querySelector(
+            '.home-kpi-value'
+          )
+          ?.textContent
+      ),
+
+    analyzed:
+      b2c31Int(
+        kpis[3]
+          ?.querySelector(
+            '.home-kpi-value'
+          )
+          ?.textContent
+      ),
+
+    top:
+      b2c31Int(
+        b2c31RankingCard()
+          ?.querySelector(
+            '.premium-rank-count'
+          )
+          ?.textContent
+      )
+
+  };
+
+
+  const tests=[
+
+    {
+      label:'Persistencia',
+      ok:
+        snap.source==='CENSUS' ||
+        snap.source==='DRAFT'
+    },
+
+    {
+      label:'TOP',
+      ok:
+        actual.top===
+        expected.top
+    },
+
+    {
+      label:'Analizados',
+      ok:
+        actual.analyzed===
+        expected.analyzed
+    },
+
+    {
+      label:'Jugables',
+      ok:
+        actual.playable===
+        expected.playable
+    }
+
+  ];
+
+
+  const passed=
+    tests.filter(
+      x=>x.ok
+    ).length;
+
+
+  return{
+
+    applicable:true,
+
+    version:'B2C-3.1',
+
+    ok:
+      passed===
+      tests.length,
+
+    passed,
+
+    total:
+      tests.length,
+
+    date:
+      snap.date,
+
+    source:
+      snap.source,
+
+    expected,
+
+    actual,
+
+    tests,
+
+    ranAt:
+      new Date()
+        .toISOString()
+
+  };
+}
+
+
+function b2c31Render(){
+
+  const root=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!root)return;
+
+
+  const report=
+    b2c31Report();
+
+
+  window.__MLB_HOME_RANKING_INTEGRITY__=
+    report;
+
+
+  let box=
+    document.getElementById(
+      'b2c3HomeRankingGuard'
+    );
+
+
+  if(!box){
+
+    box=
+      document.createElement(
+        'section'
+      );
+
+    box.id=
+      'b2c3HomeRankingGuard';
+
+    root.appendChild(box);
+  }
+
+
+  box.classList.remove(
+    'fail',
+    'wait'
+  );
+
+
+  if(!report.applicable){
+
+    box.classList.add(
+      'wait'
+    );
+
+    box.innerHTML=`
+      <div class="b2c3-guard-main">
+
+        <div>
+          <div class="b2c3-guard-title">
+            HOME ↔ RANKING PERSISTENCE
+          </div>
+
+          <div class="b2c3-guard-value">
+            EN ESPERA
+          </div>
+        </div>
+
+        <div class="b2c3-guard-source">
+          No existe Censo/Draft<br>
+          para la fecha seleccionada
+        </div>
+
+      </div>
+    `;
+
+    return;
+  }
+
+
+  if(!report.ok){
+    box.classList.add(
+      'fail'
+    );
+  }
+
+
+  const source=
+    report.source==='CENSUS'
+      ?'CENSO'
+      :report.source==='DRAFT'
+        ?'RESPALDO'
+        :report.source;
+
+
+  box.innerHTML=`
+    <div class="b2c3-guard-main">
+
+      <div>
+
+        <div class="b2c3-guard-title">
+          HOME ↔ RANKING PERSISTENCE
+        </div>
+
+        <div class="b2c3-guard-value">
+          ${report.passed}/${report.total}
+          ${report.ok?'PASS':'REVISAR'}
+        </div>
+
+      </div>
+
+
+      <div class="b2c3-guard-source">
+        Fuente: ${source}<br>
+        B2C-3.1 · READ ONLY
+      </div>
+
+    </div>
+
+
+    <div class="b2c3-details">
+
+      ${report.tests.map(t=>`
+
+        <div
+          class="b2c3-check ${t.ok?'ok':'bad'}"
+        >
+
+          ${t.ok?'✓':'✕'}
+          ${t.label}
+
+        </div>
+
+      `).join('')}
+
+    </div>
+  `;
+}
+
+
+function b2c31Install(){
+
+  if(
+    typeof renderHomeDashboard!=='function'
+  ){
+    return;
+  }
+
+
+  if(
+    renderHomeDashboard
+      .__b2c31Integrity===true
+  ){
+    return;
+  }
+
+
+  const previous=
+    renderHomeDashboard;
+
+
+  const wrapped=function(){
+
+    const result=
+      previous.apply(
+        this,
+        arguments
+      );
+
+    try{
+      b2c31Render();
+    }catch(e){
+
+      console.warn(
+        'B2C-3.1',
+        e
+      );
+
+    }
+
+    return result;
+  };
+
+
+  wrapped.__b2c31Integrity=
+    true;
+
+
+  renderHomeDashboard=
+    wrapped;
+
+
+  try{
+    window.renderHomeDashboard=
+      wrapped;
+  }catch{}
+
+
+  /*
+   * Post-boot inicial.
+   * El refresco normal de Jornada
+   * lo volverá a comprobar.
+   */
+  setTimeout(
+    ()=>{
+      try{
+        b2c31Render();
+      }catch{}
+    },
+    500
+  );
+
+}
+
+
+if(
+  document.readyState==='loading'
+){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c31Install,
+    {once:true}
+  );
+
+}else{
+
+  b2c31Install();
+
+}
+
+})();
+</script>
+
 </body>
 </html>
