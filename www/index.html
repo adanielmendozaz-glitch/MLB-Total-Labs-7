@@ -46269,5 +46269,796 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- =========================================================
+ V7.8.6 B2C-4C IMMUTABLE WEIGHT HISTORY SNAPSHOT
+ APPEND-ONLY METADATA · NO LEGACY BACKFILL
+========================================================= -->
+
+<script>
+(function(){
+'use strict';
+
+const B2C4C_KEYS=[
+  'struct',
+  'nb',
+  'pln',
+  'com'
+];
+
+const B2C4C_VERSION='B2C-4C';
+
+
+function b2c4cCloneWeights(src){
+
+  const out={};
+
+  for(const k of B2C4C_KEYS){
+
+    const v=Number(src?.[k]);
+
+    out[k]=
+      Number.isFinite(v)
+        ?v
+        :null;
+
+  }
+
+  return out;
+}
+
+
+/*
+ * Mismo concepto matemático utilizado por
+ * el Weight Shadow:
+ *
+ * sum = 1
+ * min = 0.15
+ * max = 0.40
+ *
+ * Es una función PURA.
+ * No escribe configuración.
+ */
+function b2c4cBoundedWeights(
+  input,
+  min=.15,
+  max=.40
+){
+
+  const w={};
+
+  for(const k of B2C4C_KEYS){
+
+    const v=Number(input?.[k]);
+
+    w[k]=
+      Number.isFinite(v)
+        ?v
+        :.25;
+
+  }
+
+
+  let sum=
+    B2C4C_KEYS.reduce(
+      (a,k)=>a+w[k],
+      0
+    );
+
+
+  if(!(sum>0)){
+
+    for(const k of B2C4C_KEYS){
+      w[k]=.25;
+    }
+
+    sum=1;
+  }
+
+
+  for(const k of B2C4C_KEYS){
+    w[k]/=sum;
+  }
+
+
+  for(let iter=0;iter<40;iter++){
+
+    for(const k of B2C4C_KEYS){
+
+      w[k]=
+        Math.max(
+          min,
+          Math.min(
+            max,
+            w[k]
+          )
+        );
+
+    }
+
+
+    const total=
+      B2C4C_KEYS.reduce(
+        (a,k)=>a+w[k],
+        0
+      );
+
+
+    const diff=1-total;
+
+
+    if(Math.abs(diff)<1e-12){
+      break;
+    }
+
+
+    const free=
+      B2C4C_KEYS.filter(k=>
+        diff>0
+          ?w[k]<max-1e-12
+          :w[k]>min+1e-12
+      );
+
+
+    if(!free.length){
+      break;
+    }
+
+
+    const caps=
+      free.map(k=>
+        diff>0
+          ?max-w[k]
+          :w[k]-min
+      );
+
+
+    const capSum=
+      caps.reduce(
+        (a,b)=>a+b,
+        0
+      );
+
+
+    if(capSum<=1e-15){
+      break;
+    }
+
+
+    for(let i=0;i<free.length;i++){
+
+      w[free[i]]+=
+        diff*
+        (
+          caps[i]/capSum
+        );
+
+    }
+
+  }
+
+
+  /*
+   * Limpieza floating point final.
+   */
+  let finalSum=
+    B2C4C_KEYS.reduce(
+      (a,k)=>a+w[k],
+      0
+    );
+
+
+  let residual=
+    1-finalSum;
+
+
+  if(Math.abs(residual)>1e-12){
+
+    for(const k of B2C4C_KEYS){
+
+      const room=
+        residual>0
+          ?max-w[k]
+          :w[k]-min;
+
+
+      if(room<=0){
+        continue;
+      }
+
+
+      const move=
+        Math.sign(residual)*
+        Math.min(
+          Math.abs(residual),
+          room
+        );
+
+
+      w[k]+=move;
+      residual-=move;
+
+
+      if(Math.abs(residual)<1e-12){
+        break;
+      }
+
+    }
+
+  }
+
+
+  return w;
+}
+
+
+function b2c4cOfficialWeights(){
+
+  try{
+
+    if(
+      typeof learnedWeights!=='function'
+    ){
+      return null;
+    }
+
+
+    const w=
+      learnedWeights('TOTAL');
+
+
+    if(!w){
+      return null;
+    }
+
+
+    return b2c4cCloneWeights(w);
+
+  }catch(e){
+
+    console.warn(
+      'B2C-4C official weights',
+      e
+    );
+
+    return null;
+  }
+}
+
+
+function b2c4cShadowWeights(official){
+
+  if(!official){
+    return null;
+  }
+
+
+  try{
+
+    return b2c4cCloneWeights(
+      b2c4cBoundedWeights(
+        official,
+        .15,
+        .40
+      )
+    );
+
+  }catch(e){
+
+    console.warn(
+      'B2C-4C shadow weights',
+      e
+    );
+
+    return null;
+  }
+}
+
+
+function b2c4cWeightSum(w){
+
+  if(!w){
+    return NaN;
+  }
+
+
+  return B2C4C_KEYS.reduce(
+    (a,k)=>
+      a+
+      (
+        Number.isFinite(
+          Number(w[k])
+        )
+          ?Number(w[k])
+          :0
+      ),
+    0
+  );
+}
+
+
+/*
+ * Sólo mezcla las probabilidades por modelo
+ * ya guardadas en el pronóstico.
+ *
+ * IMPORTANTE:
+ * esto NO sustituye ensembleP oficial.
+ * Se conserva como diagnóstico raw-weight.
+ */
+function b2c4cBlendProbability(
+  modelProbs,
+  weights
+){
+
+  if(
+    !modelProbs ||
+    !weights
+  ){
+    return NaN;
+  }
+
+
+  let p=0;
+  let mass=0;
+
+
+  for(const k of B2C4C_KEYS){
+
+    const mp=
+      Number(
+        modelProbs[k]
+      );
+
+    const w=
+      Number(
+        weights[k]
+      );
+
+
+    if(
+      !Number.isFinite(mp) ||
+      !Number.isFinite(w)
+    ){
+      continue;
+    }
+
+
+    p+=mp*w;
+    mass+=w;
+  }
+
+
+  return mass>0
+    ?p/mass
+    :NaN;
+}
+
+
+function b2c4cExistingIds(){
+
+  try{
+
+    const rows=
+      typeof lab==='function'
+        ?lab()
+        :[];
+
+
+    const ids=new Set();
+
+
+    for(const r of Array.isArray(rows)?rows:[]){
+
+      if(r?.id!=null){
+        ids.add(
+          String(r.id)
+        );
+      }
+
+    }
+
+
+    return ids;
+
+  }catch(e){
+
+    return new Set();
+  }
+}
+
+
+function b2c4cSnapshotFor(row){
+
+  const official=
+    b2c4cOfficialWeights();
+
+
+  const shadow=
+    b2c4cShadowWeights(
+      official
+    );
+
+
+  const officialBlend=
+    b2c4cBlendProbability(
+      row?.modelProbs,
+      official
+    );
+
+
+  const shadowBlend=
+    b2c4cBlendProbability(
+      row?.modelProbs,
+      shadow
+    );
+
+
+  return{
+
+    schema:
+      'mlb-weight-snapshot-v1',
+
+    version:
+      B2C4C_VERSION,
+
+    capturedAt:
+      new Date()
+        .toISOString(),
+
+    immutable:
+      true,
+
+    historicalBackfill:
+      false,
+
+    source:
+      'FORECAST_CREATION',
+
+    market:
+      String(
+        row?.market||
+        'TOTAL'
+      ).toUpperCase(),
+
+    side:
+      String(
+        row?.side||
+        ''
+      ).toUpperCase(),
+
+    line:
+      Number.isFinite(
+        Number(row?.line)
+      )
+        ?Number(row.line)
+        :null,
+
+    modelVersion:
+      row?.modelVersion||
+      null,
+
+    appVersion:
+      row?.appVersion||
+      null,
+
+    officialWeights:
+      official,
+
+    shadowWeights:
+      shadow,
+
+    officialWeightSum:
+      b2c4cWeightSum(
+        official
+      ),
+
+    shadowWeightSum:
+      b2c4cWeightSum(
+        shadow
+      ),
+
+    officialProbability:
+      Number.isFinite(
+        Number(row?.ensembleP)
+      )
+        ?Number(row.ensembleP)
+        :null,
+
+    /*
+     * Raw blend.
+     *
+     * No se presenta como probabilidad
+     * oficial alternativa porque todavía
+     * no replica toda la calibración/gates.
+     */
+    officialWeightBlendProbability:
+      Number.isFinite(
+        officialBlend
+      )
+        ?officialBlend
+        :null,
+
+    shadowWeightBlendProbability:
+      Number.isFinite(
+        shadowBlend
+      )
+        ?shadowBlend
+        :null
+
+  };
+}
+
+
+function b2c4cAttachOnlyToNewRows(
+  idsBefore
+){
+
+  let rows;
+
+
+  try{
+
+    rows=
+      typeof lab==='function'
+        ?lab()
+        :[];
+
+  }catch(e){
+
+    return{
+      attached:0,
+      skipped:0
+    };
+  }
+
+
+  if(!Array.isArray(rows)){
+
+    return{
+      attached:0,
+      skipped:0
+    };
+  }
+
+
+  let attached=0;
+  let skipped=0;
+  let changed=false;
+
+
+  const out=
+    rows.map(row=>{
+
+      if(!row){
+        return row;
+      }
+
+
+      const id=
+        row.id!=null
+          ?String(row.id)
+          :'';
+
+
+      /*
+       * Regla 1:
+       * registros existentes ANTES de la
+       * llamada oficial nunca se backfillean.
+       */
+      if(
+        id &&
+        idsBefore.has(id)
+      ){
+
+        skipped++;
+
+        return row;
+      }
+
+
+      /*
+       * Regla 2:
+       * si por cualquier motivo ya existe
+       * snapshot, jamás sobrescribirlo.
+       */
+      if(
+        row.weightHistorySnapshot
+      ){
+
+        skipped++;
+
+        return row;
+      }
+
+
+      /*
+       * Regla 3:
+       * sólo pronósticos nuevos.
+       */
+      const snapshot=
+        b2c4cSnapshotFor(
+          row
+        );
+
+
+      attached++;
+      changed=true;
+
+
+      return{
+        ...row,
+
+        weightHistorySnapshot:
+          snapshot
+      };
+
+    });
+
+
+  if(
+    changed &&
+    typeof saveLab==='function'
+  ){
+
+    saveLab(out);
+  }
+
+
+  return{
+    attached,
+    skipped
+  };
+}
+
+
+function b2c4cInstall(){
+
+  if(
+    typeof addLabForecast!=='function'
+  ){
+
+    console.warn(
+      'B2C-4C: addLabForecast unavailable'
+    );
+
+    return;
+  }
+
+
+  if(
+    addLabForecast
+      .__b2c4cWeightHistory===true
+  ){
+    return;
+  }
+
+
+  const previous=
+    addLabForecast;
+
+
+  const wrapped=function(){
+
+    /*
+     * FOTO DEL HISTORIAL ANTES.
+     */
+    const before=
+      b2c4cExistingIds();
+
+
+    /*
+     * EJECUCIÓN OFICIAL SIN CAMBIOS.
+     */
+    const result=
+      previous.apply(
+        this,
+        arguments
+      );
+
+
+    /*
+     * Sólo después añadimos metadata a
+     * IDs realmente nuevos.
+     */
+    try{
+
+      const audit=
+        b2c4cAttachOnlyToNewRows(
+          before
+        );
+
+
+      window.__MLB_WEIGHT_HISTORY_LAST__={
+        ...audit,
+        at:
+          new Date()
+            .toISOString()
+      };
+
+
+    }catch(e){
+
+      console.warn(
+        'B2C-4C attach',
+        e
+      );
+
+    }
+
+
+    return result;
+  };
+
+
+  wrapped.__b2c4cWeightHistory=
+    true;
+
+
+  addLabForecast=
+    wrapped;
+
+
+  try{
+
+    window.addLabForecast=
+      wrapped;
+
+  }catch{}
+
+
+  window.__MLB_WEIGHT_HISTORY_INFO__={
+
+    version:
+      B2C4C_VERSION,
+
+    mode:
+      'APPEND_ONLY_NEW_FORECASTS',
+
+    legacyBackfill:
+      false,
+
+    overwritesExistingSnapshots:
+      false,
+
+    modifiesOfficialPrediction:
+      false,
+
+    modifiesWeights:
+      false,
+
+    modifiesCalibration:
+      false,
+
+    modifiesCensus:
+      false,
+
+    installedAt:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+if(
+  document.readyState==='loading'
+){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c4cInstall,
+    {once:true}
+  );
+
+}else{
+
+  b2c4cInstall();
+
+}
+
+})();
+</script>
+
 </body>
 </html>
