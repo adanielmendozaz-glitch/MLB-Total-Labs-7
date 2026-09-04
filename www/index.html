@@ -44759,5 +44759,789 @@ if(
 })();
 </script>
 
+
+<!-- =========================================================
+ V7.8.6 B2C-4A ADAPTIVE WEIGHT SHADOW AUDIT
+ READ ONLY · DOES NOT MODIFY OFFICIAL WEIGHTS
+========================================================= -->
+
+<style>
+#b2c4WeightAudit{
+  margin:14px 0;
+  padding:15px;
+  border-radius:18px;
+  border:1px solid rgba(99,190,255,.26);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(8,28,43,.96),
+      rgba(7,20,32,.98)
+    );
+}
+
+.b2c4-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+
+.b2c4-title{
+  color:#9cb4ca;
+  font-size:.72rem;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+
+.b2c4-state{
+  margin-top:4px;
+  font-size:1.08rem;
+  font-weight:950;
+  color:#78e4ad;
+}
+
+.b2c4-state.warn{
+  color:#ffd06d;
+}
+
+.b2c4-state.bad{
+  color:#ff7e91;
+}
+
+.b2c4-meta{
+  text-align:right;
+  color:#7f96aa;
+  font-size:.68rem;
+}
+
+.b2c4-grid{
+  margin-top:13px;
+  display:grid;
+  grid-template-columns:1.2fr 1fr 1fr 1fr;
+  gap:6px;
+  align-items:center;
+}
+
+.b2c4-cell{
+  padding:8px 7px;
+  border-radius:9px;
+  background:rgba(4,15,24,.55);
+  border:1px solid rgba(105,145,180,.11);
+  font-size:.68rem;
+  color:#91a8bb;
+}
+
+.b2c4-cell.h{
+  color:#c7d6e3;
+  font-weight:900;
+}
+
+.b2c4-cell.num{
+  text-align:right;
+  font-weight:900;
+  color:#e6f1fa;
+}
+
+.b2c4-cell.delta{
+  text-align:right;
+  font-weight:900;
+}
+
+.b2c4-cell.ok{
+  color:#73dda8;
+}
+
+.b2c4-cell.warn{
+  color:#ffd06d;
+}
+
+.b2c4-foot{
+  margin-top:12px;
+  padding-top:11px;
+  border-top:1px solid rgba(120,150,180,.13);
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+}
+
+.b2c4-stat{
+  padding:8px;
+  border-radius:10px;
+  text-align:center;
+  background:rgba(3,13,22,.50);
+  border:1px solid rgba(120,150,180,.10);
+}
+
+.b2c4-stat small{
+  display:block;
+  color:#7890a5;
+  font-size:.58rem;
+  font-weight:800;
+}
+
+.b2c4-stat b{
+  display:block;
+  margin-top:3px;
+  font-size:.83rem;
+  color:#edf6ff;
+}
+
+@media(max-width:520px){
+  .b2c4-grid{
+    grid-template-columns:1fr .85fr .85fr .8fr;
+  }
+
+  .b2c4-foot{
+    grid-template-columns:1fr 1fr;
+  }
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const B2C4_KEYS=[
+  'struct',
+  'nb',
+  'pln',
+  'com'
+];
+
+const B2C4_LABELS={
+  struct:'Markov / RE24',
+  nb:'NegBin',
+  pln:'Poisson-Lognormal',
+  com:'COM-Poisson'
+};
+
+function b2c4Pct(x){
+  return Number.isFinite(Number(x))
+    ?(Number(x)*100).toFixed(1)+'%'
+    :'—';
+}
+
+function b2c4Pp(x){
+  return Number.isFinite(Number(x))
+    ?(
+      (Number(x)*100)>=0?'+':''
+    )+(Number(x)*100).toFixed(2)+' pp'
+    :'—';
+}
+
+/*
+ * Proyección a simplex acotado.
+ *
+ * Objetivo:
+ * sum(weights)=1
+ * cada weight entre 0.15 y 0.40
+ *
+ * No toca learnedWeights().
+ * Sólo construye un challenger matemático.
+ */
+function b2c4BoundedSimplex(input,min=.15,max=.40){
+
+  const w={};
+
+  for(const k of B2C4_KEYS){
+    w[k]=Number(input?.[k]);
+    if(!Number.isFinite(w[k]))w[k]=.25;
+  }
+
+  let sum=B2C4_KEYS.reduce((a,k)=>a+w[k],0);
+
+  if(!(sum>0)){
+    for(const k of B2C4_KEYS)w[k]=.25;
+    sum=1;
+  }
+
+  for(const k of B2C4_KEYS){
+    w[k]/=sum;
+  }
+
+  for(let iter=0;iter<30;iter++){
+
+    let fixedSum=0;
+    let free=[];
+
+    for(const k of B2C4_KEYS){
+
+      if(w[k]<min){
+        w[k]=min;
+      }
+
+      if(w[k]>max){
+        w[k]=max;
+      }
+    }
+
+    for(const k of B2C4_KEYS){
+
+      if(
+        w[k]<=min+1e-12 ||
+        w[k]>=max-1e-12
+      ){
+        fixedSum+=w[k];
+      }else{
+        free.push(k);
+      }
+    }
+
+    const current=
+      B2C4_KEYS.reduce(
+        (a,k)=>a+w[k],
+        0
+      );
+
+    const diff=1-current;
+
+    if(Math.abs(diff)<1e-12){
+      break;
+    }
+
+    if(!free.length){
+
+      /*
+       * Caso límite:
+       * redistribuir sobre quienes tengan
+       * capacidad en la dirección necesaria.
+       */
+      free=B2C4_KEYS.filter(k=>
+        diff>0
+          ?w[k]<max-1e-12
+          :w[k]>min+1e-12
+      );
+    }
+
+    if(!free.length)break;
+
+    const capacity=free.map(k=>
+      diff>0
+        ?max-w[k]
+        :w[k]-min
+    );
+
+    const capSum=
+      capacity.reduce(
+        (a,b)=>a+b,
+        0
+      );
+
+    if(capSum<=1e-15)break;
+
+    for(let i=0;i<free.length;i++){
+
+      const k=free[i];
+
+      const share=
+        diff*
+        (
+          capacity[i]/capSum
+        );
+
+      w[k]+=share;
+    }
+  }
+
+  /*
+   * Limpieza numérica final.
+   */
+  for(const k of B2C4_KEYS){
+    w[k]=Math.max(
+      min,
+      Math.min(
+        max,
+        w[k]
+      )
+    );
+  }
+
+  const finalSum=
+    B2C4_KEYS.reduce(
+      (a,k)=>a+w[k],
+      0
+    );
+
+  /*
+   * Si por floating point queda residuo,
+   * lo absorbemos en un peso con capacidad.
+   */
+  let residual=
+    1-finalSum;
+
+  if(Math.abs(residual)>1e-12){
+
+    for(const k of B2C4_KEYS){
+
+      const room=
+        residual>0
+          ?max-w[k]
+          :w[k]-min;
+
+      if(room<=0)continue;
+
+      const move=
+        Math.sign(residual)*
+        Math.min(
+          Math.abs(residual),
+          room
+        );
+
+      w[k]+=move;
+      residual-=move;
+
+      if(Math.abs(residual)<1e-12){
+        break;
+      }
+    }
+  }
+
+  return w;
+}
+
+
+function b2c4Official(){
+
+  try{
+
+    if(
+      typeof learnedWeights==='function'
+    ){
+
+      return learnedWeights('TOTAL');
+
+    }
+
+  }catch(e){
+
+    console.warn(
+      'B2C-4A learnedWeights',
+      e
+    );
+
+  }
+
+  return null;
+}
+
+
+function b2c4Report(){
+
+  const official=
+    b2c4Official();
+
+  if(!official){
+
+    return{
+      ok:false,
+      available:false,
+      state:'UNAVAILABLE'
+    };
+  }
+
+
+  const challenger=
+    b2c4BoundedSimplex(
+      official,
+      .15,
+      .40
+    );
+
+
+  const rows=[];
+
+  let violations=0;
+  let maxDelta=0;
+
+  for(const k of B2C4_KEYS){
+
+    const o=
+      Number(official[k]);
+
+    const c=
+      Number(challenger[k]);
+
+    const delta=
+      c-o;
+
+    const violation=
+      !Number.isFinite(o) ||
+      o<.15-1e-9 ||
+      o>.40+1e-9;
+
+    if(violation){
+      violations++;
+    }
+
+    maxDelta=
+      Math.max(
+        maxDelta,
+        Math.abs(delta)
+      );
+
+    rows.push({
+      key:k,
+      label:B2C4_LABELS[k],
+      official:o,
+      challenger:c,
+      delta,
+      violation
+    });
+
+  }
+
+
+  const officialSum=
+    B2C4_KEYS.reduce(
+      (a,k)=>
+        a+Number(official[k]||0),
+      0
+    );
+
+  const challengerSum=
+    B2C4_KEYS.reduce(
+      (a,k)=>
+        a+Number(challenger[k]||0),
+      0
+    );
+
+
+  const active=
+    official.active===true;
+
+  const n=
+    Number(official.n)||0;
+
+
+  let state='ESTABLE';
+
+  if(violations>0){
+    state='VIOLACIÓN';
+  }
+  else if(
+    Math.abs(officialSum-1)>.000001
+  ){
+    state='SUMA IRREGULAR';
+  }
+
+
+  return{
+
+    version:'B2C-4A',
+
+    available:true,
+
+    state,
+
+    ok:
+      violations===0 &&
+      Math.abs(
+        officialSum-1
+      )<=.000001,
+
+    active,
+
+    n,
+
+    violations,
+
+    officialSum,
+
+    challengerSum,
+
+    maxDelta,
+
+    rows,
+
+    official,
+
+    challenger,
+
+    at:
+      new Date()
+        .toISOString()
+
+  };
+
+}
+
+
+function b2c4Html(report){
+
+  if(!report.available){
+
+    return`
+      <section id="b2c4WeightAudit">
+        <div class="b2c4-title">
+          ADAPTIVE WEIGHT SHADOW
+        </div>
+        <div class="b2c4-state bad">
+          NO DISPONIBLE
+        </div>
+      </section>
+    `;
+  }
+
+
+  const stateClass=
+    report.state==='ESTABLE'
+      ?''
+      :report.state==='VIOLACIÓN'
+        ?'bad'
+        :'warn';
+
+
+  return`
+    <section id="b2c4WeightAudit">
+
+      <div class="b2c4-head">
+
+        <div>
+
+          <div class="b2c4-title">
+            ADAPTIVE WEIGHT SHADOW
+          </div>
+
+          <div class="b2c4-state ${stateClass}">
+            ${report.state}
+          </div>
+
+        </div>
+
+        <div class="b2c4-meta">
+          B2C-4A · READ ONLY<br>
+          ${report.active?'LEARNING ACTIVE':'LEARNING INACTIVE'}
+        </div>
+
+      </div>
+
+
+      <div class="b2c4-grid">
+
+        <div class="b2c4-cell h">
+          MOTOR
+        </div>
+
+        <div class="b2c4-cell h num">
+          OFICIAL
+        </div>
+
+        <div class="b2c4-cell h num">
+          SHADOW
+        </div>
+
+        <div class="b2c4-cell h num">
+          Δ
+        </div>
+
+
+        ${report.rows.map(r=>`
+
+          <div class="b2c4-cell">
+            ${r.label}
+          </div>
+
+          <div class="b2c4-cell num ${r.violation?'warn':''}">
+            ${b2c4Pct(r.official)}
+          </div>
+
+          <div class="b2c4-cell num">
+            ${b2c4Pct(r.challenger)}
+          </div>
+
+          <div class="b2c4-cell delta ${Math.abs(r.delta)<.0005?'ok':'warn'}">
+            ${b2c4Pp(r.delta)}
+          </div>
+
+        `).join('')}
+
+      </div>
+
+
+      <div class="b2c4-foot">
+
+        <div class="b2c4-stat">
+          <small>MUESTRA</small>
+          <b>${report.n}</b>
+        </div>
+
+        <div class="b2c4-stat">
+          <small>VIOLACIONES</small>
+          <b>${report.violations}</b>
+        </div>
+
+        <div class="b2c4-stat">
+          <small>SUMA OFICIAL</small>
+          <b>${b2c4Pct(report.officialSum)}</b>
+        </div>
+
+        <div class="b2c4-stat">
+          <small>MÁX Δ</small>
+          <b>${b2c4Pp(report.maxDelta)}</b>
+        </div>
+
+      </div>
+
+    </section>
+  `;
+
+}
+
+
+function b2c4Mount(){
+
+  const home=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!home)return;
+
+
+  const old=
+    document.getElementById(
+      'b2c4WeightAudit'
+    );
+
+  if(old){
+    old.remove();
+  }
+
+
+  const report=
+    b2c4Report();
+
+
+  window.__MLB_WEIGHT_SHADOW_AUDIT__=
+    report;
+
+
+  const wrap=
+    document.createElement(
+      'div'
+    );
+
+  wrap.innerHTML=
+    b2c4Html(report);
+
+
+  const node=
+    wrap.firstElementChild;
+
+  if(!node)return;
+
+
+  const integrity=
+    document.getElementById(
+      'b2c3HomeRankingGuard'
+    );
+
+  if(integrity){
+    integrity.insertAdjacentElement(
+      'afterend',
+      node
+    );
+  }else{
+    home.appendChild(node);
+  }
+
+}
+
+
+function b2c4Install(){
+
+  /*
+   * No envolvemos learnedWeights().
+   * No envolvemos evaluateMarket().
+   * No escribimos configuración.
+   */
+
+  if(
+    typeof renderHomeDashboard!=='function'
+  ){
+    return;
+  }
+
+
+  if(
+    renderHomeDashboard
+      .__b2c4WeightAudit===true
+  ){
+    return;
+  }
+
+
+  const previous=
+    renderHomeDashboard;
+
+
+  const wrapped=function(){
+
+    const result=
+      previous.apply(
+        this,
+        arguments
+      );
+
+    try{
+      b2c4Mount();
+    }catch(e){
+
+      console.warn(
+        'B2C-4A',
+        e
+      );
+
+    }
+
+    return result;
+  };
+
+
+  wrapped.__b2c4WeightAudit=
+    true;
+
+
+  renderHomeDashboard=
+    wrapped;
+
+
+  try{
+    window.renderHomeDashboard=
+      wrapped;
+  }catch{}
+
+
+  setTimeout(
+    ()=>{
+      try{
+        b2c4Mount();
+      }catch{}
+    },
+    700
+  );
+
+}
+
+
+if(
+  document.readyState==='loading'
+){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c4Install,
+    {once:true}
+  );
+
+}else{
+
+  b2c4Install();
+
+}
+
+})();
+</script>
+
 </body>
 </html>
