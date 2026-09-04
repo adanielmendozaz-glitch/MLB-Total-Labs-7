@@ -7894,6 +7894,709 @@ strong{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM BRIER B2A
+   BRIER LAB FOUNDATION
+   CSS ONLY
+   ========================================== */
+
+
+/* PAGE FOUNDATION */
+
+#labContent{
+  display:grid;
+  gap:13px;
+
+  padding-bottom:150px;
+}
+
+
+/* PREMIUM HEADER SIN TOCAR HTML */
+
+#labContent::before{
+  content:
+    "MLB LABS · CALIBRATION & MODEL AUDIT\A"
+    "Brier LAB";
+
+  white-space:pre;
+
+  display:block;
+
+  padding:17px 18px;
+
+  border:
+    1px solid #355f82;
+
+  border-radius:21px;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(96,181,255,.16),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 0 0,
+      rgba(185,154,255,.11),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      #0b2943,
+      #071827 55%,
+      #061522
+    );
+
+  color:#f2f7ff;
+
+  font-size:1.32rem;
+
+  font-weight:950;
+
+  line-height:1.45;
+
+  letter-spacing:-.025em;
+
+  box-shadow:
+    0 18px 42px
+    rgba(0,0,0,.22);
+}
+
+
+/* INTRO / SPORTSBOOK LAB */
+
+#labContent > .okbox:first-of-type{
+  position:relative;
+
+  margin:0!important;
+
+  padding:
+    14px 15px!important;
+
+  border:
+    1px solid #2b7057!important;
+
+  border-left:
+    4px solid #43dda0!important;
+
+  border-radius:16px!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(17,75,54,.30),
+      rgba(6,24,34,.88)
+    )!important;
+
+  color:#bff6dc!important;
+
+  line-height:1.5;
+}
+
+
+/* ==========================================
+   PRIMARY KPI DECK
+   ========================================== */
+
+#labContent > .cards:first-of-type{
+  display:grid!important;
+
+  grid-template-columns:
+    repeat(3,minmax(0,1fr))!important;
+
+  gap:9px!important;
+
+  margin:0!important;
+}
+
+
+#labContent > .cards:first-of-type .card{
+  position:relative;
+
+  min-height:108px;
+
+  overflow:hidden;
+
+  padding:13px!important;
+
+  border:
+    1px solid #274d68;
+
+  border-radius:16px;
+
+  background:
+    radial-gradient(
+      circle at 95% 0,
+      rgba(65,156,224,.10),
+      transparent 43%
+    ),
+    linear-gradient(
+      145deg,
+      #082238,
+      #061522
+    );
+
+  box-shadow:
+    inset 0 1px 0
+    rgba(255,255,255,.025);
+}
+
+
+#labContent > .cards:first-of-type .card small{
+  color:#7790a7;
+
+  font-size:.60rem;
+
+  font-weight:950;
+
+  letter-spacing:.055em;
+}
+
+
+#labContent > .cards:first-of-type .card .big{
+  margin-top:7px;
+
+  color:#f4f8fc;
+
+  font-size:1.42rem;
+
+  font-weight:950;
+
+  letter-spacing:-.035em;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(2){
+  border-color:#466b92;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(2) .big{
+  color:#67baff;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(3){
+  border-color:#685a92;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(3) .big{
+  color:#c3a7ff;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(4){
+  border-color:#2d7558;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(4) .big{
+  color:#48df9f;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(5){
+  border-color:#7a6331;
+}
+
+
+#labContent > .cards:first-of-type .card:nth-child(5) .big{
+  color:#f1cc69;
+}
+
+
+/* ==========================================
+   INTERNAL MODULES
+   ========================================== */
+
+#labContent .section{
+  overflow:hidden;
+
+  margin:0!important;
+
+  padding:15px!important;
+
+  border:
+    1px solid #244761;
+
+  border-radius:19px;
+
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(72,134,187,.055),
+      transparent 37%
+    ),
+    linear-gradient(
+      145deg,
+      #091e31,
+      #061522
+    );
+}
+
+
+#labContent .section h3{
+  position:relative;
+
+  margin:
+    0 0 14px!important;
+
+  padding-left:12px;
+
+  color:#eef7ff;
+
+  font-size:1.05rem;
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+}
+
+
+#labContent .section h3::before{
+  content:"";
+
+  position:absolute;
+
+  top:2px;
+  bottom:2px;
+  left:0;
+
+  width:4px;
+
+  border-radius:99px;
+
+  background:
+    linear-gradient(
+      #62b9ff,
+      #a888ff
+    );
+}
+
+
+/* CARDS INTERNOS */
+
+#labContent .section .card{
+  min-width:0;
+
+  border:
+    1px solid #213f57;
+
+  border-radius:14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #071c2d,
+      #06131f
+    );
+}
+
+
+#labContent .section .card small{
+  color:#758ca2;
+
+  font-weight:900;
+}
+
+
+#labContent .section .card .big{
+  font-weight:950;
+}
+
+
+/* ==========================================
+   TABLES
+   ========================================== */
+
+#labContent table{
+  width:100%;
+
+  overflow:hidden;
+
+  border-collapse:collapse;
+
+  border-radius:13px;
+}
+
+
+#labContent thead{
+  background:#071a2a;
+}
+
+
+#labContent th{
+  padding:10px 7px;
+
+  color:#718aa2;
+
+  font-size:.58rem;
+
+  font-weight:950;
+
+  letter-spacing:.045em;
+}
+
+
+#labContent td{
+  padding:11px 7px;
+
+  border-color:#19394f;
+
+  font-size:.68rem;
+}
+
+
+/* ==========================================
+   STATUS COLORS
+   ========================================== */
+
+#labContent .bp-good{
+  color:#45df9e!important;
+}
+
+
+#labContent .bp-mid{
+  color:#f0ca67!important;
+}
+
+
+#labContent .bp-bad{
+  color:#ff7888!important;
+}
+
+
+#labContent .warn{
+  border:
+    1px solid #755f2f!important;
+
+  border-left:
+    4px solid #e0b94d!important;
+
+  border-radius:14px!important;
+
+  background:
+    rgba(62,48,14,.25)!important;
+
+  color:#f2daa0!important;
+}
+
+
+#labContent .danger{
+  border:
+    1px solid #7b3b49!important;
+
+  border-left:
+    4px solid #ff7182!important;
+
+  border-radius:14px!important;
+}
+
+
+/* ==========================================
+   DENSITY / READABILITY
+   ========================================== */
+
+#labContent .smalltxt,
+#labContent .note{
+  color:#8198ac;
+
+  line-height:1.48;
+}
+
+
+#labContent .grid4,
+#labContent .cards{
+  gap:8px;
+}
+
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media(max-width:720px){
+
+  #labContent{
+    gap:11px;
+
+    padding-bottom:165px;
+  }
+
+
+  #labContent::before{
+    padding:14px;
+
+    border-radius:18px;
+
+    font-size:1.06rem;
+
+    line-height:1.5;
+  }
+
+
+  #labContent > .cards:first-of-type{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr))!important;
+  }
+
+
+  #labContent > .cards:first-of-type .card{
+    min-height:96px;
+
+    padding:11px!important;
+  }
+
+
+  #labContent > .cards:first-of-type .card .big{
+    font-size:1.24rem;
+  }
+
+
+  #labContent .section{
+    padding:12px!important;
+
+    border-radius:17px;
+  }
+
+
+  #labContent .section h3{
+    font-size:.95rem;
+  }
+
+
+  #labContent th{
+    font-size:.49rem;
+  }
+
+
+  #labContent td{
+    font-size:.61rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #labContent > .cards:first-of-type{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM BRIER B2B
+   ANALYTICS NAVIGATION
+   ========================================== */
+
+
+#labContent
+.premium-brier-nav{
+
+  display:grid;
+
+  gap:12px;
+
+  margin:
+    0 0 14px;
+
+  padding:14px;
+
+  border:
+    1px solid #315a7a;
+
+  border-radius:20px;
+
+  background:
+    radial-gradient(
+      circle at 92% 0,
+      rgba(90,177,255,.13),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 0 0,
+      rgba(111,91,229,.10),
+      transparent 38%
+    ),
+    linear-gradient(
+      145deg,
+      #0b2238,
+      #071725
+    );
+
+}
+
+
+#labContent
+.premium-brier-nav-title{
+
+  display:grid;
+
+  gap:3px;
+
+}
+
+
+#labContent
+.premium-brier-nav-title small{
+
+  color:#7394ad;
+
+  font-size:.43rem;
+
+  font-weight:950;
+
+  letter-spacing:.08em;
+
+}
+
+
+#labContent
+.premium-brier-nav-title b{
+
+  color:#eef8ff;
+
+  font-size:1.25rem;
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+
+}
+
+
+#labContent
+.premium-brier-nav-title span{
+
+  color:#879fb3;
+
+  font-size:.54rem;
+
+}
+
+
+#labContent
+.premium-brier-nav-links{
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  gap:7px;
+
+}
+
+
+#labContent
+.premium-brier-nav-chip{
+
+  min-height:34px;
+
+  padding:
+    7px 10px;
+
+  border:
+    1px solid #315c7e;
+
+  border-radius:999px;
+
+  color:#bcd8eb;
+
+  background:
+    rgba(9,35,55,.85);
+
+  font-size:.47rem;
+
+  font-weight:900;
+
+}
+
+
+#labContent
+.premium-brier-nav-chip:active{
+
+  transform:
+    translateY(1px);
+
+  background:#164b72;
+
+}
+
+
+#labContent
+.premium-brier-module{
+
+  scroll-margin-top:16px;
+
+}
+
+
+@media(max-width:720px){
+
+  #labContent
+  .premium-brier-nav{
+
+    padding:11px;
+
+    border-radius:17px;
+
+  }
+
+
+  #labContent
+  .premium-brier-nav-title b{
+
+    font-size:1.03rem;
+
+  }
+
+
+  #labContent
+  .premium-brier-nav-links{
+
+    display:grid;
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+
+  }
+
+
+  #labContent
+  .premium-brier-nav-chip{
+
+    width:100%;
+
+    min-height:38px;
+
+    padding:
+      7px 6px;
+
+    font-size:.44rem;
+
+  }
+
+}
+
+
+@media(max-width:380px){
+
+  #labContent
+  .premium-brier-nav-links{
+
+    grid-template-columns:1fr;
+
+  }
+
+}
+
+
 </style>
 </head>
 <body>
@@ -41670,6 +42373,249 @@ renderShadowLab=function(){
       .apply(this,arguments);
 
   premiumShadowSectionFix();
+
+  return result;
+
+};
+
+
+
+
+/* V7.8.6 PREMIUM BRIER B2B */
+
+function premiumBrierNorm(value){
+
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .trim()
+    .toUpperCase();
+
+}
+
+
+function premiumBrierFindSection(
+  root,
+  tokens
+){
+
+  const wanted=
+    tokens.map(
+      premiumBrierNorm
+    );
+
+  const headings=[
+    ...root.querySelectorAll(
+      'h2,h3,h4,summary'
+    )
+  ];
+
+  for(const h of headings){
+
+    const text=
+      premiumBrierNorm(
+        h.textContent
+      );
+
+    if(
+      !wanted.some(
+        token=>text.includes(token)
+      )
+    ){
+      continue;
+    }
+
+    return h.closest(
+      '.section,details'
+    ) || h.parentElement;
+
+  }
+
+  return null;
+
+}
+
+
+function premiumBrierNavigation(){
+
+  const root=
+    document.getElementById(
+      'labContent'
+    );
+
+  if(!root)return;
+
+
+  const targets=[
+
+    {
+      id:'brier-calibration',
+      label:'Calibración',
+      tokens:[
+        'CALIBRACION',
+        'BUCKET'
+      ]
+    },
+
+    {
+      id:'brier-quality',
+      label:'Data Quality',
+      tokens:[
+        'DATA QUALITY',
+        'CALIDAD DE DATOS'
+      ]
+    },
+
+    {
+      id:'brier-gates',
+      label:'Gates',
+      tokens:[
+        'GATE PERFORMANCE',
+        'GATE'
+      ]
+    },
+
+    {
+      id:'brier-closing',
+      label:'Closing Line',
+      tokens:[
+        'CLOSING LINE',
+        'LINEA DE CIERRE'
+      ]
+    },
+
+    {
+      id:'brier-segments',
+      label:'Segmentos',
+      tokens:[
+        'SEGMENT',
+        'SEGMENTACION'
+      ]
+    },
+
+    {
+      id:'brier-trace',
+      label:'Decision Trace',
+      tokens:[
+        'DECISION TRACE'
+      ]
+    },
+
+    {
+      id:'brier-integrity',
+      label:'Integridad',
+      tokens:[
+        'FINAL INTEGRITY'
+      ]
+    }
+
+  ];
+
+
+  const found=[];
+
+
+  for(const item of targets){
+
+    const section=
+      premiumBrierFindSection(
+        root,
+        item.tokens
+      );
+
+    if(!section)continue;
+
+    section.id=item.id;
+
+    section.classList.add(
+      'premium-brier-module'
+    );
+
+    found.push(item);
+
+  }
+
+
+  root.querySelector(
+    '.premium-brier-nav'
+  )?.remove();
+
+
+  if(!found.length)return;
+
+
+  const nav=
+    document.createElement('div');
+
+  nav.className=
+    'premium-brier-nav';
+
+  nav.innerHTML=
+    '<div class="premium-brier-nav-title">'+
+      '<small>BRIER LAB · ANALYTICS MAP</small>'+
+      '<b>Centro de calibración</b>'+
+      '<span>Auditoría estadística · Motor V7.0 sin cambios</span>'+
+    '</div>'+
+    '<div class="premium-brier-nav-links">'+
+      found.map(item=>
+        '<button type="button" '+
+        'class="premium-brier-nav-chip" '+
+        'data-brier-target="'+item.id+'">'+
+        item.label+
+        '</button>'
+      ).join('')+
+    '</div>';
+
+
+  const first=
+    root.firstElementChild;
+
+  if(first){
+    first.after(nav);
+  }else{
+    root.prepend(nav);
+  }
+
+
+  nav.querySelectorAll(
+    '[data-brier-target]'
+  ).forEach(btn=>{
+
+    btn.onclick=()=>{
+
+      const id=
+        btn.getAttribute(
+          'data-brier-target'
+        );
+
+      document
+        .getElementById(id)
+        ?.scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+
+    };
+
+  });
+
+}
+
+
+const __premiumRenderLabB2B=
+  renderLab;
+
+
+renderLab=function(){
+
+  const result=
+    __premiumRenderLabB2B
+      .apply(
+        this,
+        arguments
+      );
+
+  premiumBrierNavigation();
 
   return result;
 
