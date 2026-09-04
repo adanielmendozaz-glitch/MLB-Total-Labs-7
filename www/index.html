@@ -42983,5 +42983,601 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- =========================================================
+ V7.8.6 PREMIUM BRIER B2C-2 HOME PERSISTENCE FIX
+ PRESENTATION ONLY · NO ENGINE WRITES
+========================================================= -->
+<style>
+.b2c2-home-rank{
+  display:grid;
+  gap:0;
+  width:100%;
+}
+
+.b2c2-home-row{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto 12px;
+  gap:9px;
+  align-items:center;
+  min-height:62px;
+  padding:9px 10px;
+  border-bottom:1px solid rgba(91,128,164,.16);
+}
+
+.b2c2-home-row:last-child{
+  border-bottom:0;
+}
+
+.b2c2-home-num{
+  width:31px;
+  height:31px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  border:1px solid rgba(91,151,205,.40);
+  color:#dcecff;
+  font-size:.78rem;
+  font-weight:900;
+}
+
+.b2c2-home-row:first-child .b2c2-home-num{
+  border-color:rgba(255,199,73,.58);
+  color:#ffd86e;
+}
+
+.b2c2-home-copy{
+  min-width:0;
+}
+
+.b2c2-home-match{
+  color:#eef6ff;
+  font-size:.79rem;
+  font-weight:900;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.b2c2-home-side{
+  margin-top:3px;
+  font-size:.73rem;
+  font-weight:900;
+}
+
+.b2c2-home-side.over{
+  color:#ff8292;
+}
+
+.b2c2-home-side.under{
+  color:#6ec5ff;
+}
+
+.b2c2-home-side.pass{
+  color:#d8c47a;
+}
+
+.b2c2-home-stats{
+  text-align:right;
+  min-width:55px;
+}
+
+.b2c2-home-edge{
+  display:block;
+  color:#76e9ac;
+  font-size:.72rem;
+  font-weight:900;
+}
+
+.b2c2-home-prob{
+  display:block;
+  margin-top:2px;
+  color:#879bb0;
+  font-size:.72rem;
+}
+
+.b2c2-home-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#6f8192;
+}
+
+.b2c2-home-dot.play{
+  background:#48dfa1;
+  box-shadow:0 0 0 4px rgba(72,223,161,.10);
+}
+
+.b2c2-home-dot.lean{
+  background:#ffd06a;
+}
+
+.b2c2-home-dot.pass{
+  background:#73879a;
+}
+
+.b2c2-restored{
+  color:#7f9bb4!important;
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const B2C2_HOME_MARK='B2C-2 HOME PERSISTENCE';
+
+function b2c2Esc(v){
+  try{
+    if(typeof esc==='function') return esc(String(v??''));
+  }catch(e){}
+
+  return String(v??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#39;");
+}
+
+function b2c2Pct(v){
+  const x=Number(v);
+
+  if(!Number.isFinite(x)) return '—';
+
+  return (x*100).toFixed(1)+'%';
+}
+
+function b2c2Date(){
+  const field=document.getElementById('date');
+
+  if(field && field.value) return field.value;
+
+  try{
+    if(typeof localDay==='function') return localDay();
+  }catch(e){}
+
+  return '';
+}
+
+/*
+  READ ONLY.
+
+  Orden:
+  1. Censo persistente.
+  2. Draft persistente.
+  3. Sesión actual como último recurso.
+
+  No sincroniza, no guarda y no ejecuta motores.
+*/
+function b2c2HomeSnapshot(){
+
+  const date=b2c2Date();
+
+  if(!date){
+    return {
+      date:'',
+      kind:'EMPTY',
+      rows:[]
+    };
+  }
+
+  try{
+    if(typeof censusDay==='function'){
+
+      const day=censusDay(date);
+
+      if(day && Array.isArray(day.rows) && day.rows.length){
+
+        return {
+          date,
+          kind:'CENSUS',
+          when:day.updated || day.created || null,
+          rows:day.rows.filter(
+            r=>!r.market || String(r.market).toUpperCase()==='TOTAL'
+          )
+        };
+      }
+    }
+  }catch(e){
+    console.warn('B2C-2 census read',e);
+  }
+
+  try{
+    if(typeof rankDraft==='function'){
+
+      const draft=rankDraft(date);
+
+      if(draft && Array.isArray(draft.rows) && draft.rows.length){
+
+        return {
+          date,
+          kind:'DRAFT',
+          when:draft.savedAt || null,
+          rows:draft.rows.filter(
+            r=>!r.market || String(r.market).toUpperCase()==='TOTAL'
+          )
+        };
+      }
+    }
+  }catch(e){
+    console.warn('B2C-2 draft read',e);
+  }
+
+  /*
+    Si aún estamos en la sesión viva y el snapshot
+    persistente todavía no está disponible, usamos
+    la vista actual SIN guardarla.
+  */
+  try{
+    if(
+      typeof currentRankingRows==='function' &&
+      typeof currentRankViewRows==='function'
+    ){
+
+      const raw=currentRankingRows();
+
+      if(Array.isArray(raw) && raw.length){
+
+        const rows=currentRankViewRows(raw,false);
+
+        if(Array.isArray(rows) && rows.length){
+
+          return {
+            date,
+            kind:'LIVE',
+            when:new Date().toISOString(),
+            rows
+          };
+        }
+      }
+    }
+  }catch(e){
+    console.warn('B2C-2 live read',e);
+  }
+
+  return {
+    date,
+    kind:'EMPTY',
+    rows:[]
+  };
+}
+
+function b2c2IsPass(r){
+
+  if(r?.pass===true) return true;
+  if(r?.pass===false) return false;
+
+  return String(r?.signal||'')
+    .trim()
+    .toUpperCase()==='PASS';
+}
+
+function b2c2Signal(r){
+
+  if(b2c2IsPass(r)) return 'pass';
+
+  const s=String(
+    r?.signalClass ||
+    r?.signal ||
+    ''
+  ).toLowerCase();
+
+  if(s.includes('lean')) return 'lean';
+
+  return 'play';
+}
+
+function b2c2RowsHtml(rows){
+
+  const list=Array.isArray(rows)
+    ?rows.slice(0,4)
+    :[];
+
+  if(!list.length) return '';
+
+  return `
+    <div class="b2c2-home-rank">
+      ${list.map((r,i)=>{
+
+        const away=
+          r.awayAbbr ||
+          r.away ||
+          'AWAY';
+
+        const home=
+          r.homeAbbr ||
+          r.home ||
+          'HOME';
+
+        const pass=b2c2IsPass(r);
+
+        const side=pass
+          ?'PASS'
+          :String(r.side||'').toUpperCase();
+
+        const line=
+          pass
+            ?''
+            :Number.isFinite(Number(r.line))
+              ?' '+Number(r.line)
+              :'';
+
+        const sideClass=
+          pass
+            ?'pass'
+            :side==='OVER'
+              ?'over'
+              :'under';
+
+        const edge=
+          Number.isFinite(Number(r.edge))
+            ?b2c2Pct(Number(r.edge))
+            :'—';
+
+        const prob=
+          Number.isFinite(Number(r.p))
+            ?b2c2Pct(Number(r.p))
+            :'—';
+
+        const sig=b2c2Signal(r);
+
+        return `
+          <div class="b2c2-home-row">
+
+            <div class="b2c2-home-num">
+              ${Number(r.rank)||i+1}
+            </div>
+
+            <div class="b2c2-home-copy">
+
+              <div class="b2c2-home-match">
+                ${b2c2Esc(away)} @ ${b2c2Esc(home)}
+              </div>
+
+              <div class="b2c2-home-side ${sideClass}">
+                ${b2c2Esc(side+line)}
+              </div>
+
+            </div>
+
+            <div class="b2c2-home-stats">
+              <span class="b2c2-home-edge">
+                ${edge}
+              </span>
+              <span class="b2c2-home-prob">
+                ${prob}
+              </span>
+            </div>
+
+            <span class="b2c2-home-dot ${sig}"></span>
+
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function b2c2FindRankingCard(){
+
+  const cards=
+    document.querySelectorAll(
+      '.premium-center-card'
+    );
+
+  for(const card of cards){
+
+    const kicker=
+      card.querySelector(
+        '.premium-center-kicker'
+      );
+
+    const text=
+      String(kicker?.textContent||'')
+        .trim()
+        .toLowerCase();
+
+    if(text.includes('ranking del día')){
+      return card;
+    }
+  }
+
+  return null;
+}
+
+function b2c2PatchHome(){
+
+  const root=
+    document.getElementById(
+      'homeDashboard'
+    );
+
+  if(!root) return;
+
+  const snap=b2c2HomeSnapshot();
+
+  const rows=
+    Array.isArray(snap.rows)
+      ?snap.rows
+      :[];
+
+  if(!rows.length) return;
+
+  /*
+    ANALIZADOS:
+    snapshot persistente del día.
+  */
+  const analyzed=
+    rows.length;
+
+  /*
+    JUGABLES:
+    todos los que no quedaron PASS.
+  */
+  const playable=
+    rows.filter(
+      r=>!b2c2IsPass(r)
+    ).length;
+
+  const kpis=
+    root.querySelectorAll(
+      '.home-kpi'
+    );
+
+  if(kpis.length>=4){
+
+    const playValue=
+      kpis[2].querySelector(
+        '.home-kpi-value'
+      );
+
+    const analyzedValue=
+      kpis[3].querySelector(
+        '.home-kpi-value'
+      );
+
+    if(playValue){
+      playValue.textContent=
+        String(playable);
+    }
+
+    if(analyzedValue){
+      analyzedValue.textContent=
+        String(analyzed);
+    }
+  }
+
+  const card=b2c2FindRankingCard();
+
+  if(!card) return;
+
+  const count=
+    card.querySelector(
+      '.premium-rank-count'
+    );
+
+  if(count){
+    count.textContent=
+      'TOP '+String(
+        Math.min(rows.length,4)
+      );
+  }
+
+  const body=
+    card.querySelector(
+      '.premium-center-body'
+    );
+
+  if(body){
+    body.innerHTML=
+      b2c2RowsHtml(rows);
+  }
+
+  const foot=
+    card.querySelector(
+      '.premium-center-foot'
+    );
+
+  if(foot){
+
+    if(snap.kind==='CENSUS'){
+      foot.textContent=
+        'Ranking oficial · restaurado del Censo';
+      foot.classList.add(
+        'b2c2-restored'
+      );
+    }
+    else if(snap.kind==='DRAFT'){
+      foot.textContent=
+        'Ranking oficial · restaurado del respaldo';
+      foot.classList.add(
+        'b2c2-restored'
+      );
+    }
+    else{
+      foot.textContent=
+        'Ranking oficial · sesión actual';
+      foot.classList.remove(
+        'b2c2-restored'
+      );
+    }
+  }
+}
+
+function b2c2Install(){
+
+  if(
+    typeof renderHomeDashboard!=='function'
+  ){
+    console.warn(
+      B2C2_HOME_MARK,
+      'renderHomeDashboard no disponible'
+    );
+    return;
+  }
+
+  if(
+    renderHomeDashboard
+      .__b2c2Persistence===true
+  ){
+    return;
+  }
+
+  const original=
+    renderHomeDashboard;
+
+  const wrapped=function(){
+
+    const result=
+      original.apply(
+        this,
+        arguments
+      );
+
+    try{
+      b2c2PatchHome();
+    }catch(e){
+      console.warn(
+        B2C2_HOME_MARK,
+        e
+      );
+    }
+
+    return result;
+  };
+
+  wrapped.__b2c2Persistence=true;
+
+  renderHomeDashboard=wrapped;
+
+  try{
+    window.renderHomeDashboard=
+      wrapped;
+  }catch(e){}
+
+  try{
+    b2c2PatchHome();
+  }catch(e){}
+}
+
+if(document.readyState==='loading'){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c2Install,
+    {once:true}
+  );
+
+}else{
+
+  b2c2Install();
+
+}
+
+})();
+</script>
+
 </body>
 </html>
