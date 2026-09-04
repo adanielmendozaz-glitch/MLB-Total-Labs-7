@@ -42623,5 +42623,365 @@ renderLab=function(){
 
 
 </script>
+
+<!-- =========================================================
+ V7.8.6 PREMIUM BRIER B2C MODEL STATE UI ONLY
+ READ ONLY · NO ENGINE WRITES
+========================================================= -->
+<style>
+#premiumBrierModelState{
+  margin:0 0 16px;
+  padding:16px;
+  border:1px solid rgba(113,160,255,.28);
+  border-radius:20px;
+  background:
+    radial-gradient(circle at 100% 0,
+      rgba(81,153,255,.12),
+      transparent 38%),
+    linear-gradient(145deg,#091725,#07121e);
+  box-shadow:0 14px 34px rgba(0,0,0,.16);
+}
+
+.pbms-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.pbms-kicker{
+  font-size:.73rem;
+  letter-spacing:.11em;
+  color:#8da6be;
+  font-weight:800;
+}
+
+.pbms-title{
+  margin-top:3px;
+  font-size:1.12rem;
+  color:#f2f7ff;
+  font-weight:900;
+}
+
+.pbms-lock{
+  white-space:nowrap;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(72,218,149,.35);
+  background:rgba(35,160,101,.12);
+  color:#86e9b6;
+  font-size:.72rem;
+  font-weight:900;
+}
+
+.pbms-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+
+.pbms-card{
+  border:1px solid rgba(114,151,190,.17);
+  border-radius:15px;
+  padding:11px;
+  background:rgba(5,16,28,.62);
+}
+
+.pbms-label{
+  color:#8499ae;
+  font-size:.69rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.055em;
+}
+
+.pbms-value{
+  margin-top:5px;
+  color:#f5f8fc;
+  font-size:1rem;
+  font-weight:900;
+}
+
+.pbms-sub{
+  margin-top:4px;
+  color:#8ba0b5;
+  font-size:.73rem;
+  line-height:1.35;
+}
+
+.pbms-weights{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+}
+
+.pbms-weight{
+  text-align:center;
+  padding:9px 4px;
+  border-radius:13px;
+  border:1px solid rgba(118,154,194,.16);
+  background:rgba(6,20,33,.72);
+}
+
+.pbms-weight b{
+  display:block;
+  color:#eaf2ff;
+  font-size:.92rem;
+}
+
+.pbms-weight span{
+  display:block;
+  margin-top:3px;
+  color:#8095aa;
+  font-size:.62rem;
+  font-weight:800;
+}
+
+.pbms-section-title{
+  margin-top:14px;
+  margin-bottom:7px;
+  color:#9fb2c5;
+  font-size:.68rem;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+
+.pbms-foot{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid rgba(120,155,190,.13);
+  color:#71869b;
+  font-size:.68rem;
+  line-height:1.45;
+}
+
+.pbms-good{color:#81e8b0!important}
+.pbms-wait{color:#f2c874!important}
+
+@media(max-width:520px){
+  .pbms-grid{grid-template-columns:1fr 1fr}
+  .pbms-weights{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const PREMIUM_BRIER_B2C_BUILD = 'BRIER-B2C';
+const PREMIUM_BRIER_B2C_BASELINE = '5f4d047';
+
+function pbmsPct(v){
+  return Number.isFinite(Number(v))
+    ? (Number(v)*100).toFixed(1)+'%'
+    : '—';
+}
+
+function pbmsReadCfg(){
+  try{
+    return typeof cfg === 'function' ? cfg() : null;
+  }catch(e){
+    console.warn('B2C cfg read',e);
+    return null;
+  }
+}
+
+function pbmsReadLearned(){
+  try{
+    return typeof learnedWeights === 'function'
+      ? learnedWeights('TOTAL')
+      : null;
+  }catch(e){
+    console.warn('B2C learnedWeights read',e);
+    return null;
+  }
+}
+
+function premiumBrierModelState(){
+  const root=document.getElementById('labContent');
+  if(!root)return;
+
+  let box=document.getElementById('premiumBrierModelState');
+
+  if(!box){
+    box=document.createElement('section');
+    box.id='premiumBrierModelState';
+
+    const nav=root.querySelector('.premium-brier-nav');
+
+    if(nav && nav.nextSibling){
+      root.insertBefore(box,nav.nextSibling);
+    }else if(nav){
+      root.appendChild(box);
+    }else{
+      root.insertBefore(box,root.firstChild);
+    }
+  }
+
+  const c=pbmsReadCfg()||{};
+  const base=c.weights||{
+    struct:.30,
+    nb:.25,
+    pln:.25,
+    com:.20
+  };
+
+  const learned=pbmsReadLearned();
+
+  const active=!!(learned && learned.active===true);
+  const sample=Number(learned?.n)||0;
+
+  const current=active ? learned : base;
+
+  box.innerHTML=`
+    <div class="pbms-head">
+      <div>
+        <div class="pbms-kicker">MODEL STATE · READ ONLY</div>
+        <div class="pbms-title">Estado real del ensamble</div>
+      </div>
+
+      <div class="pbms-lock">🔒 CORE SIN CAMBIOS B2C</div>
+    </div>
+
+    <div class="pbms-grid">
+
+      <div class="pbms-card">
+        <div class="pbms-label">Adaptive Brier Learning</div>
+        <div class="pbms-value ${active?'pbms-good':'pbms-wait'}">
+          ${active?'ACTIVE':'WAITING'}
+        </div>
+        <div class="pbms-sub">
+          Muestra elegible: ${sample}<br>
+          Activación actual: 25 resultados
+        </div>
+      </div>
+
+      <div class="pbms-card">
+        <div class="pbms-label">Historical Calibration</div>
+        <div class="pbms-value pbms-good">CORE EXISTENTE</div>
+        <div class="pbms-sub">
+          B2C no modifica calibrate().<br>
+          Umbral existente: 12 casos similares.
+        </div>
+      </div>
+
+      <div class="pbms-card">
+        <div class="pbms-label">B2C Build</div>
+        <div class="pbms-value">${PREMIUM_BRIER_B2C_BUILD}</div>
+        <div class="pbms-sub">
+          Base protegida ${PREMIUM_BRIER_B2C_BASELINE}
+        </div>
+      </div>
+
+      <div class="pbms-card">
+        <div class="pbms-label">Engine Write Path</div>
+        <div class="pbms-value pbms-good">NONE</div>
+        <div class="pbms-sub">
+          Esta tarjeta sólo consulta estado.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pbms-section-title">PESOS BASE CONFIGURADOS</div>
+
+    <div class="pbms-weights">
+      <div class="pbms-weight">
+        <b>${pbmsPct(base.struct)}</b>
+        <span>MARKOV / RE24</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(base.nb)}</b>
+        <span>NEG BINOMIAL</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(base.pln)}</b>
+        <span>POISSON-LOGNORMAL</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(base.com)}</b>
+        <span>COM-POISSON</span>
+      </div>
+    </div>
+
+    <div class="pbms-section-title">
+      ${active?'PESOS ADAPTATIVOS ACTUALES':'PESOS ACTUALES · AÚN BASE'}
+    </div>
+
+    <div class="pbms-weights">
+      <div class="pbms-weight">
+        <b>${pbmsPct(current.struct)}</b>
+        <span>MARKOV / RE24</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(current.nb)}</b>
+        <span>NEG BINOMIAL</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(current.pln)}</b>
+        <span>POISSON-LOGNORMAL</span>
+      </div>
+      <div class="pbms-weight">
+        <b>${pbmsPct(current.com)}</b>
+        <span>COM-POISSON</span>
+      </div>
+    </div>
+
+    <div class="pbms-foot">
+      B2C muestra información del sistema existente.
+      No llama saveCfg(), saveLab(), evaluateMarket(),
+      buildModels() ni modifica probabilidades o picks.
+    </div>
+  `;
+}
+
+function premiumBrierB2CHook(){
+
+  if(typeof renderLab==='function' &&
+     renderLab.__premiumBrierB2C!==true){
+
+    const previousRenderLab=renderLab;
+
+    const wrapped=function(){
+      const result=previousRenderLab.apply(this,arguments);
+
+      try{
+        premiumBrierModelState();
+      }catch(e){
+        console.warn('PREMIUM BRIER B2C UI',e);
+      }
+
+      return result;
+    };
+
+    wrapped.__premiumBrierB2C=true;
+
+    renderLab=wrapped;
+
+    try{
+      window.renderLab=wrapped;
+    }catch(e){}
+  }
+
+  try{
+    premiumBrierModelState();
+  }catch(e){}
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener(
+    'DOMContentLoaded',
+    premiumBrierB2CHook,
+    {once:true}
+  );
+}else{
+  premiumBrierB2CHook();
+}
+
+})();
+</script>
+
 </body>
 </html>
