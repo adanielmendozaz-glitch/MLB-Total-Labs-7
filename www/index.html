@@ -6792,6 +6792,935 @@ strong{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM SHADOW S2A
+   SHADOW LAB FOUNDATION
+   CSS ONLY
+   ========================================== */
+
+
+/* TOOLBAR */
+
+#shadow > .histbar:first-child{
+  display:grid!important;
+
+  grid-template-columns:
+    repeat(3,minmax(0,1fr))!important;
+
+  gap:9px!important;
+
+  margin-bottom:14px!important;
+
+  padding:11px!important;
+
+  border:
+    1px solid #29516d;
+
+  border-radius:18px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #081e31,
+      #061522
+    );
+}
+
+
+#shadow > .histbar:first-child .btn{
+  min-height:48px;
+
+  border-radius:13px;
+
+  font-weight:950;
+}
+
+
+#shadow #shadowSettleNow{
+  border-color:#278c63;
+
+  background:
+    linear-gradient(
+      145deg,
+      #178c58,
+      #116644
+    );
+}
+
+
+#shadow #shadowRefresh{
+  border-color:#3176a4;
+
+  background:
+    linear-gradient(
+      145deg,
+      #124e78,
+      #0b314f
+    );
+}
+
+
+#shadow #shadowExport{
+  border-color:#455d79;
+
+  background:
+    linear-gradient(
+      145deg,
+      #102b43,
+      #091c2d
+    );
+}
+
+
+/* INTEGRITY */
+
+#shadowIntegrity{
+  margin-bottom:13px;
+}
+
+
+#shadowIntegrity > *{
+  border-radius:18px!important;
+}
+
+
+/* MAIN SHADOW CONTAINER */
+
+#shadowContent{
+  display:grid;
+
+  gap:13px;
+}
+
+
+#shadowContent > .section:first-child{
+  position:relative;
+
+  overflow:hidden;
+
+  padding:15px!important;
+
+  border:
+    1px solid #77632e!important;
+
+  border-radius:21px!important;
+
+  background:
+    radial-gradient(
+      circle at 92% 0,
+      rgba(226,180,54,.12),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 0 0,
+      rgba(43,144,213,.10),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      #171b17,
+      #081a27 48%,
+      #061522
+    )!important;
+}
+
+
+#shadowContent > .section:first-child > h3{
+  margin-bottom:13px;
+
+  color:#f5d476;
+
+  font-size:1.15rem;
+
+  font-weight:950;
+
+  letter-spacing:-.02em;
+}
+
+
+/* READ ONLY NOTICE */
+
+#shadowContent .warn{
+  border:
+    1px solid #765f29!important;
+
+  border-left:
+    4px solid #e2b947!important;
+
+  border-radius:14px!important;
+
+  color:#f1d78a!important;
+
+  background:
+    rgba(76,58,14,.24)!important;
+}
+
+
+/* KPI / CARDS */
+
+#shadowContent .cards,
+#shadowContent .grid2,
+#shadowContent .grid3,
+#shadowContent .grid4{
+  gap:8px;
+}
+
+
+#shadowContent .card,
+#shadowContent .metric{
+  min-width:0;
+
+  border:
+    1px solid #24455e;
+
+  border-radius:14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(7,29,46,.92),
+      rgba(5,20,32,.92)
+    );
+}
+
+
+#shadowContent .card small,
+#shadowContent .metric small{
+  color:#7690a7;
+
+  font-weight:900;
+}
+
+
+#shadowContent .card .big,
+#shadowContent .metric strong{
+  font-weight:950;
+}
+
+
+/* POSITIVE / NEGATIVE */
+
+#shadowContent .bp-good{
+  color:#43df98!important;
+}
+
+
+#shadowContent .bp-bad{
+  color:#ff7888!important;
+}
+
+
+#shadowContent .bp-mid{
+  color:#f0c861!important;
+}
+
+
+/* TABLES */
+
+#shadowContent table{
+  overflow:hidden;
+
+  border-radius:13px;
+}
+
+
+#shadowContent th{
+  color:#748ea5;
+
+  background:#071a2b;
+}
+
+
+#shadowContent td{
+  border-color:#193a52;
+}
+
+
+/* OK BOX */
+
+#shadowContent .okbox{
+  border:
+    1px solid #25664d!important;
+
+  border-left:
+    4px solid #43d99a!important;
+
+  border-radius:14px!important;
+
+  background:
+    rgba(17,77,54,.18)!important;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+  #shadow{
+    padding-bottom:165px;
+  }
+
+
+  #shadow > .histbar:first-child{
+    grid-template-columns:1fr!important;
+
+    padding:9px!important;
+
+    border-radius:16px;
+  }
+
+
+  #shadow > .histbar:first-child .btn{
+    min-height:45px;
+  }
+
+
+  #shadowContent > .section:first-child{
+    padding:11px!important;
+
+    border-radius:18px!important;
+  }
+
+
+  #shadowContent > .section:first-child > h3{
+    font-size:.95rem;
+  }
+
+
+  #shadowContent .cards,
+  #shadowContent .grid4{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #shadowContent .cards,
+  #shadowContent .grid2,
+  #shadowContent .grid3,
+  #shadowContent .grid4{
+    grid-template-columns:1fr;
+  }
+
+}
+
+
+
+/* ==========================================
+   V7.8.6 PREMIUM SHADOW S2B2
+   SHADOW DASHBOARD VISUAL LAYER
+   CSS ONLY
+   ========================================== */
+
+
+/* HERO */
+
+#shadowContent
+.shadow-premium-hero{
+  display:flex;
+
+  align-items:center;
+
+  justify-content:space-between;
+
+  gap:14px;
+
+  padding:15px;
+
+  border:
+    1px solid #5f5128;
+
+  border-radius:20px;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(229,183,55,.14),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #171b17,
+      #082033 52%,
+      #061522
+    );
+
+  box-shadow:
+    0 15px 36px
+    rgba(0,0,0,.22);
+}
+
+
+#shadowContent
+.shadow-premium-hero-copy{
+  display:grid;
+
+  gap:4px;
+}
+
+
+#shadowContent
+.shadow-premium-hero-copy small{
+  color:#8d9dad;
+
+  font-size:.43rem;
+
+  font-weight:950;
+
+  letter-spacing:.08em;
+}
+
+
+#shadowContent
+.shadow-premium-hero-copy b{
+  color:#f4d36d;
+
+  font-size:1.32rem;
+
+  font-weight:950;
+
+  letter-spacing:-.025em;
+}
+
+
+#shadowContent
+.shadow-premium-hero-copy span{
+  max-width:470px;
+
+  color:#8ca2b5;
+
+  font-size:.56rem;
+
+  line-height:1.45;
+}
+
+
+#shadowContent
+.shadow-premium-readonly{
+  flex:0 0 auto;
+
+  padding:
+    7px 10px;
+
+  border:
+    1px solid #9b4557;
+
+  border-radius:999px;
+
+  color:#ff97a6;
+
+  background:
+    rgba(105,29,44,.20);
+
+  font-size:.43rem;
+
+  font-weight:950;
+
+  letter-spacing:.055em;
+}
+
+
+/* ==========================================
+   PRINCIPAL DECISION STRIP
+   ========================================== */
+
+#shadowContent
+.shadow-premium-team-score,
+#shadowContent
+.shadow-premium-signal,
+#shadowContent
+.shadow-premium-action{
+  position:relative;
+
+  overflow:hidden;
+
+  border:
+    1px solid #2a5570!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      #082034,
+      #061522
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-team-score{
+  border-color:#846d2e!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 5%,
+      rgba(230,187,65,.12),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #211d0e,
+      #071a28
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-signal{
+  border-color:#326a52!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 5%,
+      rgba(65,219,150,.10),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #08251f,
+      #061822
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-action{
+  border-color:#386184!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 5%,
+      rgba(73,156,231,.11),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #08243d,
+      #061522
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-team-score .big,
+#shadowContent
+.shadow-premium-team-score strong{
+  color:#f0cd67!important;
+
+  font-size:1.25rem;
+
+  font-weight:950;
+}
+
+
+#shadowContent
+.shadow-premium-signal .big,
+#shadowContent
+.shadow-premium-signal strong{
+  font-size:1.10rem;
+
+  font-weight:950;
+}
+
+
+#shadowContent
+.shadow-premium-action .big,
+#shadowContent
+.shadow-premium-action strong{
+  font-size:1.10rem;
+
+  font-weight:950;
+}
+
+
+/* ==========================================
+   OBSERVED / PROTECTION METRICS
+   ========================================== */
+
+#shadowContent
+.shadow-premium-cases,
+#shadowContent
+.shadow-premium-losses,
+#shadowContent
+.shadow-premium-winners,
+#shadowContent
+.shadow-premium-saves,
+#shadowContent
+.shadow-premium-promotions{
+  min-height:88px;
+
+  border-radius:14px!important;
+}
+
+
+#shadowContent
+.shadow-premium-cases{
+  border-color:#31536a!important;
+}
+
+
+#shadowContent
+.shadow-premium-losses{
+  border-color:#257153!important;
+
+  background:
+    rgba(13,69,49,.22)!important;
+}
+
+
+#shadowContent
+.shadow-premium-losses .big,
+#shadowContent
+.shadow-premium-losses strong{
+  color:#43df98!important;
+}
+
+
+#shadowContent
+.shadow-premium-winners{
+  border-color:#7c3946!important;
+
+  background:
+    rgba(83,25,37,.20)!important;
+}
+
+
+#shadowContent
+.shadow-premium-winners .big,
+#shadowContent
+.shadow-premium-winners strong{
+  color:#ff7888!important;
+}
+
+
+#shadowContent
+.shadow-premium-saves{
+  border-color:#28735a!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(63,220,155,.10),
+      transparent 42%
+    ),
+    rgba(8,38,33,.35)!important;
+}
+
+
+#shadowContent
+.shadow-premium-saves .big,
+#shadowContent
+.shadow-premium-saves strong{
+  color:#50e3a3!important;
+}
+
+
+#shadowContent
+.shadow-premium-promotions{
+  border-color:#735e2d!important;
+
+  background:
+    rgba(70,52,13,.22)!important;
+}
+
+
+/* ==========================================
+   GATING MODULE
+   ========================================== */
+
+#shadowContent
+.shadow-premium-gating{
+  position:relative;
+
+  overflow:hidden;
+
+  padding-top:42px!important;
+
+  border:
+    1px solid #315f80!important;
+
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(62,153,224,.13),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #08243b,
+      #061522
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-gating::before{
+  content:"GATING SIMULATION";
+
+  position:absolute;
+
+  top:11px;
+  left:12px;
+
+  color:#72c5f5;
+
+  font-size:.51rem;
+
+  font-weight:950;
+
+  letter-spacing:.075em;
+}
+
+
+#shadowContent
+.shadow-premium-gating::after{
+  content:"AUDITORÍA · NO MODIFICA PICK";
+
+  position:absolute;
+
+  top:12px;
+  right:12px;
+
+  color:#66859c;
+
+  font-size:.31rem;
+
+  font-weight:900;
+
+  letter-spacing:.04em;
+}
+
+
+/* ==========================================
+   WHAT-IF MODULE
+   ========================================== */
+
+#shadowContent
+.shadow-premium-whatif{
+  position:relative;
+
+  overflow:hidden;
+
+  padding-top:42px!important;
+
+  border:
+    1px solid #745e2d!important;
+
+  border-radius:18px!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(223,180,64,.11),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #211d0e,
+      #071723
+    )!important;
+}
+
+
+#shadowContent
+.shadow-premium-whatif::before{
+  content:"WHAT-IF CENSUS";
+
+  position:absolute;
+
+  top:11px;
+  left:12px;
+
+  color:#f0cb66;
+
+  font-size:.51rem;
+
+  font-weight:950;
+
+  letter-spacing:.075em;
+}
+
+
+#shadowContent
+.shadow-premium-whatif::after{
+  content:"HIPOTÉTICO";
+
+  position:absolute;
+
+  top:12px;
+  right:12px;
+
+  color:#9d8958;
+
+  font-size:.32rem;
+
+  font-weight:950;
+}
+
+
+/* ==========================================
+   SECTION TITLES
+   ========================================== */
+
+#shadowContent .section h3{
+  color:#eef7fd;
+
+  font-weight:950;
+
+  letter-spacing:-.02em;
+}
+
+
+#shadowContent .section h4{
+  color:#c7d9e7;
+
+  font-weight:900;
+}
+
+
+/* ==========================================
+   TABLE VISUAL
+   ========================================== */
+
+#shadowContent table{
+  width:100%;
+}
+
+
+#shadowContent th{
+  padding:
+    9px 7px;
+
+  font-size:.41rem;
+
+  font-weight:950;
+
+  letter-spacing:.04em;
+}
+
+
+#shadowContent td{
+  padding:
+    10px 7px;
+
+  font-size:.55rem;
+}
+
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media(max-width:720px){
+
+  #shadowContent
+  .shadow-premium-hero{
+    align-items:flex-start;
+
+    flex-direction:column;
+
+    padding:12px;
+
+    border-radius:17px;
+  }
+
+
+  #shadowContent
+  .shadow-premium-hero-copy b{
+    font-size:1.05rem;
+  }
+
+
+  #shadowContent
+  .shadow-premium-hero-copy span{
+    font-size:.50rem;
+  }
+
+
+  #shadowContent
+  .shadow-premium-readonly{
+    padding:
+      5px 8px;
+
+    font-size:.37rem;
+  }
+
+
+  #shadowContent
+  .shadow-premium-team-score,
+  #shadowContent
+  .shadow-premium-signal,
+  #shadowContent
+  .shadow-premium-action{
+    min-height:90px;
+  }
+
+
+  #shadowContent
+  .shadow-premium-cases,
+  #shadowContent
+  .shadow-premium-losses,
+  #shadowContent
+  .shadow-premium-winners,
+  #shadowContent
+  .shadow-premium-saves,
+  #shadowContent
+  .shadow-premium-promotions{
+    min-height:78px;
+  }
+
+
+  #shadowContent
+  .shadow-premium-gating,
+  #shadowContent
+  .shadow-premium-whatif{
+    padding-top:36px!important;
+
+    border-radius:16px!important;
+  }
+
+
+  #shadowContent
+  .shadow-premium-gating::before,
+  #shadowContent
+  .shadow-premium-whatif::before{
+    top:9px;
+    left:9px;
+
+    font-size:.42rem;
+  }
+
+
+  #shadowContent
+  .shadow-premium-gating::after,
+  #shadowContent
+  .shadow-premium-whatif::after{
+    top:10px;
+    right:9px;
+
+    font-size:.27rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #shadowContent
+  .shadow-premium-gating::after,
+  #shadowContent
+  .shadow-premium-whatif::after{
+    display:none;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -15838,6 +16767,225 @@ function renderShadowLab(){
   }
 
 }
+
+/* V7.8.6 PREMIUM SHADOW S2B1 */
+
+function premiumShadowNormalizeText(value){
+
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase();
+
+}
+
+
+function premiumShadowMark(root,tokens,className){
+
+  const wanted=
+    tokens.map(
+      premiumShadowNormalizeText
+    );
+
+  const nodes=[
+    ...root.querySelectorAll(
+      '.card,.metric,.section,td,div'
+    )
+  ];
+
+  let best=null;
+
+  for(const node of nodes){
+
+    if(
+      node.classList?.contains(
+        'shadow-premium-hero'
+      )
+    ){
+      continue;
+    }
+
+    const text=
+      premiumShadowNormalizeText(
+        node.textContent
+      );
+
+    if(
+      !wanted.some(
+        token=>text.includes(token)
+      )
+    ){
+      continue;
+    }
+
+    /*
+     * Preferimos el contenedor más pequeño
+     * que ya posee el contenido original.
+     * No copiamos ni recalculamos valores.
+     */
+
+    const size=
+      String(node.textContent || '')
+        .trim()
+        .length;
+
+    if(
+      !best ||
+      size<best.size
+    ){
+      best={
+        node,
+        size
+      };
+    }
+  }
+
+  if(!best)return null;
+
+  const target=
+    best.node.closest(
+      '.card,.metric,.section,td'
+    ) ||
+    best.node;
+
+  target.classList.add(
+    className
+  );
+
+  return target;
+
+}
+
+
+function premiumShadowEnhance(){
+
+  const root=
+    document.getElementById(
+      'shadowContent'
+    );
+
+  if(!root)return;
+
+
+  /*
+   * HERO puramente visual.
+   */
+
+  if(
+    !root.querySelector(
+      '.shadow-premium-hero'
+    )
+  ){
+
+    const hero=
+      document.createElement('div');
+
+    hero.className=
+      'shadow-premium-hero';
+
+    hero.innerHTML=
+      '<div class="shadow-premium-hero-copy">'+
+        '<small>MLB LABS · OBSERVATIONAL LAYER</small>'+
+        '<b>Shadow Lab</b>'+
+        '<span>Simulación paralela para auditar decisiones sin modificar el Motor V7.0.</span>'+
+      '</div>'+
+      '<div class="shadow-premium-readonly">'+
+        'READ ONLY'+
+      '</div>';
+
+    root.prepend(hero);
+
+  }
+
+
+  const marks=[
+
+    [
+      ['TEAM SCORE'],
+      'shadow-premium-team-score'
+    ],
+
+    [
+      ['SENAL'],
+      'shadow-premium-signal'
+    ],
+
+    [
+      ['ACCION HIPOTETICA'],
+      'shadow-premium-action'
+    ],
+
+    [
+      ['CASOS OBSERVADOS'],
+      'shadow-premium-cases'
+    ],
+
+    [
+      ['LOSSES AVOIDED'],
+      'shadow-premium-losses'
+    ],
+
+    [
+      ['WINNERS BLOCKED'],
+      'shadow-premium-winners'
+    ],
+
+    [
+      ['NET SAVES'],
+      'shadow-premium-saves'
+    ],
+
+    [
+      ['LEAN -> JUGABLE','LEAN → JUGABLE'],
+      'shadow-premium-promotions'
+    ],
+
+    [
+      ['GATING'],
+      'shadow-premium-gating'
+    ],
+
+    [
+      ['WHAT-IF','WHAT IF'],
+      'shadow-premium-whatif'
+    ]
+
+  ];
+
+
+  for(const [tokens,cls] of marks){
+
+    premiumShadowMark(
+      root,
+      tokens,
+      cls
+    );
+
+  }
+
+}
+
+
+const __premiumRenderShadowLabOfficial=
+  renderShadowLab;
+
+
+renderShadowLab=function(){
+
+  const result=
+    __premiumRenderShadowLabOfficial
+      .apply(
+        this,
+        arguments
+      );
+
+  premiumShadowEnhance();
+
+  return result;
+
+};
+
+
 
 function teamShadowCsvCell(
   value
