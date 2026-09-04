@@ -7721,6 +7721,179 @@ strong{
 
 }
 
+
+
+/* ==========================================
+   V7.8.6 PREMIUM SHADOW S2C
+   EXACT SECTION TARGETING
+   ========================================== */
+
+
+/* neutraliza etiquetas heurísticas viejas */
+
+#shadowContent
+.shadow-premium-gating::before,
+#shadowContent
+.shadow-premium-gating::after,
+#shadowContent
+.shadow-premium-whatif::before,
+#shadowContent
+.shadow-premium-whatif::after{
+  display:none!important;
+}
+
+
+/* TEAM SHADOW INTRO */
+
+#shadowContent
+.shadow-premium-intro{
+  border-color:#75622d!important;
+
+  background:
+    radial-gradient(
+      circle at 92% 0,
+      rgba(228,181,55,.11),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #211d0e,
+      #081a27 50%,
+      #061522
+    )!important;
+}
+
+
+/* RESUMEN */
+
+#shadowContent
+.shadow-premium-summary{
+  border-color:#2b5872!important;
+}
+
+
+/* COMPARATIVA A/B = GATING */
+
+#shadowContent
+.shadow-premium-ab{
+  position:relative;
+
+  overflow:hidden;
+
+  padding-top:43px!important;
+
+  border-color:#31658a!important;
+
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(65,155,225,.11),
+      transparent 38%
+    ),
+    #091928!important;
+}
+
+
+#shadowContent
+.shadow-premium-ab::before{
+  content:"GATING A/B · HIPOTÉTICO";
+
+  position:absolute;
+
+  top:11px;
+  left:13px;
+
+  color:#71c5f4;
+
+  font-size:.48rem;
+
+  font-weight:950;
+
+  letter-spacing:.07em;
+}
+
+
+#shadowContent
+.shadow-premium-ab::after{
+  content:"NO MODIFICA PICK OFICIAL";
+
+  position:absolute;
+
+  top:12px;
+  right:13px;
+
+  color:#67869c;
+
+  font-size:.30rem;
+
+  font-weight:900;
+}
+
+
+/* AUDITORÍAS */
+
+#shadowContent
+.shadow-premium-score-audit,
+#shadowContent
+.shadow-premium-side-audit,
+#shadowContent
+.shadow-premium-team-audit,
+#shadowContent
+.shadow-premium-history{
+  border-color:#274e69!important;
+}
+
+
+/* PROTOCOLO */
+
+#shadowContent
+.shadow-premium-protocol{
+  border-color:#75622d!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(47,39,13,.45),
+      #091928
+    )!important;
+}
+
+
+@media(max-width:720px){
+
+  #shadowContent
+  .shadow-premium-ab{
+    padding-top:38px!important;
+  }
+
+  #shadowContent
+  .shadow-premium-ab::before{
+    top:9px;
+    left:10px;
+
+    font-size:.40rem;
+  }
+
+  #shadowContent
+  .shadow-premium-ab::after{
+    top:10px;
+    right:10px;
+
+    font-size:.26rem;
+  }
+
+}
+
+
+@media(max-width:390px){
+
+  #shadowContent
+  .shadow-premium-ab::after{
+    display:none;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -41344,6 +41517,165 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.
 <script src="./database.js"></script>
 <script>window.addEventListener("DOMContentLoaded",()=>{window.MLBDB?.init();});</script>
 <script>window.addEventListener("DOMContentLoaded",()=>{window.initTeamShadowPersistence?.().catch(e=>console.warn("TEAM SHADOW boot",e));});</script>
-<script>window.addEventListener("DOMContentLoaded",()=>{window.teamShadowStartSettlementWatcher?.();});</script>
+<script>window.addEventListener("DOMContentLoaded",()=>{window.teamShadowStartSettlementWatcher?.();});
+
+/* V7.8.6 PREMIUM SHADOW S2C */
+
+function premiumShadowSectionFix(){
+
+  const root=
+    document.getElementById(
+      'shadowContent'
+    );
+
+  if(!root)return;
+
+
+  /*
+   * Elimina falsos positivos de S2B1.
+   * Gating y What-If ya no se detectan
+   * por palabras dentro de tablas/notas.
+   */
+
+  root.querySelectorAll(
+    '.shadow-premium-gating,'+
+    '.shadow-premium-whatif'
+  ).forEach(el=>{
+
+    el.classList.remove(
+      'shadow-premium-gating',
+      'shadow-premium-whatif'
+    );
+
+  });
+
+
+  const premiumClasses=[
+    'shadow-premium-intro',
+    'shadow-premium-summary',
+    'shadow-premium-ab',
+    'shadow-premium-score-audit',
+    'shadow-premium-side-audit',
+    'shadow-premium-team-audit',
+    'shadow-premium-history',
+    'shadow-premium-protocol'
+  ];
+
+
+  const norm=value=>
+    String(value||'')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .trim()
+      .toUpperCase();
+
+
+  const sections=[
+    ...root.querySelectorAll('.section')
+  ];
+
+
+  for(const section of sections){
+
+    section.classList.remove(
+      ...premiumClasses
+    );
+
+    const h=
+      section.querySelector('h3');
+
+    if(!h)continue;
+
+    const title=
+      norm(h.textContent);
+
+
+    if(title==='TEAM SHADOW LAB'){
+
+      section.classList.add(
+        'shadow-premium-intro'
+      );
+
+    }else if(
+      title==='RESUMEN EXPERIMENTAL'
+    ){
+
+      section.classList.add(
+        'shadow-premium-summary'
+      );
+
+    }else if(
+      title==='COMPARATIVA A/B'
+    ){
+
+      section.classList.add(
+        'shadow-premium-ab'
+      );
+
+    }else if(
+      title==='AUDITORIA POR TEAM SCORE'
+    ){
+
+      section.classList.add(
+        'shadow-premium-score-audit'
+      );
+
+    }else if(
+      title==='AUDITORIA OVER / UNDER'
+    ){
+
+      section.classList.add(
+        'shadow-premium-side-audit'
+      );
+
+    }else if(
+      title==='AUDITORIA POR EQUIPO'
+    ){
+
+      section.classList.add(
+        'shadow-premium-team-audit'
+      );
+
+    }else if(
+      title==='HISTORIAL INDIVIDUAL SHADOW'
+    ){
+
+      section.classList.add(
+        'shadow-premium-history'
+      );
+
+    }else if(
+      title==='PROTOCOLO DE OBSERVACION'
+    ){
+
+      section.classList.add(
+        'shadow-premium-protocol'
+      );
+
+    }
+
+  }
+
+}
+
+
+const __premiumRenderShadowLabS2C=
+  renderShadowLab;
+
+
+renderShadowLab=function(){
+
+  const result=
+    __premiumRenderShadowLabS2C
+      .apply(this,arguments);
+
+  premiumShadowSectionFix();
+
+  return result;
+
+};
+
+
+</script>
 </body>
 </html>
