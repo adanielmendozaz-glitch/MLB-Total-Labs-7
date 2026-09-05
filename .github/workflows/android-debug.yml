@@ -6,6 +6,7 @@ on:
     branches:
       - android-v7
       - v1-sqlite
+      - v786-rescue-stable
 
 jobs:
   build:
