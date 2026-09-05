@@ -7,7 +7,7 @@ android {
         applicationId "com.totallabs.mlb.v786test"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 786
+        versionCode 787
         versionName "7.8.6-test"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
