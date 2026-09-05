@@ -47901,7 +47901,75 @@ function html(r){if(!r.available)return'<section id="b2c5lAudit"><div class="b2c
 <div class="b2c5l-note">Analiza sólo promociones retrospectivas: oficial bajo 56% y Shadow sobre 56%. Busca patrones entre ganadores y perdedores sin modificar Motor V7.0, calibración, gates, Censo, Bank ni picks.</div></section>`}
 function mount(){document.getElementById('b2c5lAudit')?.remove();const r=report();window.__MLB_FALSE_ASCENT_AUDIT__=r;const w=document.createElement('div');w.innerHTML=html(r);const n=w.firstElementChild;if(!n)return;const a=document.getElementById('b2c5kAudit')||document.getElementById('b2c5jLedger');if(a&&a.parentNode)a.insertAdjacentElement('afterend',n);else document.getElementById('homeDashboard')?.appendChild(n)}
 function install(){try{mount()}catch{};let i=0;const t=setInterval(()=>{i++;try{if(!document.getElementById('b2c5lAudit'))mount()}catch{}if(document.getElementById('b2c5lAudit')||i>=20)clearInterval(t)},500)}
+window.__B2C5L_FORCE_MOUNT__=mount;
+window.__B2C5L_REPORT__=report;
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+
+
+
+
+
+<!-- =========================================================
+ V7.8.6 B2C-5L VISIBILITY WATCHDOG
+ READ ONLY - UI MOUNT ONLY
+========================================================= -->
+<script>
+(function(){
+'use strict';
+const VER='B2C-5L-VIS-1';
+
+function tryMount(){
+  try{
+    if(typeof window.__B2C5L_FORCE_MOUNT__!=='function') return false;
+    const anchor=document.getElementById('b2c5kAudit')||document.getElementById('b2c5jLedger');
+    if(!anchor) return false;
+    window.__B2C5L_FORCE_MOUNT__();
+    const node=document.getElementById('b2c5lAudit');
+    if(node){
+      window.__MLB_B2C5L_VISIBILITY__={version:VER,visible:true,at:new Date().toISOString()};
+      return true;
+    }
+    return false;
+  }catch(e){
+    console.warn('B2C-5L visibility',e);
+    return false;
+  }
+}
+
+function installVis(){
+  let attempts=0;
+  const timer=setInterval(()=>{
+    attempts++;
+    const ok=tryMount();
+    if(ok||attempts>=24){
+      clearInterval(timer);
+      if(!ok){
+        window.__MLB_B2C5L_VISIBILITY__={version:VER,visible:false,attempts,at:new Date().toISOString()};
+      }
+    }
+  },500);
+
+  try{
+    const obs=new MutationObserver(()=>{
+      if(!document.getElementById('b2c5lAudit')&&document.getElementById('b2c5kAudit')){
+        tryMount();
+      }
+    });
+    obs.observe(document.body,{childList:true,subtree:true});
+    window.__MLB_B2C5L_VIS_OBSERVER__=obs;
+  }catch(e){
+    console.warn('B2C-5L observer',e);
+  }
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',installVis,{once:true});
+}else{
+  installVis();
+}
 })();
 </script>
 
