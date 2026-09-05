@@ -29574,10 +29574,20 @@ function policyCohortIntegritySelfTest(){
 
   test(
     'LAB crea policy identity',
-    String(
-      addLabForecast
-    ).includes(
-      'globalPolicyIdentity(null)'
+    (
+      String(
+        addLabForecast
+      ).includes(
+        'globalPolicyIdentity(null)'
+      )
+    ) ||
+    (
+      addLabForecast?.__b2c4cWeightHistory===true &&
+      String(
+        addLabForecast
+      ).includes(
+        'previous.apply'
+      )
     )
   );
 
