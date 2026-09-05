@@ -47060,5 +47060,2055 @@ if(
 })();
 </script>
 
+
+<!-- =========================================================
+     V7.8.6 B2C-5A ADAPTIVE WEIGHT BOUNDARY AUDITOR
+     READ ONLY
+     No modifica learnedWeights(), motores, picks ni calibración.
+========================================================= -->
+<script>
+(function(){
+'use strict';
+
+const B2C5_KEYS=['struct','nb','pln','com'];
+const B2C5_MIN=.15;
+const B2C5_MAX=.40;
+const B2C5_EPS=1e-9;
+
+function b2c5Clone(w){
+  const out={};
+  for(const k of B2C5_KEYS){
+    out[k]=Number(w?.[k]);
+  }
+  return out;
+}
+
+/*
+ * Replica exactamente la parte problemática:
+ * 1) normaliza
+ * 2) clamp 15%-40%
+ * 3) vuelve a normalizar
+ *
+ * NO llama ni modifica learnedWeights().
+ */
+function b2c5LegacyNormalize(input){
+  const raw=b2c5Clone(input);
+
+  let sum=0;
+  for(const k of B2C5_KEYS){
+    if(!Number.isFinite(raw[k])) raw[k]=0;
+    sum+=raw[k];
+  }
+
+  if(!(sum>0)){
+    return {struct:.30,nb:.25,pln:.25,com:.20};
+  }
+
+  for(const k of B2C5_KEYS){
+    raw[k]/=sum;
+  }
+
+  for(const k of B2C5_KEYS){
+    raw[k]=Math.max(B2C5_MIN,Math.min(B2C5_MAX,raw[k]));
+  }
+
+  const s2=B2C5_KEYS.reduce((a,k)=>a+raw[k],0);
+
+  if(!(s2>0)){
+    return {struct:.30,nb:.25,pln:.25,com:.20};
+  }
+
+  for(const k of B2C5_KEYS){
+    raw[k]/=s2;
+  }
+
+  return raw;
+}
+
+function b2c5Inspect(weights){
+  const vals=B2C5_KEYS.map(k=>Number(weights?.[k]));
+  const finite=vals.every(Number.isFinite);
+  const sum=finite ? vals.reduce((a,b)=>a+b,0) : NaN;
+  const min=finite ? Math.min(...vals) : NaN;
+  const max=finite ? Math.max(...vals) : NaN;
+
+  const sumOK=finite && Math.abs(sum-1)<=1e-7;
+  const minOK=finite && min>=B2C5_MIN-B2C5_EPS;
+  const maxOK=finite && max<=B2C5_MAX+B2C5_EPS;
+
+  return {
+    finite,
+    sum,
+    min,
+    max,
+    sumOK,
+    minOK,
+    maxOK,
+    pass:finite && sumOK && minOK && maxOK
+  };
+}
+
+function b2c5CurrentOfficial(){
+  try{
+    if(typeof learnedWeights!=='function') return null;
+    return b2c5Clone(learnedWeights('TOTAL'));
+  }catch(e){
+    console.warn('B2C-5A current weights read',e);
+    return null;
+  }
+}
+
+function b2c5Run(){
+  const scenarios=[
+    {
+      id:'CURRENT',
+      label:'Pesos actuales',
+      input:b2c5CurrentOfficial()
+    },
+    {
+      id:'NORMAL',
+      label:'30 / 25 / 25 / 20',
+      input:{struct:.30,nb:.25,pln:.25,com:.20}
+    },
+    {
+      id:'DOMINANT',
+      label:'80 / 10 / 5 / 5',
+      input:{struct:.80,nb:.10,pln:.05,com:.05}
+    },
+    {
+      id:'WEAK',
+      label:'1 / 33 / 33 / 33',
+      input:{struct:.01,nb:.33,pln:.33,com:.33}
+    },
+    {
+      id:'EXTREME',
+      label:'97 / 1 / 1 / 1',
+      input:{struct:.97,nb:.01,pln:.01,com:.01}
+    },
+    {
+      id:'DUAL',
+      label:'45 / 45 / 5 / 5',
+      input:{struct:.45,nb:.45,pln:.05,com:.05}
+    }
+  ];
+
+  const rows=[];
+
+  for(const s of scenarios){
+    if(!s.input){
+      rows.push({
+        ...s,
+        output:null,
+        audit:{
+          finite:false,
+          sum:NaN,
+          min:NaN,
+          max:NaN,
+          sumOK:false,
+          minOK:false,
+          maxOK:false,
+          pass:false
+        }
+      });
+      continue;
+    }
+
+    /*
+     * CURRENT se inspecciona tal como sale actualmente.
+     * Los stress tests pasan por la secuencia legacy.
+     */
+    const output=
+      s.id==='CURRENT'
+        ? b2c5Clone(s.input)
+        : b2c5LegacyNormalize(s.input);
+
+    rows.push({
+      ...s,
+      output,
+      audit:b2c5Inspect(output)
+    });
+  }
+
+  const stress=rows.filter(r=>r.id!=='CURRENT');
+  const violations=stress.filter(r=>!r.audit.pass).length;
+
+  const validStress=stress.filter(r=>r.audit.finite);
+
+  const effectiveMin=validStress.length
+    ? Math.min(...validStress.map(r=>r.audit.min))
+    : NaN;
+
+  const effectiveMax=validStress.length
+    ? Math.max(...validStress.map(r=>r.audit.max))
+    : NaN;
+
+  return {
+    version:'B2C-5A',
+    mode:'READ_ONLY',
+    declaredMin:B2C5_MIN,
+    declaredMax:B2C5_MAX,
+    rows,
+    stressTests:stress.length,
+    violations,
+    effectiveMin,
+    effectiveMax,
+    current:rows.find(r=>r.id==='CURRENT') || null,
+    pass:violations===0
+  };
+}
+
+function b2c5Pct(v){
+  return Number.isFinite(v)
+    ? (v*100).toFixed(2)+'%'
+    : '—';
+}
+
+function b2c5Console(){
+  const r=b2c5Run();
+
+  console.group('B2C-5A Adaptive Weight Boundary Auditor');
+  console.log('MODE:',r.mode);
+  console.log(
+    'Declared:',
+    b2c5Pct(r.declaredMin),
+    '→',
+    b2c5Pct(r.declaredMax)
+  );
+
+  for(const x of r.rows){
+    console.log(
+      x.id,
+      x.audit.pass?'PASS':'FAIL',
+      x.output,
+      'MIN',b2c5Pct(x.audit.min),
+      'MAX',b2c5Pct(x.audit.max),
+      'SUM',
+      Number.isFinite(x.audit.sum)
+        ? x.audit.sum.toFixed(8)
+        : '—'
+    );
+  }
+
+  console.log(
+    'Stress violations:',
+    r.violations+'/'+r.stressTests
+  );
+
+  console.log(
+    'Effective stress range:',
+    b2c5Pct(r.effectiveMin),
+    '→',
+    b2c5Pct(r.effectiveMax)
+  );
+
+  console.groupEnd();
+
+  return r;
+}
+
+window.B2C5_BOUNDARY_AUDIT=b2c5Run;
+window.B2C5_BOUNDARY_CONSOLE=b2c5Console;
+
+/*
+ * Sólo lectura.
+ * Ejecuta el diagnóstico una vez al cargar.
+ */
+try{
+  setTimeout(()=>b2c5Console(),1200);
+}catch(e){
+  console.warn('B2C-5A auditor',e);
+}
+
+})();
+</script>
+
+
+<!-- =========================================================
+     V7.8.6 B2C-5B BOUNDED SIMPLEX SHADOW
+     READ ONLY
+     No modifica learnedWeights(), picks ni motores.
+========================================================= -->
+<script>
+(function(){
+'use strict';
+
+const B2C5B_KEYS=['struct','nb','pln','com'];
+const B2C5B_MIN=.15;
+const B2C5B_MAX=.40;
+const B2C5B_TARGET=1;
+const B2C5B_EPS=1e-10;
+
+function b2c5bClone(input){
+  const out={};
+  for(const k of B2C5B_KEYS){
+    const v=Number(input?.[k]);
+    out[k]=Number.isFinite(v) ? v : 0;
+  }
+  return out;
+}
+
+function b2c5bSum(w){
+  return B2C5B_KEYS.reduce((a,k)=>a+Number(w?.[k]||0),0);
+}
+
+function b2c5bInspect(w){
+  const vals=B2C5B_KEYS.map(k=>Number(w?.[k]));
+  const finite=vals.every(Number.isFinite);
+  const sum=finite ? vals.reduce((a,b)=>a+b,0) : NaN;
+  const min=finite ? Math.min(...vals) : NaN;
+  const max=finite ? Math.max(...vals) : NaN;
+
+  return {
+    finite,
+    sum,
+    min,
+    max,
+    pass:
+      finite &&
+      Math.abs(sum-1)<=1e-8 &&
+      min>=B2C5B_MIN-B2C5B_EPS &&
+      max<=B2C5B_MAX+B2C5B_EPS
+  };
+}
+
+/*
+ * Proyección al simplex acotado:
+ *
+ * x_i = clamp(v_i - lambda, min, max)
+ * y buscamos lambda tal que sum(x)=1.
+ *
+ * Esto garantiza simultáneamente:
+ * - suma = 1
+ * - cada peso >= min
+ * - cada peso <= max
+ */
+function b2c5bBoundedSimplex(input,min=B2C5B_MIN,max=B2C5B_MAX){
+  const n=B2C5B_KEYS.length;
+
+  if(
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    min<0 ||
+    max>1 ||
+    min>max ||
+    n*min>1+B2C5B_EPS ||
+    n*max<1-B2C5B_EPS
+  ){
+    throw new Error('B2C-5B infeasible bounds');
+  }
+
+  const v=B2C5B_KEYS.map(k=>{
+    const x=Number(input?.[k]);
+    return Number.isFinite(x) ? x : 0;
+  });
+
+  let lo=Math.min(...v)-max-1;
+  let hi=Math.max(...v)-min+1;
+
+  for(let iter=0;iter<160;iter++){
+    const mid=(lo+hi)/2;
+
+    let s=0;
+    for(const x of v){
+      s+=Math.max(min,Math.min(max,x-mid));
+    }
+
+    if(s>1){
+      lo=mid;
+    }else{
+      hi=mid;
+    }
+  }
+
+  const lambda=(lo+hi)/2;
+  const out={};
+
+  let sum=0;
+  for(let i=0;i<n;i++){
+    const x=Math.max(min,Math.min(max,v[i]-lambda));
+    out[B2C5B_KEYS[i]]=x;
+    sum+=x;
+  }
+
+  /*
+   * Ajuste sólo por residuo flotante.
+   * Nunca renormalizamos todo el vector.
+   */
+  let residual=1-sum;
+
+  if(Math.abs(residual)>1e-12){
+    for(const k of B2C5B_KEYS){
+      if(Math.abs(residual)<=1e-12) break;
+
+      const current=out[k];
+
+      if(residual>0){
+        const room=max-current;
+        const delta=Math.min(room,residual);
+        out[k]+=delta;
+        residual-=delta;
+      }else{
+        const room=current-min;
+        const delta=Math.min(room,-residual);
+        out[k]-=delta;
+        residual+=delta;
+      }
+    }
+  }
+
+  return out;
+}
+
+function b2c5bLegacyNormalize(input){
+  const raw=b2c5bClone(input);
+
+  let sum=b2c5bSum(raw);
+
+  if(!(sum>0)){
+    return {struct:.30,nb:.25,pln:.25,com:.20};
+  }
+
+  for(const k of B2C5B_KEYS){
+    raw[k]/=sum;
+  }
+
+  for(const k of B2C5B_KEYS){
+    raw[k]=Math.max(
+      B2C5B_MIN,
+      Math.min(B2C5B_MAX,raw[k])
+    );
+  }
+
+  const s2=b2c5bSum(raw);
+
+  for(const k of B2C5B_KEYS){
+    raw[k]/=s2;
+  }
+
+  return raw;
+}
+
+function b2c5bCurrentOfficial(){
+  try{
+    if(typeof learnedWeights!=='function') return null;
+    return b2c5bClone(learnedWeights('TOTAL'));
+  }catch(e){
+    console.warn('B2C-5B current official',e);
+    return null;
+  }
+}
+
+function b2c5bRun(){
+  const scenarios=[
+    {
+      id:'CURRENT',
+      label:'Pesos actuales',
+      source:b2c5bCurrentOfficial()
+    },
+    {
+      id:'NORMAL',
+      label:'30 / 25 / 25 / 20',
+      source:{struct:.30,nb:.25,pln:.25,com:.20}
+    },
+    {
+      id:'DOMINANT',
+      label:'80 / 10 / 5 / 5',
+      source:{struct:.80,nb:.10,pln:.05,com:.05}
+    },
+    {
+      id:'WEAK',
+      label:'1 / 33 / 33 / 33',
+      source:{struct:.01,nb:.33,pln:.33,com:.33}
+    },
+    {
+      id:'EXTREME',
+      label:'97 / 1 / 1 / 1',
+      source:{struct:.97,nb:.01,pln:.01,com:.01}
+    },
+    {
+      id:'DUAL',
+      label:'45 / 45 / 5 / 5',
+      source:{struct:.45,nb:.45,pln:.05,com:.05}
+    }
+  ];
+
+  const rows=[];
+
+  for(const s of scenarios){
+    if(!s.source){
+      rows.push({
+        ...s,
+        legacy:null,
+        shadow:null,
+        legacyAudit:{pass:false},
+        shadowAudit:{pass:false}
+      });
+      continue;
+    }
+
+    const legacy=
+      s.id==='CURRENT'
+        ? b2c5bClone(s.source)
+        : b2c5bLegacyNormalize(s.source);
+
+    const shadow=b2c5bBoundedSimplex(
+      legacy,
+      B2C5B_MIN,
+      B2C5B_MAX
+    );
+
+    rows.push({
+      ...s,
+      legacy,
+      shadow,
+      legacyAudit:b2c5bInspect(legacy),
+      shadowAudit:b2c5bInspect(shadow)
+    });
+  }
+
+  const stress=rows.filter(r=>r.id!=='CURRENT');
+
+  const legacyViolations=
+    stress.filter(r=>!r.legacyAudit.pass).length;
+
+  const shadowViolations=
+    stress.filter(r=>!r.shadowAudit.pass).length;
+
+  let maxDelta=0;
+
+  for(const r of rows){
+    if(!r.legacy || !r.shadow) continue;
+
+    for(const k of B2C5B_KEYS){
+      maxDelta=Math.max(
+        maxDelta,
+        Math.abs(r.shadow[k]-r.legacy[k])
+      );
+    }
+  }
+
+  return {
+    version:'B2C-5B',
+    mode:'READ_ONLY_SHADOW',
+    rows,
+    stressTests:stress.length,
+    legacyViolations,
+    shadowViolations,
+    maxDelta,
+    pass:shadowViolations===0
+  };
+}
+
+function b2c5bConsole(){
+  const r=b2c5bRun();
+
+  console.group('B2C-5B Bounded Simplex Shadow');
+
+  console.log(
+    'Legacy violations:',
+    r.legacyViolations+'/'+r.stressTests
+  );
+
+  console.log(
+    'Shadow violations:',
+    r.shadowViolations+'/'+r.stressTests
+  );
+
+  for(const x of r.rows){
+    console.log(
+      x.id,
+      'LEGACY',x.legacyAudit.pass?'PASS':'FAIL',
+      x.legacy,
+      'SHADOW',x.shadowAudit.pass?'PASS':'FAIL',
+      x.shadow
+    );
+  }
+
+  console.log(
+    'Max delta:',
+    (r.maxDelta*100).toFixed(2)+' pp'
+  );
+
+  console.log(
+    'GLOBAL:',
+    r.pass?'PASS':'FAIL'
+  );
+
+  console.groupEnd();
+
+  return r;
+}
+
+window.B2C5B_BOUNDED_SIMPLEX=b2c5bBoundedSimplex;
+window.B2C5B_BOUNDARY_SHADOW=b2c5bRun;
+window.B2C5B_BOUNDARY_CONSOLE=b2c5bConsole;
+
+try{
+  setTimeout(()=>b2c5bConsole(),1400);
+}catch(e){
+  console.warn('B2C-5B shadow auditor',e);
+}
+
+})();
+</script>
+
+
+<!-- =========================================================
+     V7.8.6 B2C-5C HISTORICAL BOUNDED WEIGHT REPLAY
+     COUNTERFACTUAL / READ ONLY
+     No modifica Censo, Bank, picks, ranking ni learnedWeights().
+========================================================= -->
+<script>
+(function(){
+'use strict';
+
+const B2C5C_KEYS=['struct','nb','pln','com'];
+
+function b2c5cNum(v,d=NaN){
+  const x=Number(v);
+  return Number.isFinite(x)?x:d;
+}
+
+function b2c5cClamp(v,a,b){
+  return Math.max(a,Math.min(b,v));
+}
+
+function b2c5cOutcome(row){
+  if(Number.isFinite(Number(row?.y))){
+    return Number(row.y);
+  }
+
+  const s=String(
+    row?.result ||
+    row?.status ||
+    row?.outcome ||
+    ''
+  ).toUpperCase();
+
+  if(s==='WIN') return 1;
+  if(s==='LOSS') return 0;
+
+  return NaN;
+}
+
+function b2c5cRows(){
+  try{
+    if(typeof labPickRows!=='function') return [];
+
+    return labPickRows(
+      'TOTAL',
+      'FINAL',
+      'SPORTSBOOK',
+      true
+    ).filter(r=>{
+      return (
+        r &&
+        r.modelProbs &&
+        Number.isFinite(Number(r.ensembleP)) &&
+        Number.isFinite(b2c5cOutcome(r))
+      );
+    });
+  }catch(e){
+    console.warn('B2C-5C rows',e);
+    return [];
+  }
+}
+
+function b2c5cOfficialWeights(){
+  try{
+    if(typeof learnedWeights!=='function') return null;
+    return learnedWeights('TOTAL');
+  }catch(e){
+    return null;
+  }
+}
+
+function b2c5cBoundedWeights(){
+  try{
+    if(typeof B2C5B_BOUNDED_SIMPLEX!=='function') return null;
+
+    const w=b2c5cOfficialWeights();
+    if(!w) return null;
+
+    return B2C5B_BOUNDED_SIMPLEX(
+      w,
+      .15,
+      .40
+    );
+  }catch(e){
+    console.warn('B2C-5C bounded weights',e);
+    return null;
+  }
+}
+
+function b2c5cShadowP(row,w){
+  if(!row?.modelProbs || !w) return NaN;
+
+  let p=0;
+  let mass=0;
+
+  for(const k of B2C5C_KEYS){
+    const mp=Number(row.modelProbs[k]);
+    const wk=Number(w[k]);
+
+    if(
+      !Number.isFinite(mp) ||
+      !Number.isFinite(wk)
+    ){
+      continue;
+    }
+
+    p+=mp*wk;
+    mass+=wk;
+  }
+
+  if(!(mass>0)) return NaN;
+
+  return b2c5cClamp(p/mass,.001,.999);
+}
+
+function b2c5cBrier(rows,key){
+  if(!rows.length) return NaN;
+
+  let s=0;
+  let n=0;
+
+  for(const r of rows){
+    const p=Number(r[key]);
+    const y=Number(r.y);
+
+    if(
+      !Number.isFinite(p) ||
+      !Number.isFinite(y)
+    ) continue;
+
+    s+=(p-y)*(p-y);
+    n++;
+  }
+
+  return n ? s/n : NaN;
+}
+
+function b2c5cLogLoss(rows,key){
+  let s=0;
+  let n=0;
+
+  for(const r of rows){
+    const p=b2c5cClamp(Number(r[key]),.001,.999);
+    const y=Number(r.y);
+
+    if(
+      !Number.isFinite(p) ||
+      !Number.isFinite(y)
+    ) continue;
+
+    s+=-(y*Math.log(p)+(1-y)*Math.log(1-p));
+    n++;
+  }
+
+  return n ? s/n : NaN;
+}
+
+function b2c5cHit(rows,key,threshold=.56){
+  let hits=0;
+  let n=0;
+
+  for(const r of rows){
+    const p=Number(r[key]);
+    const y=Number(r.y);
+
+    if(
+      !Number.isFinite(p) ||
+      !Number.isFinite(y)
+    ) continue;
+
+    if(p>=threshold){
+      n++;
+      if(y===1) hits++;
+    }
+  }
+
+  return {
+    n,
+    hits,
+    rate:n?hits/n:NaN
+  };
+}
+
+function b2c5cRun(){
+  const raw=b2c5cRows();
+
+  const officialW=b2c5cOfficialWeights();
+  const shadowW=b2c5cBoundedWeights();
+
+  if(!raw.length || !officialW || !shadowW){
+    return {
+      available:false,
+      n:raw.length,
+      reason:'Sin historial elegible o pesos disponibles'
+    };
+  }
+
+  const rows=[];
+
+  for(const r of raw){
+    const y=b2c5cOutcome(r);
+
+    const officialP=
+      b2c5cClamp(
+        Number(r.ensembleP),
+        .001,
+        .999
+      );
+
+    const shadowP=
+      b2c5cShadowP(r,shadowW);
+
+    if(
+      !Number.isFinite(y) ||
+      !Number.isFinite(officialP) ||
+      !Number.isFinite(shadowP)
+    ){
+      continue;
+    }
+
+    rows.push({
+      id:r.id || r.gamePk || '',
+      date:r.date || '',
+      side:r.side || '',
+      line:r.line,
+      y,
+      officialP,
+      shadowP,
+      delta:shadowP-officialP
+    });
+  }
+
+  const officialBrier=
+    b2c5cBrier(rows,'officialP');
+
+  const shadowBrier=
+    b2c5cBrier(rows,'shadowP');
+
+  const officialLL=
+    b2c5cLogLoss(rows,'officialP');
+
+  const shadowLL=
+    b2c5cLogLoss(rows,'shadowP');
+
+  const officialHit=
+    b2c5cHit(rows,'officialP');
+
+  const shadowHit=
+    b2c5cHit(rows,'shadowP');
+
+  let absDelta=0;
+  let maxDelta=0;
+  let up=0;
+  let down=0;
+  let same=0;
+
+  for(const r of rows){
+    const d=Math.abs(r.delta);
+
+    absDelta+=d;
+    maxDelta=Math.max(maxDelta,d);
+
+    if(r.delta>1e-9) up++;
+    else if(r.delta<-1e-9) down++;
+    else same++;
+  }
+
+  return {
+    available:true,
+    mode:'READ_ONLY_COUNTERFACTUAL',
+    n:rows.length,
+    officialW,
+    shadowW,
+    officialBrier,
+    shadowBrier,
+    deltaBrier:shadowBrier-officialBrier,
+    officialLogLoss:officialLL,
+    shadowLogLoss:shadowLL,
+    deltaLogLoss:shadowLL-officialLL,
+    officialHit,
+    shadowHit,
+    avgAbsProbDelta:rows.length?absDelta/rows.length:NaN,
+    maxProbDelta:maxDelta,
+    probabilityMoves:{
+      up,
+      down,
+      same
+    },
+    rows
+  };
+}
+
+function b2c5cConsole(){
+  const r=b2c5cRun();
+
+  console.group(
+    'B2C-5C Historical Bounded Weight Replay'
+  );
+
+  if(!r.available){
+    console.log(
+      'NO DISPONIBLE:',
+      r.reason,
+      'n=',r.n
+    );
+    console.groupEnd();
+    return r;
+  }
+
+  console.log('N:',r.n);
+
+  console.log(
+    'Official weights:',
+    r.officialW
+  );
+
+  console.log(
+    'Shadow weights:',
+    r.shadowW
+  );
+
+  console.log(
+    'Brier official:',
+    r.officialBrier
+  );
+
+  console.log(
+    'Brier shadow:',
+    r.shadowBrier
+  );
+
+  console.log(
+    'Delta Brier:',
+    r.deltaBrier
+  );
+
+  console.log(
+    'LogLoss official:',
+    r.officialLogLoss
+  );
+
+  console.log(
+    'LogLoss shadow:',
+    r.shadowLogLoss
+  );
+
+  console.log(
+    'Delta LogLoss:',
+    r.deltaLogLoss
+  );
+
+  console.log(
+    'Hit official:',
+    r.officialHit
+  );
+
+  console.log(
+    'Hit shadow:',
+    r.shadowHit
+  );
+
+  console.log(
+    'Avg abs probability delta:',
+    r.avgAbsProbDelta
+  );
+
+  console.log(
+    'Max probability delta:',
+    r.maxProbDelta
+  );
+
+  console.log(
+    'Probability moves:',
+    r.probabilityMoves
+  );
+
+  console.groupEnd();
+
+  return r;
+}
+
+window.B2C5C_HISTORICAL_REPLAY=b2c5cRun;
+window.B2C5C_HISTORICAL_CONSOLE=b2c5cConsole;
+
+try{
+  setTimeout(()=>{
+    b2c5cConsole();
+  },1800);
+}catch(e){
+  console.warn(
+    'B2C-5C counterfactual audit',
+    e
+  );
+}
+
+})();
+</script>
+
+
+<!-- =========================================================
+     V7.8.6 B2C-5D HISTORICAL REAL REPLAY BRIDGE
+     READ ONLY · REAL CENSO/LAB HISTORY
+========================================================== -->
+<script>
+(function(){
+'use strict';
+
+const B2C5D_KEYS=['struct','nb','pln','com'];
+
+function b2c5dN(v){
+  const x=Number(v);
+  return Number.isFinite(x)?x:NaN;
+}
+
+function b2c5dClamp(v,a,b){
+  return Math.max(a,Math.min(b,v));
+}
+
+function b2c5dWeightVector(x){
+  if(!x || typeof x!=='object') return null;
+
+  const candidates=[
+    x,
+    x.weights,
+    x.official,
+    x.officialWeights,
+    x.learnedWeights,
+    x.weightHistorySnapshot
+  ];
+
+  for(const c of candidates){
+    if(!c || typeof c!=='object') continue;
+
+    const w={};
+    let ok=true;
+
+    for(const k of B2C5D_KEYS){
+      const v=b2c5dN(c[k]);
+      if(!Number.isFinite(v)){
+        ok=false;
+        break;
+      }
+      w[k]=v;
+    }
+
+    if(!ok) continue;
+
+    const s=B2C5D_KEYS.reduce((a,k)=>a+w[k],0);
+
+    if(!(s>0)) continue;
+
+    for(const k of B2C5D_KEYS){
+      w[k]/=s;
+    }
+
+    return w;
+  }
+
+  return null;
+}
+
+function b2c5dSnapshotWeights(r){
+  if(!r || typeof r!=='object') return null;
+
+  const probes=[
+    r.weightHistorySnapshot,
+    r.predictionSnapshot?.weightHistorySnapshot,
+    r.predictionSnapshot?.weights,
+    r.weightsSnapshot,
+    r.officialWeights
+  ];
+
+  for(const x of probes){
+    const w=b2c5dWeightVector(x);
+    if(w) return w;
+  }
+
+  return null;
+}
+
+function b2c5dCurrentWeights(){
+  try{
+    if(typeof learnedWeights==='function'){
+      return b2c5dWeightVector(
+        learnedWeights('TOTAL')
+      );
+    }
+  }catch(e){
+    console.warn('B2C-5D learnedWeights read',e);
+  }
+
+  return null;
+}
+
+function b2c5dBounded(w){
+  if(!w) return null;
+
+  try{
+    if(typeof window.B2C5B_BOUNDED_SIMPLEX==='function'){
+      return window.B2C5B_BOUNDED_SIMPLEX(w,.15,.40);
+    }
+  }catch(e){
+    console.warn('B2C-5D bounded simplex',e);
+  }
+
+  return null;
+}
+
+function b2c5dModelProbability(r,w){
+  if(!r?.modelProbs || !w) return NaN;
+
+  let p=0;
+  let mass=0;
+
+  for(const k of B2C5D_KEYS){
+    const mp=b2c5dN(r.modelProbs[k]);
+    const wk=b2c5dN(w[k]);
+
+    if(!Number.isFinite(mp) || !Number.isFinite(wk)){
+      continue;
+    }
+
+    p+=mp*wk;
+    mass+=wk;
+  }
+
+  return mass>0
+    ? b2c5dClamp(p/mass,.001,.999)
+    : NaN;
+}
+
+function b2c5dRows(){
+  try{
+    if(typeof labPickRows!=='function'){
+      return [];
+    }
+
+    const rows=labPickRows(
+      'TOTAL',
+      'FINAL',
+      'SPORTSBOOK',
+      true
+    );
+
+    return (Array.isArray(rows)?rows:[])
+      .filter(r=>
+        r &&
+        r.modelProbs &&
+        Number.isFinite(Number(r.ensembleP)) &&
+        Number.isFinite(Number(r.y))
+      );
+  }catch(e){
+    console.warn('B2C-5D rows',e);
+    return [];
+  }
+}
+
+function b2c5dBrier(rows,key){
+  if(!rows.length) return NaN;
+
+  let sum=0;
+  let n=0;
+
+  for(const r of rows){
+    const p=b2c5dN(r[key]);
+    const y=b2c5dN(r.y);
+
+    if(!Number.isFinite(p) || !Number.isFinite(y)) continue;
+
+    sum+=(p-y)*(p-y);
+    n++;
+  }
+
+  return n?sum/n:NaN;
+}
+
+function b2c5dLogLoss(rows,key){
+  if(!rows.length) return NaN;
+
+  let sum=0;
+  let n=0;
+
+  for(const r of rows){
+    let p=b2c5dN(r[key]);
+    const y=b2c5dN(r.y);
+
+    if(!Number.isFinite(p) || !Number.isFinite(y)) continue;
+
+    p=b2c5dClamp(p,.001,.999);
+
+    sum+=-(
+      y*Math.log(p)+
+      (1-y)*Math.log(1-p)
+    );
+
+    n++;
+  }
+
+  return n?sum/n:NaN;
+}
+
+function b2c5dThreshold(){
+  try{
+    const c=typeof cfg==='function'?cfg():null;
+    const p=Number(c?.prob);
+    if(Number.isFinite(p)) return p;
+  }catch(e){}
+
+  return .56;
+}
+
+function b2c5dHit(rows,key,threshold){
+  let n=0;
+  let hits=0;
+
+  for(const r of rows){
+    const p=b2c5dN(r[key]);
+    const y=b2c5dN(r.y);
+
+    if(!Number.isFinite(p) || !Number.isFinite(y)) continue;
+
+    if(p>=threshold){
+      n++;
+      if(y===1) hits++;
+    }
+  }
+
+  return{
+    n,
+    hits,
+    rate:n?hits/n:NaN
+  };
+}
+
+function b2c5dRun(){
+  const rows=b2c5dRows();
+  const fallbackCurrent=b2c5dCurrentWeights();
+  const threshold=b2c5dThreshold();
+
+  const replay=[];
+
+  let exact=0;
+  let legacy=0;
+  let unusable=0;
+  let crossingsUp=0;
+  let crossingsDown=0;
+  let maxDelta=0;
+  let sumAbsDelta=0;
+
+  for(const r of rows){
+    const officialP=b2c5dN(r.ensembleP);
+
+    const snap=b2c5dSnapshotWeights(r);
+
+    const sourceWeights=
+      snap ||
+      fallbackCurrent;
+
+    const sourceType=
+      snap
+        ? 'SNAPSHOT'
+        : 'LEGACY_FALLBACK';
+
+    if(snap) exact++;
+    else legacy++;
+
+    const shadowWeights=b2c5dBounded(sourceWeights);
+
+    const shadowP=
+      b2c5dModelProbability(
+        r,
+        shadowWeights
+      );
+
+    if(
+      !Number.isFinite(officialP) ||
+      !Number.isFinite(shadowP)
+    ){
+      unusable++;
+      continue;
+    }
+
+    const delta=shadowP-officialP;
+    const absDelta=Math.abs(delta);
+
+    sumAbsDelta+=absDelta;
+    maxDelta=Math.max(maxDelta,absDelta);
+
+    if(
+      officialP<threshold &&
+      shadowP>=threshold
+    ){
+      crossingsUp++;
+    }
+
+    if(
+      officialP>=threshold &&
+      shadowP<threshold
+    ){
+      crossingsDown++;
+    }
+
+    replay.push({
+      id:r.id ?? null,
+      gamePk:r.gamePk ?? null,
+      date:r.date ?? null,
+      side:r.side ?? null,
+      line:r.line ?? null,
+
+      y:Number(r.y),
+
+      sourceType,
+
+      officialP,
+      shadowP,
+      delta,
+
+      officialWeights:
+        sourceWeights
+          ? {...sourceWeights}
+          : null,
+
+      shadowWeights:
+        shadowWeights
+          ? {...shadowWeights}
+          : null
+    });
+  }
+
+  const officialBrier=
+    b2c5dBrier(replay,'officialP');
+
+  const shadowBrier=
+    b2c5dBrier(replay,'shadowP');
+
+  const officialLogLoss=
+    b2c5dLogLoss(replay,'officialP');
+
+  const shadowLogLoss=
+    b2c5dLogLoss(replay,'shadowP');
+
+  return{
+    available:replay.length>0,
+
+    mode:'READ_ONLY_REAL_HISTORY',
+
+    rowsFound:rows.length,
+    n:replay.length,
+
+    exactSnapshots:exact,
+    legacyFallback:legacy,
+    unusable,
+
+    exactCoverage:
+      rows.length
+        ? exact/rows.length
+        : 0,
+
+    threshold,
+
+    officialBrier,
+    shadowBrier,
+    deltaBrier:
+      Number.isFinite(officialBrier) &&
+      Number.isFinite(shadowBrier)
+        ? shadowBrier-officialBrier
+        : NaN,
+
+    officialLogLoss,
+    shadowLogLoss,
+    deltaLogLoss:
+      Number.isFinite(officialLogLoss) &&
+      Number.isFinite(shadowLogLoss)
+        ? shadowLogLoss-officialLogLoss
+        : NaN,
+
+    avgAbsProbDelta:
+      replay.length
+        ? sumAbsDelta/replay.length
+        : NaN,
+
+    maxProbDelta:maxDelta,
+
+    crossingsUp,
+    crossingsDown,
+
+    officialHit:
+      b2c5dHit(
+        replay,
+        'officialP',
+        threshold
+      ),
+
+    shadowHit:
+      b2c5dHit(
+        replay,
+        'shadowP',
+        threshold
+      ),
+
+    replay
+  };
+}
+
+function b2c5dConsole(){
+  const r=b2c5dRun();
+
+  console.group(
+    'B2C-5D Historical Real Replay'
+  );
+
+  console.log('Mode:',r.mode);
+  console.log('Rows found:',r.rowsFound);
+  console.log('Usable:',r.n);
+
+  console.log(
+    'Exact snapshots:',
+    r.exactSnapshots
+  );
+
+  console.log(
+    'Legacy fallback:',
+    r.legacyFallback
+  );
+
+  console.log(
+    'Exact coverage:',
+    (r.exactCoverage*100).toFixed(2)+'%'
+  );
+
+  console.log(
+    'Brier official:',
+    r.officialBrier
+  );
+
+  console.log(
+    'Brier shadow:',
+    r.shadowBrier
+  );
+
+  console.log(
+    'Delta Brier:',
+    r.deltaBrier
+  );
+
+  console.log(
+    'LogLoss official:',
+    r.officialLogLoss
+  );
+
+  console.log(
+    'LogLoss shadow:',
+    r.shadowLogLoss
+  );
+
+  console.log(
+    'Delta LogLoss:',
+    r.deltaLogLoss
+  );
+
+  console.log(
+    'Avg abs probability delta:',
+    r.avgAbsProbDelta
+  );
+
+  console.log(
+    'Max probability delta:',
+    r.maxProbDelta
+  );
+
+  console.log(
+    'Crossings up:',
+    r.crossingsUp
+  );
+
+  console.log(
+    'Crossings down:',
+    r.crossingsDown
+  );
+
+  console.log(
+    'Official hit:',
+    r.officialHit
+  );
+
+  console.log(
+    'Shadow hit:',
+    r.shadowHit
+  );
+
+  console.groupEnd();
+
+  return r;
+}
+
+window.B2C5D_REAL_REPLAY=b2c5dRun;
+window.B2C5D_REAL_CONSOLE=b2c5dConsole;
+
+})();
+</script>
+
+
+<script>
+/* V7.8.6 B2C-5H HISTORICAL DATA VAULT INVENTORY
+   READ ONLY.
+   No modifica LAB, Censo, Bank, pesos, picks ni configuración.
+*/
+(function(){
+
+function b2c5hFinite(v){
+  return Number.isFinite(Number(v));
+}
+
+function b2c5hModelVector(r){
+  const candidates=[
+    r?.modelProbs,
+    r?.rawP,
+    r?.models,
+    r?.predictionSnapshot?.modelProbs,
+    r?.predictionSnapshot?.rawP,
+    r?.predictionSnapshot?.models
+  ];
+
+  for(const x of candidates){
+    if(!x || typeof x!=='object') continue;
+
+    const keys=['struct','nb','pln','com'];
+
+    if(keys.every(k=>b2c5hFinite(x[k]))){
+      return {
+        struct:Number(x.struct),
+        nb:Number(x.nb),
+        pln:Number(x.pln),
+        com:Number(x.com)
+      };
+    }
+  }
+
+  return null;
+}
+
+function b2c5hWeightVector(r){
+  const candidates=[
+    r?.weightHistorySnapshot,
+    r?.predictionSnapshot?.weightHistorySnapshot,
+    r?.predictionSnapshot?.weights,
+    r?.weightsSnapshot,
+    r?.officialWeights
+  ];
+
+  for(const x of candidates){
+    if(!x || typeof x!=='object') continue;
+
+    const keys=['struct','nb','pln','com'];
+
+    if(keys.every(k=>b2c5hFinite(x[k]))){
+      return {
+        struct:Number(x.struct),
+        nb:Number(x.nb),
+        pln:Number(x.pln),
+        com:Number(x.com)
+      };
+    }
+  }
+
+  return null;
+}
+
+function b2c5hRun(){
+
+  let rows=[];
+
+  try{
+    rows =
+      typeof lab === 'function'
+        ? lab()
+        : [];
+  }catch(e){
+    console.warn("B2C-5H lab()",e);
+  }
+
+  rows=Array.isArray(rows)?rows:[];
+
+  const out={
+    total:rows.length,
+    final:0,
+    pending:0,
+
+    predictionSnapshot:0,
+    modelVector:0,
+    weightVector:0,
+
+    ensembleP:0,
+    outcomeY:0,
+    actual:0,
+
+    sportsbook:0,
+    modelSource:0,
+    legacySource:0,
+
+    exactReplay:0,
+    probabilityReplay:0,
+    ensembleOnly:0,
+    unusable:0,
+
+    versions:{},
+    classes:[]
+  };
+
+  for(const r of rows){
+
+    const status=String(r?.status||'').toUpperCase();
+
+    if(status==='FINAL') out.final++;
+    else if(status==='PENDING') out.pending++;
+
+    const snap=
+      !!r?.predictionSnapshot &&
+      typeof r.predictionSnapshot==='object';
+
+    const mv=b2c5hModelVector(r);
+    const wv=b2c5hWeightVector(r);
+
+    const ep=b2c5hFinite(r?.ensembleP);
+    const y=b2c5hFinite(r?.y);
+    const actual=b2c5hFinite(r?.actual);
+
+    if(snap) out.predictionSnapshot++;
+    if(mv) out.modelVector++;
+    if(wv) out.weightVector++;
+    if(ep) out.ensembleP++;
+    if(y) out.outcomeY++;
+    if(actual) out.actual++;
+
+    const source=String(r?.lineSource||r?.source||'').toUpperCase();
+    const labType=String(r?.labType||'').toUpperCase();
+
+    if(source==='SPORTSBOOK') out.sportsbook++;
+    if(source==='MODEL') out.modelSource++;
+    if(labType==='LEGACY') out.legacySource++;
+
+    const version=
+      String(
+        r?.modelVersion ??
+        r?.predictionSnapshot?.modelVersion ??
+        'UNKNOWN'
+      );
+
+    out.versions[version]=(out.versions[version]||0)+1;
+
+    let cls;
+
+    if(status==='FINAL' && b2c5hFinite(r?.y) && mv && wv){
+      cls='A_EXACT';
+      out.exactReplay++;
+    }
+    else if(status==='FINAL' && b2c5hFinite(r?.y) && mv){
+      cls='B_MODEL_PROBS';
+      out.probabilityReplay++;
+    }
+    else if(status==='FINAL' && b2c5hFinite(r?.y) && ep){
+      cls='C_ENSEMBLE_ONLY';
+      out.ensembleOnly++;
+    }
+    else{
+      cls='D_UNUSABLE';
+      out.unusable++;
+    }
+
+    out.classes.push({
+      id:r?.id ?? null,
+      gamePk:r?.gamePk ?? null,
+      date:r?.date ?? null,
+      status,
+      modelVersion:version,
+      cls,
+      snapshot:snap,
+      modelVector:!!mv,
+      weightVector:!!wv,
+      ensembleP:ep,
+      y
+    });
+  }
+
+  console.group("B2C-5H HISTORICAL DATA VAULT INVENTORY");
+  console.log("MODE: READ_ONLY");
+  console.log("TOTAL:",out.total);
+  console.log("FINAL:",out.final);
+  console.log("PENDING:",out.pending);
+  console.log("predictionSnapshot:",out.predictionSnapshot);
+  console.log("model vectors:",out.modelVector);
+  console.log("weight snapshots:",out.weightVector);
+  console.log("ensembleP:",out.ensembleP);
+  console.log("y:",out.outcomeY);
+  console.log("actual:",out.actual);
+  console.log("SPORTSBOOK:",out.sportsbook);
+  console.log("MODEL source:",out.modelSource);
+  console.log("LEGACY:",out.legacySource);
+  console.log("");
+  console.log("A EXACT:",out.exactReplay);
+  console.log("B MODEL_PROBS:",out.probabilityReplay);
+  console.log("C ENSEMBLE ONLY:",out.ensembleOnly);
+  console.log("D UNUSABLE:",out.unusable);
+  console.log("");
+  console.log("VERSIONS:",out.versions);
+  console.table(out.classes);
+  console.groupEnd();
+
+  return out;
+}
+
+window.B2C5H_HISTORY_INVENTORY=b2c5hRun;
+
+})();
+</script>
+
+
+<script>
+/* V7.8.6 B2C-5I REAL HISTORICAL DATA VAULT UI
+ * READ ONLY.
+ * No modifica LAB, Censo, Bank, pesos, picks ni configuración.
+ */
+(function(){
+
+  function b2c5iFinite(v){
+    return Number.isFinite(Number(v));
+  }
+
+  function b2c5iModelVector(r){
+    const candidates=[
+      r?.modelProbs,
+      r?.rawP,
+      r?.models,
+      r?.predictionSnapshot?.modelProbs,
+      r?.predictionSnapshot?.rawP,
+      r?.predictionSnapshot?.models
+    ];
+
+    const keys=['struct','nb','pln','com'];
+
+    for(const x of candidates){
+      if(!x || typeof x!=='object') continue;
+
+      if(keys.every(k=>b2c5iFinite(x[k]))){
+        return {
+          struct:Number(x.struct),
+          nb:Number(x.nb),
+          pln:Number(x.pln),
+          com:Number(x.com)
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function b2c5iWeightVector(r){
+    const candidates=[
+      r?.weightHistorySnapshot,
+      r?.predictionSnapshot?.weightHistorySnapshot,
+      r?.predictionSnapshot?.weights,
+      r?.weightsSnapshot,
+      r?.officialWeights
+    ];
+
+    const keys=['struct','nb','pln','com'];
+
+    for(const x of candidates){
+      if(!x || typeof x!=='object') continue;
+
+      if(keys.every(k=>b2c5iFinite(x[k]))){
+        return {
+          struct:Number(x.struct),
+          nb:Number(x.nb),
+          pln:Number(x.pln),
+          com:Number(x.com)
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function b2c5iInventory(){
+    let rows=[];
+
+    try{
+      rows = typeof lab==='function' ? lab() : [];
+    }catch(e){
+      console.warn('B2C-5I lab()',e);
+      rows=[];
+    }
+
+    rows=Array.isArray(rows)?rows:[];
+
+    const out={
+      total:rows.length,
+      final:0,
+      pending:0,
+
+      exact:0,
+      modelProbs:0,
+      ensembleOnly:0,
+      unusable:0,
+
+      predictionSnapshot:0,
+      modelVector:0,
+      weightVector:0,
+      ensembleP:0,
+      y:0,
+      actual:0,
+
+      versions:{}
+    };
+
+    for(const r of rows){
+
+      const status=String(r?.status||'').toUpperCase();
+
+      if(status==='FINAL') out.final++;
+      else if(status==='PENDING') out.pending++;
+
+      if(r?.predictionSnapshot &&
+         typeof r.predictionSnapshot==='object'){
+        out.predictionSnapshot++;
+      }
+
+      const mv=b2c5iModelVector(r);
+      const wv=b2c5iWeightVector(r);
+
+      if(mv) out.modelVector++;
+      if(wv) out.weightVector++;
+
+      const ep=b2c5iFinite(r?.ensembleP);
+      const y=b2c5iFinite(r?.y);
+      const actual=b2c5iFinite(r?.actual);
+
+      if(ep) out.ensembleP++;
+      if(y) out.y++;
+      if(actual) out.actual++;
+
+      const version=
+        String(
+          r?.modelVersion ??
+          r?.predictionSnapshot?.modelVersion ??
+          'legacy'
+        );
+
+      out.versions[version]=(out.versions[version]||0)+1;
+
+      if(status==='FINAL' && y && mv && wv){
+        out.exact++;
+      }
+      else if(status==='FINAL' && y && mv){
+        out.modelProbs++;
+      }
+      else if(status==='FINAL' && y && ep){
+        out.ensembleOnly++;
+      }
+      else{
+        out.unusable++;
+      }
+    }
+
+    out.replayUsable=
+      out.final
+        ? (out.exact+out.modelProbs+out.ensembleOnly)/out.final
+        : 0;
+
+    out.exactCoverage=
+      out.final
+        ? out.exact/out.final
+        : 0;
+
+    return out;
+  }
+
+  function b2c5iPct(v){
+    return Number.isFinite(v)
+      ? (v*100).toFixed(1)+'%'
+      : '—';
+  }
+
+  function b2c5iHtml(){
+    const d=b2c5iInventory();
+
+    const versions=
+      Object.entries(d.versions)
+        .sort((a,b)=>b[1]-a[1])
+        .map(([k,v])=>`${k}: ${v}`)
+        .join(' · ') || '—';
+
+    return `
+      <div id="b2c5iVaultPanel"
+           class="section"
+           style="margin-top:12px">
+
+        <div class="card"
+             style="border:1px solid rgba(99,218,170,.35)">
+
+          <div class="smalltxt">
+            B2C-5I · READ ONLY
+          </div>
+
+          <h3 style="margin:5px 0 12px">
+            Historical Data Vault
+          </h3>
+
+          <div class="grid4">
+
+            <div class="card">
+              <div class="smalltxt">TOTAL</div>
+              <div class="big">${d.total}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">FINAL</div>
+              <div class="big">${d.final}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">PENDING</div>
+              <div class="big">${d.pending}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">REPLAY USABLE</div>
+              <div class="big">${b2c5iPct(d.replayUsable)}</div>
+            </div>
+
+          </div>
+
+          <div class="grid4" style="margin-top:10px">
+
+            <div class="card">
+              <div class="smalltxt">A · EXACT</div>
+              <div class="big">${d.exact}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">B · MODEL PROBS</div>
+              <div class="big">${d.modelProbs}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">C · ENSEMBLE ONLY</div>
+              <div class="big">${d.ensembleOnly}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">D · UNUSABLE</div>
+              <div class="big">${d.unusable}</div>
+            </div>
+
+          </div>
+
+          <div class="grid4" style="margin-top:10px">
+
+            <div class="card">
+              <div class="smalltxt">SNAPSHOT</div>
+              <div class="big">${d.predictionSnapshot}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">MODEL VECTOR</div>
+              <div class="big">${d.modelVector}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">WEIGHT SNAPSHOT</div>
+              <div class="big">${d.weightVector}</div>
+            </div>
+
+            <div class="card">
+              <div class="smalltxt">EXACT COVERAGE</div>
+              <div class="big">${b2c5iPct(d.exactCoverage)}</div>
+            </div>
+
+          </div>
+
+          <div class="note" style="margin-top:10px">
+            Versiones: ${versions}
+          </div>
+
+          <div class="note" style="margin-top:6px">
+            Auditor histórico. No modifica pesos oficiales,
+            motores, probabilidades, picks, Censo ni Bank.
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  function b2c5iMount(){
+
+    const old=document.getElementById('b2c5iVaultPanel');
+    if(old) old.remove();
+
+    let host=
+      document.querySelector('#labPanel') ||
+      document.querySelector('#labTab') ||
+      document.querySelector('#lab') ||
+      document.querySelector('[data-tab="lab"]');
+
+    if(!host){
+      const nodes=[...document.querySelectorAll('h1,h2,h3')];
+
+      const title=nodes.find(el=>
+        /brier|sportsbook lab/i.test(el.textContent||'')
+      );
+
+      if(title){
+        host=
+          title.closest('.section') ||
+          title.closest('.panel') ||
+          title.parentElement;
+      }
+    }
+
+    if(!host) return false;
+
+    host.insertAdjacentHTML('beforeend',b2c5iHtml());
+    return true;
+  }
+
+  window.B2C5I_HISTORY_INVENTORY=b2c5iInventory;
+  window.B2C5I_HISTORY_MOUNT=b2c5iMount;
+
+  if(typeof window.renderLab==='function'){
+
+    const originalRenderLab=window.renderLab;
+
+    window.renderLab=function(...args){
+
+      const result=originalRenderLab.apply(this,args);
+
+      setTimeout(()=>{
+        try{
+          b2c5iMount();
+        }catch(e){
+          console.warn('B2C-5I mount',e);
+        }
+      },60);
+
+      return result;
+    };
+  }
+
+  setTimeout(()=>{
+    try{
+      b2c5iMount();
+    }catch(e){}
+  },1800);
+
+})();
+</script>
+
 </body>
 </html>
