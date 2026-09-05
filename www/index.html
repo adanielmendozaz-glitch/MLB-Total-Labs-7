@@ -47866,5 +47866,45 @@ if(document.readyState==='loading'){
 </script>
 
 
+
+
+<!-- =========================================================
+ V7.8.6 B2C-5L FALSE ASCENT AUDIT
+ READ ONLY · PROMOTED CASE FORENSICS
+========================================================= -->
+<style>
+#b2c5lAudit{margin:14px 0;padding:15px;border-radius:18px;border:1px solid rgba(255,119,119,.25);background:linear-gradient(145deg,rgba(34,14,18,.96),rgba(8,19,30,.99))}
+.b2c5l-head{display:flex;justify-content:space-between;gap:12px}.b2c5l-kicker{color:#d39b9b;font-size:.70rem;font-weight:900;letter-spacing:.07em}.b2c5l-title{margin-top:4px;color:#f4f7fb;font-size:1.03rem;font-weight:950}.b2c5l-mode{color:#ffadad;text-align:right;font-size:.68rem;font-weight:900}
+.b2c5l-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.b2c5l-card{padding:11px;border-radius:12px;border:1px solid rgba(150,150,160,.13);background:rgba(4,13,23,.54)}.b2c5l-card small{display:block;color:#8f9eae;font-size:.60rem;font-weight:850}.b2c5l-card b{display:block;margin-top:4px;color:#f2f7fa;font-size:1rem}.b2c5l-card b.good{color:#79e2a9}.b2c5l-card b.bad{color:#ff8f9a}
+.b2c5l-sub{margin-top:13px;color:#d9e4ee;font-size:.70rem;font-weight:900;letter-spacing:.04em}.b2c5l-table{margin-top:10px;display:grid;grid-template-columns:1.25fr .65fr 1fr;gap:6px}.b2c5l-cell{padding:8px;border-radius:9px;border:1px solid rgba(120,150,180,.10);background:rgba(4,14,24,.54);color:#8ea6ba;font-size:.66rem}.b2c5l-cell.h{color:#cbd8e4;font-weight:900}.b2c5l-cell.n{text-align:right;color:#edf6ff;font-weight:900}.b2c5l-note{margin-top:12px;padding-top:11px;border-top:1px solid rgba(120,150,180,.12);color:#788fa3;font-size:.64rem;line-height:1.5}
+</style>
+<script>
+(function(){
+'use strict';
+const K=['struct','nb','pln','com'], finite=v=>Number.isFinite(Number(v));
+function bounded(input,min=.15,max=.40){const w={};for(const k of K){const v=Number(input?.[k]);w[k]=Number.isFinite(v)?v:.25}let s=K.reduce((a,k)=>a+w[k],0);if(!(s>0)){for(const k of K)w[k]=.25;s=1}for(const k of K)w[k]/=s;for(let it=0;it<40;it++){for(const k of K)w[k]=Math.max(min,Math.min(max,w[k]));const t=K.reduce((a,k)=>a+w[k],0),d=1-t;if(Math.abs(d)<1e-12)break;const free=K.filter(k=>d>0?w[k]<max-1e-12:w[k]>min+1e-12);if(!free.length)break;const caps=free.map(k=>d>0?max-w[k]:w[k]-min),cs=caps.reduce((a,b)=>a+b,0);if(cs<=1e-15)break;for(let i=0;i<free.length;i++)w[free[i]]+=d*(caps[i]/cs)}return w}
+function shadowP(r,w){let p=0,m=0;for(const k of K){const mp=Number(r?.modelProbs?.[k]),wk=Number(w?.[k]);if(!Number.isFinite(mp)||!Number.isFinite(wk))continue;p+=mp*wk;m+=wk}return m>0?p/m:NaN}
+function lineType(x){x=Number(x);if(!Number.isFinite(x))return'UNKNOWN';return Math.abs(x-Math.round(x))<1e-9?'ENTERA':'MEDIA'}
+function probBand(p){p=Number(p);if(p<.55)return'50–54.9%';if(p<.58)return'55–57.9%';if(p<.60)return'58–59.9%';if(p<.65)return'60–64.9%';return'65%+'}
+function spread(r){const v=K.map(k=>Number(r?.modelProbs?.[k])).filter(Number.isFinite);return v.length<2?NaN:Math.max(...v)-Math.min(...v)}
+function spreadBand(v){if(!Number.isFinite(v))return'UNKNOWN';if(v<.04)return'<4 pp';if(v<.08)return'4–7.9 pp';if(v<.12)return'8–11.9 pp';return'12+ pp'}
+function inc(m,k,w){if(!m[k])m[k]={n:0,w:0,l:0};m[k].n++;w?m[k].w++:m[k].l++}
+function rows(){try{return labPickRows('TOTAL','FINAL','SPORTSBOOK',true).filter(r=>r&&r.modelProbs&&finite(r.y)&&finite(r.ensembleP))}catch{return[]}}
+function report(){const a=rows();let w;try{w=bounded(learnedWeights('TOTAL'),.15,.40)}catch{return{available:false}}const th=Number(typeof cfg==='function'?cfg()?.prob:.56)||.56,valid=[];for(const r of a){const po=Number(r.ensembleP),ps=shadowP(r,w),y=Number(r.y);if(!Number.isFinite(po)||!Number.isFinite(ps)||!Number.isFinite(y))continue;if(po>=th||ps<th)continue;if(y!==0&&y!==1)continue;const sp=spread(r);valid.push({side:String(r.side||'UNKNOWN').toUpperCase(),line:lineType(r.line),prob:probBand(po),spread:spreadBand(sp),win:y===1,dp:ps-po})}const maps={side:{},line:{},prob:{},spread:{}};let dw=0,dl=0,nw=0,nl=0;for(const r of valid){inc(maps.side,r.side,r.win);inc(maps.line,r.line,r.win);inc(maps.prob,r.prob,r.win);inc(maps.spread,r.spread,r.win);if(r.win){dw+=r.dp;nw++}else{dl+=r.dp;nl++}}const conv=o=>Object.entries(o).map(([label,v])=>({label,...v,hit:v.n?v.w/v.n:NaN})).sort((a,b)=>b.n-a.n);const wins=valid.filter(x=>x.win).length;return{available:true,n:valid.length,wins,losses:valid.length-wins,hit:valid.length?wins/valid.length:NaN,avgDeltaWin:nw?dw/nw:NaN,avgDeltaLoss:nl?dl/nl:NaN,bySide:conv(maps.side),byLine:conv(maps.line),byProb:conv(maps.prob),bySpread:conv(maps.spread)}}
+const pct=v=>finite(v)?(Number(v)*100).toFixed(1)+'%':'—', pp=v=>finite(v)?(Number(v)*100).toFixed(2)+' pp':'—';
+function group(x){return x.map(r=>`<div class="b2c5l-cell">${r.label}</div><div class="b2c5l-cell n">${r.n}</div><div class="b2c5l-cell n">${r.w}-${r.l} · ${pct(r.hit)}</div>`).join('')}
+function html(r){if(!r.available)return'<section id="b2c5lAudit"><div class="b2c5l-title">SIN CASOS PROMOVIDOS</div></section>';return `<section id="b2c5lAudit"><div class="b2c5l-head"><div><div class="b2c5l-kicker">B2C-5L · FALSE ASCENT AUDIT</div><div class="b2c5l-title">Forense de ascensos Shadow</div></div><div class="b2c5l-mode">READ ONLY<br>NO CORE CHANGES</div></div><div class="b2c5l-grid"><div class="b2c5l-card"><small>CASOS</small><b>${r.n}</b></div><div class="b2c5l-card"><small>RECORD</small><b class="${r.hit>=.5?'good':'bad'}">${r.wins}-${r.losses}</b></div><div class="b2c5l-card"><small>HIT RATE</small><b class="${r.hit>=.5?'good':'bad'}">${pct(r.hit)}</b></div><div class="b2c5l-card"><small>ΔP MEDIO GANADORES</small><b>${pp(r.avgDeltaWin)}</b></div><div class="b2c5l-card"><small>ΔP MEDIO PERDEDORES</small><b>${pp(r.avgDeltaLoss)}</b></div><div class="b2c5l-card"><small>LECTURA</small><b class="bad">NO PROMOVER AÚN</b></div></div>
+<div class="b2c5l-sub">POR LADO</div><div class="b2c5l-table"><div class="b2c5l-cell h">SEGMENTO</div><div class="b2c5l-cell h n">N</div><div class="b2c5l-cell h n">W-L · HIT</div>${group(r.bySide)}</div>
+<div class="b2c5l-sub">POR TIPO DE LÍNEA</div><div class="b2c5l-table"><div class="b2c5l-cell h">SEGMENTO</div><div class="b2c5l-cell h n">N</div><div class="b2c5l-cell h n">W-L · HIT</div>${group(r.byLine)}</div>
+<div class="b2c5l-sub">POR PROBABILIDAD OFICIAL</div><div class="b2c5l-table"><div class="b2c5l-cell h">RANGO</div><div class="b2c5l-cell h n">N</div><div class="b2c5l-cell h n">W-L · HIT</div>${group(r.byProb)}</div>
+<div class="b2c5l-sub">POR DISPERSIÓN ENTRE MOTORES</div><div class="b2c5l-table"><div class="b2c5l-cell h">SPREAD</div><div class="b2c5l-cell h n">N</div><div class="b2c5l-cell h n">W-L · HIT</div>${group(r.bySpread)}</div>
+<div class="b2c5l-note">Analiza sólo promociones retrospectivas: oficial bajo 56% y Shadow sobre 56%. Busca patrones entre ganadores y perdedores sin modificar Motor V7.0, calibración, gates, Censo, Bank ni picks.</div></section>`}
+function mount(){document.getElementById('b2c5lAudit')?.remove();const r=report();window.__MLB_FALSE_ASCENT_AUDIT__=r;const w=document.createElement('div');w.innerHTML=html(r);const n=w.firstElementChild;if(!n)return;const a=document.getElementById('b2c5kAudit')||document.getElementById('b2c5jLedger');if(a&&a.parentNode)a.insertAdjacentElement('afterend',n);else document.getElementById('homeDashboard')?.appendChild(n)}
+function install(){try{mount()}catch{};let i=0;const t=setInterval(()=>{i++;try{if(!document.getElementById('b2c5lAudit'))mount()}catch{}if(document.getElementById('b2c5lAudit')||i>=20)clearInterval(t)},500)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+
+
 </body>
 </html>
