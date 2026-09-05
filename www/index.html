@@ -14784,33 +14784,64 @@ function teamShadowOfficialSignal(
           pick,
           source
         )?.txt || ''
-      ).toUpperCase();
+      )
+        .trim()
+        .toUpperCase();
+
+
+    /*
+     * K3 SHADOW FAIL-SAFE
+     *
+     * Una señal que no puede leerse
+     * jamás se convierte artificialmente
+     * en LEAN.
+     */
+
+    if(!label){
+      return 'UNKNOWN';
+    }
+
+
+    /*
+     * PASS / NO BET se comprueba antes
+     * de buscar JUGABLE para evitar
+     * falsos positivos textuales.
+     */
+
+    if(
+      label.includes('PASS') ||
+      label.includes('NO BET') ||
+      label.includes('NO JUGABLE')
+    ){
+      return 'NO BET';
+    }
 
 
     if(
-      label.includes('JUGABLE')
+      /\bJUGABLE\b/.test(label)
     ){
       return 'JUGABLE';
     }
 
 
     if(
-      label.includes('LEAN')
+      /\bLEAN\b/.test(label)
     ){
       return 'LEAN';
     }
 
 
-    return 'NO BET';
+    return 'UNKNOWN';
 
 
-  }catch{
+  }catch(e){
 
-    if(pick?.pass){
-      return 'NO BET';
-    }
+    console.warn(
+      'TEAM SHADOW signal unreadable',
+      e
+    );
 
-    return 'LEAN';
+    return 'UNKNOWN';
 
   }
 
@@ -14823,7 +14854,7 @@ function teamShadowGatingDecision(
 
   const original=
     String(
-      officialSignal || 'NO BET'
+      officialSignal || 'UNKNOWN'
     ).toUpperCase();
 
 
@@ -14843,10 +14874,24 @@ function teamShadowGatingDecision(
 
 
   /*
+   * K3:
+   * UNKNOWN queda excluido del gating.
+   * No se promueve, bloquea ni interpreta.
+   */
+
+  if(original==='UNKNOWN'){
+
+    hypothetical='UNKNOWN';
+    action='EXCLUDE UNKNOWN';
+
+  }
+
+
+  /*
    * Nunca resucita NO BET.
    */
 
-  if(original==='NO BET'){
+  else if(original==='NO BET'){
 
     hypothetical='NO BET';
     action='KEEP NO BET';
@@ -14953,10 +14998,18 @@ function teamShadowGameStarted(
     );
 
 
+  /*
+   * null = timing no verificable.
+   *
+   * Antes devolvía false y Shadow
+   * podía confundir una fecha inválida
+   * con pregame confirmado.
+   */
+
   if(
     !Number.isFinite(start)
   ){
-    return false;
+    return null;
   }
 
 
@@ -15244,9 +15297,21 @@ function teamShadowCaptureOfficial(
   best
 ){
 
-  if(
-    teamShadowGameStarted(g)
-  ){
+  const started=
+    teamShadowGameStarted(g);
+
+
+  if(started===null){
+
+    return{
+      captured:false,
+      reason:'TIMING_UNVERIFIED'
+    };
+
+  }
+
+
+  if(started===true){
 
     return{
       captured:false,
@@ -29731,7 +29796,8 @@ function policyCohortDashboardHtml(){
 
 
   const integrity=
-    policyCohortIntegritySelfTest();
+    window.__MLB_POLICY_COHORT_INTEGRITY__ ||
+    policyCohortRunIntegritySelfTest();
 
 
   const row=(
@@ -30240,7 +30306,7 @@ function finalIntegritySuite(){
       'Policy Cohort',
       ()=>
         window.__MLB_POLICY_COHORT_INTEGRITY__ ||
-        policyCohortIntegritySelfTest()
+        policyCohortRunIntegritySelfTest()
     ),
 
 
