@@ -47070,5 +47070,133 @@ if(
 })();
 </script>
 
+
+
+<!-- =========================================================
+ V7.8.6 B2C-5J HISTORICAL EVIDENCE LEDGER
+ READ ONLY · EXACT / PARTIAL / LEGACY
+========================================================= -->
+<style>
+#b2c5jLedger{margin:14px 0;padding:15px;border-radius:18px;border:1px solid rgba(95,208,255,.27);background:linear-gradient(145deg,rgba(8,28,43,.97),rgba(7,19,31,.99))}
+.b2c5j-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.b2c5j-kicker{color:#92b4cf;font-size:.70rem;font-weight:900;letter-spacing:.07em}
+.b2c5j-title{margin-top:4px;color:#eef7ff;font-size:1.03rem;font-weight:950}
+.b2c5j-mode{color:#7ee3ae;text-align:right;font-size:.70rem;font-weight:900}
+.b2c5j-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.b2c5j-card{padding:11px;border-radius:12px;border:1px solid rgba(120,155,190,.13);background:rgba(3,13,24,.53)}
+.b2c5j-card small{display:block;color:#7f98ae;font-size:.60rem;font-weight:850}
+.b2c5j-card b{display:block;margin-top:4px;color:#eef7ff;font-size:1rem}
+.b2c5j-card b.good{color:#78e1a9}.b2c5j-card b.warn{color:#ffd16f}.b2c5j-card b.muted{color:#9bb0c3}
+.b2c5j-table{margin-top:13px;display:grid;grid-template-columns:1.35fr .75fr 1.15fr;gap:6px}
+.b2c5j-cell{padding:8px;border-radius:9px;border:1px solid rgba(120,150,180,.10);background:rgba(4,14,24,.54);color:#8ea6ba;font-size:.66rem}
+.b2c5j-cell.h{color:#cbd8e4;font-weight:900}.b2c5j-cell.n{text-align:right;color:#edf6ff;font-weight:900}
+.b2c5j-note{margin-top:12px;padding-top:11px;border-top:1px solid rgba(120,150,180,.12);color:#748da3;font-size:.64rem;line-height:1.5}
+.b2c5j-badge{display:inline-block;margin-top:8px;padding:5px 9px;border-radius:999px;border:1px solid rgba(120,220,170,.28);color:#7de0aa;font-size:.61rem;font-weight:900}
+@media(max-width:520px){.b2c5j-grid{grid-template-columns:1fr 1fr}.b2c5j-table{grid-template-columns:1.25fr .65fr 1fr}}
+</style>
+<script>
+(function(){
+'use strict';
+const B2C5J_VERSION='B2C-5J';
+const finite=v=>Number.isFinite(Number(v));
+
+function rows(){
+  try{
+    if(typeof labPickRows!=='function')return[];
+    return labPickRows('TOTAL','FINAL','SPORTSBOOK',true).filter(Boolean);
+  }catch(e){console.warn('B2C-5J rows',e);return[]}
+}
+function hasModelProbs(r){
+  const m=r?.modelProbs;if(!m)return false;
+  return ['struct','nb','pln','com'].every(k=>finite(m[k]));
+}
+function exactSnap(r){
+  const w=r?.weightHistorySnapshot;if(!w)return false;
+  return w.schema==='mlb-weight-snapshot-v1' &&
+    w.version==='B2C-4C' &&
+    w.immutable===true &&
+    w.historicalBackfill===false &&
+    w.source==='FORECAST_CREATION' &&
+    !!w.capturedAt && !!w.officialWeights && !!w.shadowWeights &&
+    finite(w.officialWeightSum) && finite(w.shadowWeightSum) &&
+    Math.abs(Number(w.officialWeightSum)-1)<1e-6 &&
+    Math.abs(Number(w.shadowWeightSum)-1)<1e-6;
+}
+function classify(r){
+  const settled=finite(r?.y), model=hasModelProbs(r), official=finite(r?.ensembleP), exact=exactSnap(r);
+  if(settled&&model&&official&&exact)return'EXACT';
+  if(settled&&official&&(model||r?.predictionSnapshot||r?.weightHistorySnapshot))return'PARTIAL';
+  return'LEGACY';
+}
+function brier(p,y){return Math.pow(Number(p)-Number(y),2)}
+function report(){
+  const a=rows();
+  let exact=0,partial=0,legacy=0,settled=0,n=0,bo=0,bs=0,better=0,worse=0,equal=0;
+  for(const r of a){
+    if(finite(r?.y))settled++;
+    const c=classify(r);
+    if(c==='EXACT')exact++; else if(c==='PARTIAL')partial++; else legacy++;
+    if(c!=='EXACT')continue;
+    const po=Number(r.ensembleP), ps=Number(r.weightHistorySnapshot?.shadowWeightBlendProbability), y=Number(r.y);
+    if(!Number.isFinite(po)||!Number.isFinite(ps)||!Number.isFinite(y))continue;
+    const x=brier(po,y), z=brier(ps,y);n++;bo+=x;bs+=z;
+    if(z<x-1e-12)better++;else if(z>x+1e-12)worse++;else equal++;
+  }
+  let censoTotal=NaN;
+  try{const c=typeof censusAllRows==='function'?censusAllRows():[];if(Array.isArray(c))censoTotal=c.length}catch{}
+  const bOfficial=n?bo/n:NaN,bShadow=n?bs/n:NaN;
+  return{version:B2C5J_VERSION,mode:'READ_ONLY_EVIDENCE_LEDGER',rows:a.length,settled,censoTotal,exact,partial,legacy,
+    rawReplayN:n,officialBrier:bOfficial,shadowRawBrier:bShadow,
+    deltaRaw:Number.isFinite(bOfficial)&&Number.isFinite(bShadow)?bShadow-bOfficial:NaN,
+    shadowRawBetter:better,shadowRawWorse:worse,shadowRawEqual:equal,fullPolicyReplayN:0,at:new Date().toISOString()};
+}
+const num=(v,d=4)=>finite(v)?Number(v).toFixed(d):'—';
+function html(r){
+  const d=Number(r.deltaRaw),dt=Number.isFinite(d)?(d>=0?'+':'')+d.toFixed(4):'—',good=Number.isFinite(d)&&d<0;
+  return `<section id="b2c5jLedger">
+  <div class="b2c5j-head"><div><div class="b2c5j-kicker">B2C-5J · HISTORICAL EVIDENCE LEDGER</div>
+  <div class="b2c5j-title">Evidencia histórica utilizable</div><span class="b2c5j-badge">MOTOR V7.0 INTACTO</span></div>
+  <div class="b2c5j-mode">READ ONLY<br>NO BACKFILL</div></div>
+  <div class="b2c5j-grid">
+    <div class="b2c5j-card"><small>CENSO TOTAL</small><b>${finite(r.censoTotal)?r.censoTotal:'—'}</b></div>
+    <div class="b2c5j-card"><small>LAB EVALUABLE</small><b>${r.rows}</b></div>
+    <div class="b2c5j-card"><small>EXACT</small><b class="good">${r.exact}</b></div>
+    <div class="b2c5j-card"><small>PARTIAL</small><b class="warn">${r.partial}</b></div>
+    <div class="b2c5j-card"><small>LEGACY / NO REPLAY</small><b class="muted">${r.legacy}</b></div>
+    <div class="b2c5j-card"><small>FULL-POLICY EXACT</small><b class="muted">${r.fullPolicyReplayN}</b></div>
+  </div>
+  <div class="b2c5j-table">
+    <div class="b2c5j-cell h">RAW-WEIGHT REPLAY</div><div class="b2c5j-cell h n">VALOR</div><div class="b2c5j-cell h n">LECTURA</div>
+    <div class="b2c5j-cell">Muestra exacta utilizable</div><div class="b2c5j-cell n">${r.rawReplayN}</div><div class="b2c5j-cell n">B2C-4C contemporáneo</div>
+    <div class="b2c5j-cell">Brier oficial</div><div class="b2c5j-cell n">${num(r.officialBrier)}</div><div class="b2c5j-cell n">ensembleP guardado</div>
+    <div class="b2c5j-cell">Brier Shadow raw</div><div class="b2c5j-cell n">${num(r.shadowRawBrier)}</div><div class="b2c5j-cell n">mezcla pesos histórica</div>
+    <div class="b2c5j-cell">Δ Brier raw</div><div class="b2c5j-cell n">${dt}</div><div class="b2c5j-cell n">${good?'Shadow raw mejora':'No mejora demostrada'}</div>
+    <div class="b2c5j-cell">Mejor / peor / igual</div><div class="b2c5j-cell n">${r.shadowRawBetter}/${r.shadowRawWorse}/${r.shadowRawEqual}</div><div class="b2c5j-cell n">por pick exacto</div>
+  </div>
+  <div class="b2c5j-note">EXACT exige weightHistorySnapshot B2C-4C inmutable creado en FORECAST_CREATION, además de modelProbs, ensembleP y resultado. PARTIAL conserva parte de la evidencia, pero no la foto exacta de pesos. LEGACY sigue siendo válido para Censo, Brier global, calibración y segmentación, pero no para afirmar replay exacto. Shadow raw NO es probabilidad final alternativa: no reproduce calibración, no-vig shrink ni gates completos.</div>
+  </section>`;
+}
+function mount(){
+  document.getElementById('b2c5jLedger')?.remove();
+  const r=report();window.__MLB_HISTORICAL_EVIDENCE_LEDGER__=r;
+  const w=document.createElement('div');w.innerHTML=html(r);const n=w.firstElementChild;if(!n)return;
+  const a=document.getElementById('b2c4bAudit')||document.getElementById('b2c4WeightAudit');
+  if(a&&a.parentNode){a.insertAdjacentElement('afterend',n);return}
+  document.getElementById('homeDashboard')?.appendChild(n);
+}
+function install(){
+  try{mount()}catch(e){console.warn('B2C-5J mount',e)}
+  if(typeof renderHomeDashboard==='function'&&renderHomeDashboard.__b2c5jLedger!==true){
+    const prev=renderHomeDashboard;
+    const wrap=function(){const r=prev.apply(this,arguments);try{mount()}catch(e){}return r};
+    wrap.__b2c5jLedger=true;renderHomeDashboard=wrap;try{window.renderHomeDashboard=wrap}catch{}
+  }
+  setTimeout(()=>{try{mount()}catch{}},1100);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+
+
 </body>
 </html>
