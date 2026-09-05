@@ -47193,7 +47193,106 @@ function install(){
   }
   setTimeout(()=>{try{mount()}catch{}},1100);
 }
+window.__B2C5J_FORCE_MOUNT__=mount;
+window.__B2C5J_REPORT__=report;
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+
+
+
+
+
+<!-- =========================================================
+ V7.8.6 B2C-5J VISIBILITY WATCHDOG
+ READ ONLY - UI MOUNT ONLY
+========================================================= -->
+<script>
+(function(){
+'use strict';
+
+const B2C5J_VIS_VERSION='B2C-5J-VIS-1';
+
+function b2c5jVisTryMount(){
+  try{
+    if(typeof window.__B2C5J_FORCE_MOUNT__!=='function') return false;
+
+    const anchor=
+      document.getElementById('b2c4bAudit') ||
+      document.getElementById('b2c4WeightAudit');
+
+    if(!anchor) return false;
+
+    window.__B2C5J_FORCE_MOUNT__();
+
+    const node=document.getElementById('b2c5jLedger');
+
+    if(node){
+      window.__MLB_B2C5J_VISIBILITY__={
+        version:B2C5J_VIS_VERSION,
+        visible:true,
+        at:new Date().toISOString()
+      };
+      return true;
+    }
+
+    return false;
+  }catch(e){
+    console.warn('B2C-5J visibility',e);
+    return false;
+  }
+}
+
+function b2c5jVisInstall(){
+  let attempts=0;
+
+  const timer=setInterval(()=>{
+    attempts++;
+    const ok=b2c5jVisTryMount();
+
+    if(ok || attempts>=20){
+      clearInterval(timer);
+
+      if(!ok){
+        window.__MLB_B2C5J_VISIBILITY__={
+          version:B2C5J_VIS_VERSION,
+          visible:false,
+          attempts,
+          at:new Date().toISOString()
+        };
+      }
+    }
+  },500);
+
+  try{
+    const obs=new MutationObserver(()=>{
+      if(!document.getElementById('b2c5jLedger')){
+        b2c5jVisTryMount();
+      }
+    });
+
+    obs.observe(
+      document.body,
+      {childList:true,subtree:true}
+    );
+
+    window.__MLB_B2C5J_VIS_OBSERVER__=obs;
+  }catch(e){
+    console.warn('B2C-5J observer',e);
+  }
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener(
+    'DOMContentLoaded',
+    b2c5jVisInstall,
+    {once:true}
+  );
+}else{
+  b2c5jVisInstall();
+}
+
 })();
 </script>
 
