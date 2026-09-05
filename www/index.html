@@ -47297,5 +47297,574 @@ if(document.readyState==='loading'){
 </script>
 
 
+
+
+<!-- =========================================================
+ V7.8.6 B2C-5K PARTIAL REPLAY DIAGNOSTIC
+ READ ONLY · RETROSPECTIVE · NO CAUSAL CLAIMS
+========================================================= -->
+
+<style>
+#b2c5kAudit{
+  margin:14px 0;
+  padding:15px;
+  border-radius:18px;
+  border:1px solid rgba(255,196,94,.28);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(34,27,10,.96),
+      rgba(10,20,31,.99)
+    );
+}
+.b2c5k-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.b2c5k-kicker{
+  color:#c6aa72;
+  font-size:.70rem;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+.b2c5k-title{
+  margin-top:4px;
+  color:#f3f7fb;
+  font-size:1.03rem;
+  font-weight:950;
+}
+.b2c5k-mode{
+  color:#ffd071;
+  text-align:right;
+  font-size:.68rem;
+  font-weight:900;
+}
+.b2c5k-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+}
+.b2c5k-card{
+  padding:11px;
+  border-radius:12px;
+  border:1px solid rgba(150,150,140,.13);
+  background:rgba(4,13,23,.54);
+}
+.b2c5k-card small{
+  display:block;
+  color:#8e9dad;
+  font-size:.60rem;
+  font-weight:850;
+}
+.b2c5k-card b{
+  display:block;
+  margin-top:4px;
+  color:#f1f6fa;
+  font-size:1rem;
+}
+.b2c5k-card b.good{color:#78e1a9}
+.b2c5k-card b.warn{color:#ffd16f}
+.b2c5k-table{
+  margin-top:13px;
+  display:grid;
+  grid-template-columns:1.35fr .75fr 1.15fr;
+  gap:6px;
+}
+.b2c5k-cell{
+  padding:8px;
+  border-radius:9px;
+  border:1px solid rgba(120,150,180,.10);
+  background:rgba(4,14,24,.54);
+  color:#8ea6ba;
+  font-size:.66rem;
+}
+.b2c5k-cell.h{
+  color:#cbd8e4;
+  font-weight:900;
+}
+.b2c5k-cell.n{
+  text-align:right;
+  color:#edf6ff;
+  font-weight:900;
+}
+.b2c5k-sub{
+  margin-top:13px;
+  color:#d8e4ee;
+  font-size:.70rem;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.b2c5k-note{
+  margin-top:12px;
+  padding-top:11px;
+  border-top:1px solid rgba(120,150,180,.12);
+  color:#788fa3;
+  font-size:.64rem;
+  line-height:1.5;
+}
+@media(max-width:520px){
+  .b2c5k-grid{grid-template-columns:1fr 1fr}
+  .b2c5k-table{grid-template-columns:1.2fr .65fr 1fr}
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const K5_KEYS=['struct','nb','pln','com'];
+const K5_VERSION='B2C-5K';
+
+const k5Finite=v=>Number.isFinite(Number(v));
+const k5Brier=(p,y)=>Math.pow(Number(p)-Number(y),2);
+
+function k5Rows(){
+  try{
+    if(typeof labPickRows!=='function') return [];
+    return labPickRows(
+      'TOTAL',
+      'FINAL',
+      'SPORTSBOOK',
+      true
+    ).filter(r=>
+      r &&
+      r.modelProbs &&
+      k5Finite(r.y) &&
+      k5Finite(r.ensembleP)
+    );
+  }catch(e){
+    console.warn('B2C-5K rows',e);
+    return [];
+  }
+}
+
+function k5BoundedWeights(input,min=.15,max=.40){
+  const w={};
+
+  for(const k of K5_KEYS){
+    const v=Number(input?.[k]);
+    w[k]=Number.isFinite(v)?v:.25;
+  }
+
+  let s=K5_KEYS.reduce((a,k)=>a+w[k],0);
+  if(!(s>0)){
+    for(const k of K5_KEYS)w[k]=.25;
+    s=1;
+  }
+
+  for(const k of K5_KEYS)w[k]/=s;
+
+  for(let iter=0;iter<40;iter++){
+    for(const k of K5_KEYS){
+      w[k]=Math.max(min,Math.min(max,w[k]));
+    }
+
+    const total=K5_KEYS.reduce((a,k)=>a+w[k],0);
+    const diff=1-total;
+
+    if(Math.abs(diff)<1e-12)break;
+
+    const free=K5_KEYS.filter(k=>
+      diff>0
+        ?w[k]<max-1e-12
+        :w[k]>min+1e-12
+    );
+
+    if(!free.length)break;
+
+    const caps=free.map(k=>
+      diff>0 ? max-w[k] : w[k]-min
+    );
+
+    const capSum=caps.reduce((a,b)=>a+b,0);
+    if(capSum<=1e-15)break;
+
+    for(let i=0;i<free.length;i++){
+      w[free[i]]+=diff*(caps[i]/capSum);
+    }
+  }
+
+  return w;
+}
+
+function k5ShadowWeights(){
+  try{
+    if(typeof learnedWeights!=='function') return null;
+    return k5BoundedWeights(
+      learnedWeights('TOTAL'),
+      .15,
+      .40
+    );
+  }catch(e){
+    return null;
+  }
+}
+
+function k5ShadowP(row,w){
+  let p=0,mass=0;
+
+  for(const k of K5_KEYS){
+    const mp=Number(row?.modelProbs?.[k]);
+    const wk=Number(w?.[k]);
+
+    if(!Number.isFinite(mp)||!Number.isFinite(wk))continue;
+
+    p+=mp*wk;
+    mass+=wk;
+  }
+
+  return mass>0?p/mass:NaN;
+}
+
+function k5Bucket(p){
+  const x=Number(p);
+
+  if(x<.55)return '50–54.9%';
+  if(x<.60)return '55–59.9%';
+  if(x<.65)return '60–64.9%';
+  if(x<.70)return '65–69.9%';
+  return '70%+';
+}
+
+function k5Report(){
+  const rows=k5Rows();
+  const w=k5ShadowWeights();
+
+  if(!rows.length || !w){
+    return{
+      available:false,
+      version:K5_VERSION,
+      n:rows.length
+    };
+  }
+
+  const threshold=
+    Number(
+      typeof cfg==='function'
+        ?cfg()?.prob
+        :.56
+    ) || .56;
+
+  let usable=0,bo=0,bs=0;
+  let up=0,down=0;
+  let flipWon=0,flipLost=0,flipPush=0;
+  let promotedWon=0,promotedLost=0;
+  let blockedWon=0,blockedLost=0;
+
+  const bySide={
+    OVER:{n:0,bo:0,bs:0},
+    UNDER:{n:0,bo:0,bs:0},
+    OTHER:{n:0,bo:0,bs:0}
+  };
+
+  const byBucket={};
+
+  for(const r of rows){
+    const po=Number(r.ensembleP);
+    const ps=k5ShadowP(r,w);
+    const y=Number(r.y);
+
+    if(!Number.isFinite(po)||!Number.isFinite(ps)||!Number.isFinite(y))continue;
+
+    usable++;
+
+    const bO=k5Brier(po,y);
+    const bS=k5Brier(ps,y);
+
+    bo+=bO;
+    bs+=bS;
+
+    const side=String(r.side||'').toUpperCase();
+    const sk=side==='OVER'?'OVER':side==='UNDER'?'UNDER':'OTHER';
+
+    bySide[sk].n++;
+    bySide[sk].bo+=bO;
+    bySide[sk].bs+=bS;
+
+    const bk=k5Bucket(po);
+    if(!byBucket[bk])byBucket[bk]={n:0,bo:0,bs:0};
+    byBucket[bk].n++;
+    byBucket[bk].bo+=bO;
+    byBucket[bk].bs+=bS;
+
+    const og=po>=threshold;
+    const sg=ps>=threshold;
+
+    if(og===sg)continue;
+
+    if(!og&&sg){
+      up++;
+      if(y===1)promotedWon++;
+      else if(y===0)promotedLost++;
+    }
+
+    if(og&&!sg){
+      down++;
+      if(y===1)blockedWon++;
+      else if(y===0)blockedLost++;
+    }
+
+    if(y===1)flipWon++;
+    else if(y===0)flipLost++;
+    else flipPush++;
+  }
+
+  const sideRows=Object.entries(bySide)
+    .filter(([,v])=>v.n>0)
+    .map(([side,v])=>({
+      side,
+      n:v.n,
+      official:v.bo/v.n,
+      shadow:v.bs/v.n,
+      delta:(v.bs-v.bo)/v.n
+    }));
+
+  const bucketRows=Object.entries(byBucket)
+    .map(([bucket,v])=>({
+      bucket,
+      n:v.n,
+      official:v.bo/v.n,
+      shadow:v.bs/v.n,
+      delta:(v.bs-v.bo)/v.n
+    }));
+
+  return{
+    available:true,
+    version:K5_VERSION,
+    mode:'RETROSPECTIVE_PARTIAL_ONLY',
+    n:usable,
+    threshold,
+    officialBrier:bo/usable,
+    shadowBrier:bs/usable,
+    deltaBrier:(bs-bo)/usable,
+    gateUp:up,
+    gateDown:down,
+    gateFlips:up+down,
+    flipWon,
+    flipLost,
+    flipPush,
+    promotedWon,
+    promotedLost,
+    blockedWon,
+    blockedLost,
+    bySide:sideRows,
+    byBucket:bucketRows,
+    causal:false,
+    at:new Date().toISOString()
+  };
+}
+
+function k5Num(v,d=4){
+  return k5Finite(v)?Number(v).toFixed(d):'—';
+}
+
+function k5Pct(v){
+  return k5Finite(v)?(Number(v)*100).toFixed(2)+'%':'—';
+}
+
+function k5RowsHtml(rows,labelKey){
+  return rows.map(r=>`
+    <div class="b2c5k-cell">${r[labelKey]}</div>
+    <div class="b2c5k-cell n">${r.n}</div>
+    <div class="b2c5k-cell n">
+      Δ ${k5Num(r.delta,4)}
+    </div>
+  `).join('');
+}
+
+function k5Html(r){
+  if(!r.available){
+    return `
+      <section id="b2c5kAudit">
+        <div class="b2c5k-kicker">
+          B2C-5K · PARTIAL REPLAY DIAGNOSTIC
+        </div>
+        <div class="b2c5k-title">
+          SIN MUESTRA UTILIZABLE
+        </div>
+      </section>
+    `;
+  }
+
+  const good=r.deltaBrier<0;
+
+  return `
+    <section id="b2c5kAudit">
+
+      <div class="b2c5k-head">
+        <div>
+          <div class="b2c5k-kicker">
+            B2C-5K · PARTIAL REPLAY DIAGNOSTIC
+          </div>
+          <div class="b2c5k-title">
+            160 históricos sin convertirlos en EXACT
+          </div>
+        </div>
+
+        <div class="b2c5k-mode">
+          READ ONLY<br>
+          RETROSPECTIVE
+        </div>
+      </div>
+
+      <div class="b2c5k-grid">
+        <div class="b2c5k-card">
+          <small>MUESTRA PARTIAL</small>
+          <b>${r.n}</b>
+        </div>
+
+        <div class="b2c5k-card">
+          <small>UMBRAL ACTUAL</small>
+          <b>${k5Pct(r.threshold)}</b>
+        </div>
+
+        <div class="b2c5k-card">
+          <small>BRIER OFICIAL</small>
+          <b>${k5Num(r.officialBrier)}</b>
+        </div>
+
+        <div class="b2c5k-card">
+          <small>BRIER SHADOW RETRO</small>
+          <b class="${good?'good':'warn'}">
+            ${k5Num(r.shadowBrier)}
+          </b>
+        </div>
+
+        <div class="b2c5k-card">
+          <small>Δ BRIER</small>
+          <b class="${good?'good':'warn'}">
+            ${(r.deltaBrier>=0?'+':'')+k5Num(r.deltaBrier)}
+          </b>
+        </div>
+
+        <div class="b2c5k-card">
+          <small>CRUCES DE UMBRAL</small>
+          <b>${r.gateFlips}</b>
+        </div>
+      </div>
+
+      <div class="b2c5k-sub">
+        CRUCES DEL GATE DE PROBABILIDAD
+      </div>
+
+      <div class="b2c5k-table">
+        <div class="b2c5k-cell h">MÉTRICA</div>
+        <div class="b2c5k-cell h n">CANT.</div>
+        <div class="b2c5k-cell h n">RESULTADO HISTÓRICO</div>
+
+        <div class="b2c5k-cell">Promovidos: bajo → sobre umbral</div>
+        <div class="b2c5k-cell n">${r.gateUp}</div>
+        <div class="b2c5k-cell n">${r.promotedWon}-${r.promotedLost}</div>
+
+        <div class="b2c5k-cell">Bloqueados: sobre → bajo umbral</div>
+        <div class="b2c5k-cell n">${r.gateDown}</div>
+        <div class="b2c5k-cell n">${r.blockedWon}-${r.blockedLost}</div>
+
+        <div class="b2c5k-cell">Todos los cruces</div>
+        <div class="b2c5k-cell n">${r.gateFlips}</div>
+        <div class="b2c5k-cell n">
+          ${r.flipWon}-${r.flipLost}
+          ${r.flipPush?(' · '+r.flipPush+' push'):''}
+        </div>
+      </div>
+
+      <div class="b2c5k-sub">
+        ¿DÓNDE CAMBIA EL BRIER?
+      </div>
+
+      <div class="b2c5k-table">
+        <div class="b2c5k-cell h">LADO</div>
+        <div class="b2c5k-cell h n">N</div>
+        <div class="b2c5k-cell h n">Δ BRIER</div>
+        ${k5RowsHtml(r.bySide,'side')}
+      </div>
+
+      <div class="b2c5k-table">
+        <div class="b2c5k-cell h">PROB. OFICIAL</div>
+        <div class="b2c5k-cell h n">N</div>
+        <div class="b2c5k-cell h n">Δ BRIER</div>
+        ${k5RowsHtml(r.byBucket,'bucket')}
+      </div>
+
+      <div class="b2c5k-note">
+        Este panel explota la muestra PARTIAL sin falsificar snapshots.
+        Reutiliza modelProbs y resultados guardados, pero aplica los pesos
+        Shadow actuales retrospectivamente. Por eso sirve para localizar
+        patrones —lado, rango de probabilidad y cruces—, NO para afirmar
+        causalmente que una apuesta habría sido tomada o evitada aquel día.
+        No modifica Motor V7.0, learnedWeights(), calibración, Censo, Bank
+        ni picks oficiales.
+      </div>
+
+    </section>
+  `;
+}
+
+function k5Mount(){
+  document.getElementById('b2c5kAudit')?.remove();
+
+  const r=k5Report();
+  window.__MLB_PARTIAL_REPLAY_AUDIT__=r;
+
+  const wrap=document.createElement('div');
+  wrap.innerHTML=k5Html(r);
+  const node=wrap.firstElementChild;
+  if(!node)return;
+
+  const anchor=
+    document.getElementById('b2c5jLedger') ||
+    document.getElementById('b2c4bAudit');
+
+  if(anchor&&anchor.parentNode){
+    anchor.insertAdjacentElement('afterend',node);
+    return;
+  }
+
+  document.getElementById('homeDashboard')?.appendChild(node);
+}
+
+function k5Install(){
+  try{k5Mount()}catch(e){console.warn('B2C-5K mount',e)}
+
+  let attempts=0;
+  const timer=setInterval(()=>{
+    attempts++;
+    try{
+      if(!document.getElementById('b2c5kAudit'))k5Mount();
+    }catch{}
+    if(document.getElementById('b2c5kAudit')||attempts>=20){
+      clearInterval(timer);
+    }
+  },500);
+
+  try{
+    const obs=new MutationObserver(()=>{
+      if(!document.getElementById('b2c5kAudit')){
+        try{k5Mount()}catch{}
+      }
+    });
+
+    obs.observe(document.body,{childList:true,subtree:true});
+    window.__MLB_B2C5K_OBSERVER__=obs;
+  }catch{}
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener(
+    'DOMContentLoaded',
+    k5Install,
+    {once:true}
+  );
+}else{
+  k5Install();
+}
+
+})();
+</script>
+
+
 </body>
 </html>
