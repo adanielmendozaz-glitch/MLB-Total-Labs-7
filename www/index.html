@@ -9143,7 +9143,7 @@ const n=(x,d=0)=>Number.isFinite(+x)?+x:d,clamp=(x,a,b)=>Math.max(a,Math.min(b,x
 const localDay=()=>{const d=new Date;d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)},shift=(iso,x)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+x);return d.toISOString().slice(0,10)},longDate=iso=>new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00')),localTime=iso=>new Intl.DateTimeFormat('es-MX',{hour:'numeric',minute:'2-digit'}).format(new Date(iso));
 function status(msg,type=''){const e=$('#status');e.className='status'+(type?' '+type:'');e.firstElementChild.innerHTML=msg}
 async function fetchJ(url,ttl=0){const hit=S.cache.get(url);if(hit&&Date.now()-hit.t<ttl)return hit.v;const c=new AbortController,t=setTimeout(()=>c.abort(),22000);try{const r=await fetch(url,{signal:c.signal,cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);const v=await r.json();S.cache.set(url,{t:Date.now(),v});return v}finally{clearTimeout(t)}}
-/* V7.8.6 LIVE STATE CLASSIFICATION FIX · Warmup != LIVE · Pregame delay != LIVE */
+/* V7.8.6 LIVE STATE CLASSIFICATION FIX V2 · authoritative status first */
 function gameMeta(g){
   const st=g.status||{},ls=g.linescore||{};
   const abstractState=String(st.abstractGameState||'').trim().toLowerCase();
@@ -9156,17 +9156,6 @@ function gameMeta(g){
     coded==='F' ||
     /final|completed/i.test(detailedState);
 
-  const inningNumber=Number(ls.currentInning);
-  const inningOrdinal=String(ls.currentInningOrdinal||'').trim();
-
-  const hasInningEvidence=
-    (Number.isFinite(inningNumber)&&inningNumber>=1) ||
-    !!inningOrdinal;
-
-  const explicitInProgress=
-    /in progress|game in progress/i.test(detailedState) ||
-    coded==='I';
-
   const pregameState=
     /warmup|pre-?game|scheduled|preview/i.test(detail);
 
@@ -9175,16 +9164,63 @@ function gameMeta(g){
   const postponedOrSuspended=
     /postponed|cancelled|canceled|suspended/i.test(detail);
 
+  /*
+   * Importante:
+   * MLB puede hidratar linescore.currentInning=1 y "Top 1st"
+   * ANTES del primer lanzamiento. Por eso currentInning por sí solo
+   * NO es evidencia de juego iniciado.
+   */
+  const inningNumber=Number(ls.currentInning);
+  const balls=Number(ls.balls);
+  const strikes=Number(ls.strikes);
+  const outs=Number(ls.outs);
+
+  const awayScore=Number(g?.teams?.away?.score);
+  const homeScore=Number(g?.teams?.home?.score);
+
+  const hasNonZeroScore=
+    (Number.isFinite(awayScore)&&awayScore>0) ||
+    (Number.isFinite(homeScore)&&homeScore>0);
+
+  const hasCountEvidence=
+    (Number.isFinite(balls)&&balls>0) ||
+    (Number.isFinite(strikes)&&strikes>0) ||
+    (Number.isFinite(outs)&&outs>0);
+
+  const hasDeepInningEvidence=
+    Number.isFinite(inningNumber) &&
+    inningNumber>=2;
+
+  const playEvidence=
+    hasNonZeroScore ||
+    hasCountEvidence ||
+    hasDeepInningEvidence;
+
+  const explicitInProgress=
+    coded==='I' ||
+    /in progress|game in progress/i.test(detailedState);
+
+  /*
+   * LIVE sólo con señal autoritativa de MLB.
+   * abstractGameState='Live' NO basta porque MLB lo usa también
+   * durante Warmup en ciertos feeds.
+   *
+   * Para un delay ya comenzado aceptamos evidencia real de juego.
+   */
   const live=
     !final &&
     !postponedOrSuspended &&
     (
       explicitInProgress ||
-      hasInningEvidence ||
+      (
+        delayed &&
+        playEvidence
+      ) ||
       (
         abstractState==='live' &&
         !pregameState &&
-        (!delayed || hasInningEvidence)
+        !delayed &&
+        playEvidence
       )
     );
 
@@ -9198,7 +9234,7 @@ function gameMeta(g){
     final,
     delayed,
     pregame:!live&&!final&&!postponedOrSuspended,
-    started:live||final||hasInningEvidence,
+    started:live||final,
     a,h,has,
     inning:ls.currentInningOrdinal||'',
     half:ls.inningState||ls.inningHalf||'',
