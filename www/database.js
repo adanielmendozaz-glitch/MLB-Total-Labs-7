@@ -2444,165 +2444,388 @@ window.MLBDB = MLBDB;
 
 
 /* =========================================================
- V7.8.6 DATA VAULT SYNC GUARD
- Safe reconciliation · LocalStorage -> SQLite on fingerprint mismatch
+ V7.8.6 DATA VAULT SYNC GUARD V2
+ Deferred reconciliation · never writes during SQLite init
 ========================================================= */
 (function(){
 'use strict';
 
 const db=window.MLBDB;
-if(!db || db.__vaultSyncGuardInstalled===true) return;
+if(!db || db.__vaultSyncGuardV2Installed===true) return;
 
-db.__vaultSyncGuardInstalled=true;
-db.__vaultSyncInFlight=null;
+db.__vaultSyncGuardV2Installed=true;
+db.__vaultSyncV2InFlight=null;
+db.__vaultSyncV2Timer=null;
 
-db.vaultSyncFromLocal=async function(){
-  if(this.__vaultSyncInFlight) return this.__vaultSyncInFlight;
+db.vaultSyncV2ReadLocal=function(){
+  const out={};
 
-  this.__vaultSyncInFlight=(async()=>{
+  const specs=[
+    {
+      name:'bets',
+      localKey:this.betsStorageKey,
+      sqlKey:this.betsSqlKey,
+      valid:v=>Array.isArray(v)
+    },
+    {
+      name:'lab',
+      localKey:this.labStorageKey,
+      sqlKey:this.labSqlKey,
+      valid:v=>Array.isArray(v)
+    },
+    {
+      name:'census',
+      localKey:this.censusStorageKey,
+      sqlKey:this.censusSqlKey,
+      valid:v=>
+        v &&
+        typeof v==='object' &&
+        !Array.isArray(v) &&
+        v.days &&
+        typeof v.days==='object'
+    },
+    {
+      name:'bank',
+      localKey:this.bankStorageKey,
+      sqlKey:this.bankSqlKey,
+      valid:v=>
+        v &&
+        typeof v==='object' &&
+        !Array.isArray(v)
+    }
+  ];
+
+  for(const spec of specs){
+    try{
+      const raw=localStorage.getItem(spec.localKey);
+
+      if(raw===null){
+        out[spec.name]={
+          ...spec,
+          present:false,
+          valid:true,
+          raw:null
+        };
+        continue;
+      }
+
+      let parsed;
+      try{
+        parsed=JSON.parse(raw);
+      }catch{
+        out[spec.name]={
+          ...spec,
+          present:true,
+          valid:false,
+          raw
+        };
+        continue;
+      }
+
+      out[spec.name]={
+        ...spec,
+        present:true,
+        valid:!!spec.valid(parsed),
+        raw,
+        parsed
+      };
+    }catch(e){
+      out[spec.name]={
+        ...spec,
+        present:false,
+        valid:false,
+        raw:null,
+        error:String(e?.message||e)
+      };
+    }
+  }
+
+  return out;
+};
+
+db.vaultDeferredReconcile=async function(reason='deferred'){
+  if(this.__vaultSyncV2InFlight){
+    return this.__vaultSyncV2InFlight;
+  }
+
+  this.__vaultSyncV2InFlight=(async()=>{
     const report={
       ok:false,
-      synced:[],
+      reason,
+      startedAt:new Date().toISOString(),
+      changed:[],
+      unchanged:[],
       skipped:[],
-      errors:[],
-      at:new Date().toISOString()
+      errors:[]
     };
 
-    if(!this.sqlite || !this.ready){
+    if(
+      !this.sqlite ||
+      this.ready!==true
+    ){
       report.errors.push('SQLite no listo');
       return report;
     }
 
-    const specs=[
-      {
-        name:'bets',
-        localKey:this.betsStorageKey,
-        sqlKey:this.betsSqlKey,
-        valid:v=>Array.isArray(v)
-      },
-      {
-        name:'lab',
-        localKey:this.labStorageKey,
-        sqlKey:this.labSqlKey,
-        valid:v=>Array.isArray(v)
-      },
-      {
-        name:'census',
-        localKey:this.censusStorageKey,
-        sqlKey:this.censusSqlKey,
-        valid:v=>v && typeof v==='object' && !Array.isArray(v)
-      },
-      {
-        name:'bank',
-        localKey:this.bankStorageKey,
-        sqlKey:this.bankSqlKey,
-        valid:v=>v && typeof v==='object' && !Array.isArray(v)
-      }
+    /*
+     * Nunca escribimos durante init.
+     * Dejamos que las reconciliaciones nativas terminen primero.
+     */
+    await new Promise(r=>setTimeout(r,350));
+
+    let first;
+    try{
+      first=await this.vaultIntegrityCheck();
+    }catch(e){
+      report.errors.push(
+        'fingerprint-1:'+String(e?.message||e)
+      );
+    }
+
+    if(first?.ok===true){
+      report.ok=true;
+      report.state='already-synced';
+      this.lastVaultSyncV2=report;
+      return report;
+    }
+
+    /*
+     * Segundo intento pasivo: cubre escrituras async recién terminadas.
+     */
+    await new Promise(r=>setTimeout(r,350));
+
+    let second;
+    try{
+      second=await this.vaultIntegrityCheck();
+    }catch(e){
+      report.errors.push(
+        'fingerprint-2:'+String(e?.message||e)
+      );
+    }
+
+    if(second?.ok===true){
+      report.ok=true;
+      report.state='settled-without-write';
+      this.lastVaultSyncV2=report;
+      return report;
+    }
+
+    const local=this.vaultSyncV2ReadLocal();
+
+    const names=[
+      'bets',
+      'lab',
+      'census',
+      'bank'
     ];
 
-    for(const spec of specs){
+    for(const name of names){
+      const item=local[name];
+
+      if(
+        !item ||
+        !item.present
+      ){
+        report.skipped.push(
+          name+':local-empty'
+        );
+        continue;
+      }
+
+      if(!item.valid){
+        report.skipped.push(
+          name+':local-invalid'
+        );
+        continue;
+      }
+
       try{
-        const raw=localStorage.getItem(spec.localKey);
+        const nativeRaw=
+          await this.getKV(
+            item.sqlKey
+          );
 
-        if(raw===null){
-          report.skipped.push(spec.name+':local-empty');
+        if(nativeRaw===item.raw){
+          report.unchanged.push(name);
           continue;
         }
 
-        let parsed;
-        try{
-          parsed=JSON.parse(raw);
-        }catch{
-          report.skipped.push(spec.name+':invalid-json');
-          continue;
+        /*
+         * En este punto init ya fusionó/restauró ambas copias.
+         * LocalStorage representa el estado activo de la app.
+         */
+        await this.setKV(
+          item.sqlKey,
+          item.raw
+        );
+
+        const verify=
+          await this.getKV(
+            item.sqlKey
+          );
+
+        if(verify!==item.raw){
+          throw new Error(
+            'readback mismatch'
+          );
         }
 
-        if(!spec.valid(parsed)){
-          report.skipped.push(spec.name+':invalid-shape');
-          continue;
-        }
-
-        await this.setKV(spec.sqlKey,raw);
-
-        const verify=await this.getKV(spec.sqlKey);
-
-        if(verify!==raw){
-          throw new Error('readback mismatch');
-        }
-
-        report.synced.push(spec.name);
+        report.changed.push(name);
 
       }catch(e){
         report.errors.push(
-          spec.name+':'+String(e?.message||e)
+          name+':'+
+          String(e?.message||e)
         );
       }
     }
 
-    report.ok=report.errors.length===0;
+    await new Promise(r=>setTimeout(r,120));
+
+    let finalCheck;
+    try{
+      finalCheck=
+        await this.vaultIntegrityCheck();
+    }catch(e){
+      report.errors.push(
+        'fingerprint-final:'+
+        String(e?.message||e)
+      );
+    }
+
+    report.ok=
+      finalCheck?.ok===true &&
+      report.errors.length===0;
+
+    report.state=
+      report.ok
+        ?'reconciled'
+        :'mismatch-persists';
+
+    report.finishedAt=
+      new Date().toISOString();
+
+    report.finalCheck=
+      finalCheck || null;
+
+    this.lastVaultSyncV2=report;
+
+    /*
+     * El badge distingue salud SQLite de sincronía del Vault.
+     */
+    if(report.ok){
+      try{
+        const health=
+          await this.vaultHealth();
+
+        if(health?.ok===true){
+          this.showStatus(
+            'SQLite OK · Data Vault protegido',
+            true
+          );
+        }else{
+          this.showStatus(
+            'SQLite OK · Vault pendiente',
+            true
+          );
+        }
+      }catch{
+        this.showStatus(
+          'SQLite OK',
+          true
+        );
+      }
+    }else{
+      console.warn(
+        'Data Vault Sync Guard V2:',
+        report
+      );
+
+      this.showStatus(
+        'SQLite OK · Vault requiere revisión',
+        false
+      );
+    }
+
     return report;
   })();
 
   try{
-    return await this.__vaultSyncInFlight;
+    return await this.__vaultSyncV2InFlight;
   }finally{
-    this.__vaultSyncInFlight=null;
+    this.__vaultSyncV2InFlight=null;
   }
 };
 
-const originalVaultIntegrityCheck=
-  db.vaultIntegrityCheck.bind(db);
+/*
+ * Envolvemos init, pero NO alteramos su lógica.
+ * La reparación empieza sólo DESPUÉS de que init terminó con éxito.
+ */
+const originalInit=
+  db.init.bind(db);
 
-db.vaultIntegrityCheck=async function(){
-  let first=await originalVaultIntegrityCheck();
+db.init=async function(){
+  const ok=
+    await originalInit();
 
-  if(first?.ok===true){
-    first.syncGuard='clean';
-    return first;
+  if(ok!==true){
+    return ok;
   }
 
-  /*
-   * Da tiempo a terminar escrituras async recién disparadas.
-   */
-  await new Promise(r=>setTimeout(r,250));
+  clearTimeout(
+    this.__vaultSyncV2Timer
+  );
 
-  let second=await originalVaultIntegrityCheck();
+  this.__vaultSyncV2Timer=
+    setTimeout(()=>{
+      this.vaultDeferredReconcile(
+        'post-init'
+      ).catch(e=>
+        console.warn(
+          'Vault post-init:',
+          e
+        )
+      );
+    },900);
 
-  if(second?.ok===true){
-    second.syncGuard='settled-after-wait';
-    return second;
-  }
-
-  /*
-   * Sólo reparamos usando datos locales JSON válidos.
-   * No borramos ninguna clave SQLite.
-   */
-  const sync=await this.vaultSyncFromLocal();
-
-  await new Promise(r=>setTimeout(r,80));
-
-  let third=await originalVaultIntegrityCheck();
-
-  third.syncGuard=
-    third?.ok===true
-      ?'reconciled'
-      :'mismatch-persists';
-
-  third.syncReport=sync;
-
-  this.lastVaultSyncGuard={
-    ok:third?.ok===true,
-    first:first?.ok===true,
-    second:second?.ok===true,
-    sync,
-    at:new Date().toISOString()
-  };
-
-  return third;
+  return true;
 };
+
+/*
+ * Guardia ligera en runtime:
+ * sólo compara/repara si la app está visible.
+ * No ejecuta escrituras si ambas copias ya coinciden.
+ */
+db.__vaultSyncV2Interval=
+  setInterval(()=>{
+    if(
+      document.visibilityState==='visible' &&
+      db.ready===true
+    ){
+      db.vaultDeferredReconcile(
+        'runtime'
+      ).catch(()=>{});
+    }
+  },15000);
+
+document.addEventListener(
+  'visibilitychange',
+  ()=>{
+    if(
+      document.visibilityState==='visible' &&
+      db.ready===true
+    ){
+      setTimeout(()=>{
+        db.vaultDeferredReconcile(
+          'resume'
+        ).catch(()=>{});
+      },700);
+    }
+  }
+);
 
 console.info(
-  'V7.8.6 Data Vault Sync Guard activo'
+  'V7.8.6 Data Vault Sync Guard V2 activo'
 );
 
 })();
