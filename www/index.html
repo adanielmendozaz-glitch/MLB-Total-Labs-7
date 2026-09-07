@@ -48358,5 +48358,442 @@ if(document.readyState==='loading'){
 </script>
 
 
+
+
+
+<!-- =========================================================
+ V7.8.6 FINAL INTEGRITY MANUAL REFRESH
+ READ ONLY · AUDIT REFRESH
+========================================================= -->
+<style>
+.fi-manual-refresh-wrap{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:12px 0 2px;
+}
+.fi-manual-refresh-btn{
+  border:1px solid #315474;
+  background:#102d4a;
+  color:white;
+  border-radius:12px;
+  padding:10px 13px;
+  font-weight:850;
+}
+.fi-manual-refresh-btn:disabled{
+  opacity:.65;
+  cursor:wait;
+}
+.fi-manual-refresh-status{
+  color:#91a8bf;
+  font-size:.68rem;
+  line-height:1.35;
+}
+.fi-manual-refresh-status.ok{color:#43dda0}
+.fi-manual-refresh-status.warn{color:#ffd06a}
+.fi-manual-refresh-status.bad{color:#ff7182}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+const MARK='V7.8.6 FINAL INTEGRITY MANUAL REFRESH';
+
+function findFinalIntegrityPanel(){
+  const nodes=[
+    ...document.querySelectorAll(
+      'h1,h2,h3,h4,.section,.card'
+    )
+  ];
+
+  const heading=
+    nodes.find(
+      el=>
+        String(
+          el.textContent||''
+        ).trim()==='Final Integrity Suite'
+    );
+
+  if(heading){
+    return(
+      heading.closest('.section') ||
+      heading.parentElement
+    );
+  }
+
+  const sections=[
+    ...document.querySelectorAll('.section')
+  ];
+
+  return(
+    sections.find(
+      el=>
+        /Final Integrity Suite/i.test(
+          String(el.textContent||'')
+        )
+    ) ||
+    null
+  );
+}
+
+function setStatus(
+  wrap,
+  text,
+  cls=''
+){
+  const el=
+    wrap?.querySelector(
+      '.fi-manual-refresh-status'
+    );
+
+  if(!el) return;
+
+  el.className=
+    'fi-manual-refresh-status'+
+    (cls?' '+cls:'');
+
+  el.textContent=text;
+}
+
+async function currentVaultReport(){
+  const db=
+    window.MLBDB;
+
+  if(!db){
+    return{
+      ok:false,
+      pending:true,
+      message:'MLBDB no disponible todavía'
+    };
+  }
+
+  if(
+    typeof db.vaultIntegrityCheck!=='function'
+  ){
+    const prior=
+      db.lastVaultIntegrity;
+
+    return{
+      ok:prior?.ok===true,
+      pending:!prior,
+      report:prior||null,
+      message:
+        prior
+          ?(
+            prior.ok===true
+              ?'Vault verificado'
+              :'Vault no sincronizado'
+          )
+          :'Vault todavía pendiente'
+    };
+  }
+
+  try{
+    const report=
+      await db.vaultIntegrityCheck();
+
+    db.lastVaultIntegrity=
+      report;
+
+    return{
+      ok:report?.ok===true,
+      pending:false,
+      report,
+      message:
+        report?.ok===true
+          ?'Vault verificado'
+          :'Vault no sincronizado'
+    };
+
+  }catch(err){
+    return{
+      ok:false,
+      pending:true,
+      error:String(
+        err?.message||err||''
+      ),
+      message:'Vault todavía pendiente'
+    };
+  }
+}
+
+async function refreshFinalIntegrity(
+  wrap,
+  button
+){
+  if(button.disabled) return;
+
+  button.disabled=true;
+  button.textContent=
+    '↻ Refrescando…';
+
+  setStatus(
+    wrap,
+    'Verificando Data Vault actual…',
+    'warn'
+  );
+
+  try{
+    let vault=
+      await currentVaultReport();
+
+    /*
+     * Sólo lectura:
+     * si SQLite acaba de terminar de arrancar,
+     * damos unas oportunidades para que publique
+     * su fingerprint definitivo.
+     */
+    for(
+      let i=0;
+      i<4 &&
+      vault.ok!==true &&
+      vault.pending===true;
+      i++
+    ){
+      await new Promise(
+        r=>setTimeout(r,500)
+      );
+
+      vault=
+        await currentVaultReport();
+    }
+
+    if(vault.ok!==true){
+      setStatus(
+        wrap,
+        vault.message+
+        ' · no se fuerza PASS',
+        vault.pending?'warn':'bad'
+      );
+
+      button.disabled=false;
+      button.textContent=
+        '↻ Refrescar auditoría';
+
+      return;
+    }
+
+    if(
+      typeof window.runCoreSelfTests!=='function' ||
+      typeof window.finalIntegrityRunSuite!=='function'
+    ){
+      throw new Error(
+        'Auditor interno no disponible'
+      );
+    }
+
+    const core=
+      window.runCoreSelfTests();
+
+    window.MLB_SELF_TESTS=
+      core;
+
+    const finalReport=
+      window.finalIntegrityRunSuite();
+
+    if(
+      typeof window.finalIntegrityDashboardHtml==='function'
+    ){
+      const panel=
+        findFinalIntegrityPanel();
+
+      if(panel){
+        panel.outerHTML=
+          window.finalIntegrityDashboardHtml();
+      }
+    }
+
+    setTimeout(
+      mountButton,
+      0
+    );
+
+    const ok=
+      finalReport?.ok===true;
+
+    const passed=
+      Number.isFinite(
+        +finalReport?.passed
+      )
+        ?+finalReport.passed
+        :'—';
+
+    const total=
+      Number.isFinite(
+        +finalReport?.total
+      )
+        ?+finalReport.total
+        :'—';
+
+    const newPanel=
+      findFinalIntegrityPanel();
+
+    const newWrap=
+      newPanel?.querySelector(
+        '.fi-manual-refresh-wrap'
+      );
+
+    setStatus(
+      newWrap,
+      ok
+        ?(
+          'Actualizado · '+
+          passed+
+          '/'+
+          total+
+          ' PASS'
+        )
+        :(
+          'Actualizado · '+
+          passed+
+          '/'+
+          total+
+          ' · revisar fallo real'
+        ),
+      ok?'ok':'bad'
+    );
+
+  }catch(err){
+    console.error(
+      'Final Integrity manual refresh:',
+      err
+    );
+
+    setStatus(
+      wrap,
+      'No se pudo refrescar: '+
+      String(
+        err?.message||err
+      ),
+      'bad'
+    );
+
+  }finally{
+    const panel=
+      findFinalIntegrityPanel();
+
+    const btn=
+      panel?.querySelector(
+        '.fi-manual-refresh-btn'
+      );
+
+    if(btn){
+      btn.disabled=false;
+      btn.textContent=
+        '↻ Refrescar auditoría';
+    }
+  }
+}
+
+function mountButton(){
+  const panel=
+    findFinalIntegrityPanel();
+
+  if(!panel) return;
+
+  if(
+    panel.querySelector(
+      '.fi-manual-refresh-wrap'
+    )
+  ){
+    return;
+  }
+
+  const wrap=
+    document.createElement('div');
+
+  wrap.className=
+    'fi-manual-refresh-wrap';
+
+  wrap.dataset.feature=
+    MARK;
+
+  const button=
+    document.createElement('button');
+
+  button.type='button';
+
+  button.className=
+    'fi-manual-refresh-btn';
+
+  button.textContent=
+    '↻ Refrescar auditoría';
+
+  const status=
+    document.createElement('span');
+
+  status.className=
+    'fi-manual-refresh-status';
+
+  status.textContent=
+    'Sólo relee Vault y auditoría; no modifica Motor V7.0.';
+
+  wrap.append(
+    button,
+    status
+  );
+
+  const note=
+    [...panel.querySelectorAll(
+      '.note,.smalltxt,p'
+    )].find(
+      el=>
+        /certificado|diagnóstico|Motor V7\.0/i.test(
+          String(
+            el.textContent||''
+          )
+        )
+    );
+
+  if(note){
+    note.before(wrap);
+  }else{
+    panel.appendChild(wrap);
+  }
+
+  button.addEventListener(
+    'click',
+    ()=>refreshFinalIntegrity(
+      wrap,
+      button
+    )
+  );
+}
+
+const observer=
+  new MutationObserver(
+    ()=>mountButton()
+  );
+
+function install(){
+  mountButton();
+
+  observer.observe(
+    document.body,
+    {
+      childList:true,
+      subtree:true
+    }
+  );
+}
+
+if(
+  document.readyState==='loading'
+){
+  document.addEventListener(
+    'DOMContentLoaded',
+    install,
+    {once:true}
+  );
+}else{
+  install();
+}
+
+})();
+</script>
+
+
 </body>
 </html>
