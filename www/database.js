@@ -2991,6 +2991,36 @@ db.vaultDeferredReconcile=async function(reason='deferred'){
 
     this.lastVaultSyncV2=report;
 
+    /* V7.8.6 FINAL INTEGRITY AFTER NATIVE VAULT SYNC */
+    if(report.ok===true){
+      try{
+        if(
+          typeof window.runCoreSelfTests==='function' &&
+          typeof window.finalIntegrityRunSuite==='function'
+        ){
+          const coreReport=
+            window.runCoreSelfTests();
+
+          window.MLB_SELF_TESTS=
+            coreReport;
+
+          window.finalIntegrityRunSuite();
+
+          document.documentElement
+            .dataset
+            .mlbSelfTest=
+              coreReport?.ok
+                ?'ok'
+                :'fail';
+        }
+      }catch(e){
+        console.warn(
+          'Final Integrity native-sync refresh',
+          e
+        );
+      }
+    }
+
     /*
      * El badge distingue salud SQLite de sincronía del Vault.
      */
