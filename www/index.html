@@ -48076,5 +48076,283 @@ if(document.readyState==='loading'){
 </script>
 
 
+
+
+
+<!-- =========================================================
+ V7.8.6 SQLITE DIAGNOSTIC OVERLAY
+ READ ONLY · NO DB WRITES
+========================================================= -->
+<style>
+#sqliteDiagOverlay{
+  margin:14px 0;
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,120,120,.28);
+  background:linear-gradient(145deg,rgba(35,15,20,.97),rgba(7,18,28,.99));
+}
+#sqliteDiagOverlay .sd-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+#sqliteDiagOverlay .sd-kicker{
+  color:#e6a7a7;
+  font-size:.69rem;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+#sqliteDiagOverlay .sd-title{
+  margin-top:4px;
+  color:#f5f8fb;
+  font-size:1rem;
+  font-weight:950;
+}
+#sqliteDiagOverlay .sd-mode{
+  color:#ffb0b0;
+  font-size:.66rem;
+  font-weight:900;
+  text-align:right;
+}
+#sqliteDiagOverlay .sd-grid{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+#sqliteDiagOverlay .sd-card{
+  padding:10px;
+  border-radius:11px;
+  border:1px solid rgba(140,160,180,.12);
+  background:rgba(5,14,23,.58);
+}
+#sqliteDiagOverlay .sd-card small{
+  display:block;
+  color:#8fa1b2;
+  font-size:.60rem;
+  font-weight:850;
+}
+#sqliteDiagOverlay .sd-card b{
+  display:block;
+  margin-top:4px;
+  color:#f3f7fa;
+  font-size:.92rem;
+  word-break:break-word;
+}
+#sqliteDiagOverlay .sd-good{color:#75dfa6!important}
+#sqliteDiagOverlay .sd-bad{color:#ff8f9a!important}
+#sqliteDiagOverlay .sd-note{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid rgba(140,160,180,.12);
+  color:#8196aa;
+  font-size:.64rem;
+  line-height:1.5;
+}
+#sqliteDiagOverlay button{
+  margin-top:12px;
+}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+function safeText(v){
+  if(v===undefined || v===null || v==='') return '—';
+  if(typeof v==='string') return v;
+  try{return JSON.stringify(v)}catch{return String(v)}
+}
+
+async function collectSqliteDiag(){
+  const db=window.MLBDB;
+
+  const out={
+    pluginPresent:!!window.Capacitor?.Plugins?.CapacitorSQLite,
+    ready:db?.ready===true,
+    stage:db?.lastInitStage||'—',
+    error:db?.lastInitError||'—',
+    hasDbName:!!db?.dbName,
+    dbName:db?.dbName||'—',
+    lastVaultIntegrity:db?.lastVaultIntegrity||null,
+    lastNativeHealth:db?.lastNativeHealth||null,
+    lastVaultSyncV2:db?.lastVaultSyncV2||null
+  };
+
+  const sqlite=
+    window.Capacitor?.Plugins?.CapacitorSQLite;
+
+  if(sqlite && db?.dbName){
+    try{
+      const r=
+        await sqlite.isDBOpen({
+          database:db.dbName,
+          readonly:false
+        });
+
+      out.isDbOpen=
+        r?.result===true;
+
+    }catch(e){
+      out.isDbOpenError=
+        String(e?.message||e);
+    }
+
+    if(
+      typeof sqlite.checkConnectionsConsistency==='function'
+    ){
+      try{
+        const r=
+          await sqlite.checkConnectionsConsistency({
+            dbNames:[db.dbName],
+            openModes:['RW']
+          });
+
+        out.connectionConsistency=
+          r?.result ?? r;
+
+      }catch(e){
+        out.connectionConsistencyError=
+          String(e?.message||e);
+      }
+    }
+  }
+
+  return out;
+}
+
+function card(label,value,good=null){
+  const cls=
+    good===true
+      ?'sd-good'
+      :good===false
+        ?'sd-bad'
+        :'';
+
+  return `
+    <div class="sd-card">
+      <small>${label}</small>
+      <b class="${cls}">
+        ${safeText(value)}
+      </b>
+    </div>
+  `;
+}
+
+async function renderSqliteDiag(){
+  const target=
+    document.getElementById('sqliteDiagOverlay');
+
+  if(!target) return;
+
+  const d=
+    await collectSqliteDiag();
+
+  window.__MLB_SQLITE_DIAGNOSTIC__=d;
+
+  target.innerHTML=`
+    <div class="sd-head">
+      <div>
+        <div class="sd-kicker">
+          SQLITE DIAGNOSTIC OVERLAY
+        </div>
+        <div class="sd-title">
+          Estado real de inicialización
+        </div>
+      </div>
+      <div class="sd-mode">
+        READ ONLY<br>
+        NO DB WRITES
+      </div>
+    </div>
+
+    <div class="sd-grid">
+      ${card('PLUGIN',d.pluginPresent?'PRESENTE':'AUSENTE',d.pluginPresent)}
+      ${card('READY',d.ready?'TRUE':'FALSE',d.ready)}
+      ${card('INIT STAGE',d.stage,d.stage==='ready')}
+      ${card('INIT ERROR',d.error,d.error==='—')}
+      ${card('DB NAME',d.dbName)}
+      ${card('IS DB OPEN',d.isDbOpen===true?'TRUE':d.isDbOpen===false?'FALSE':'—',d.isDbOpen===true)}
+      ${card('CONSISTENCIA CONEXIÓN',
+        d.connectionConsistency!==undefined
+          ?safeText(d.connectionConsistency)
+          :d.connectionConsistencyError||'—',
+        d.connectionConsistency===true
+      )}
+      ${card('VAULT LAST CHECK',
+        d.lastVaultIntegrity
+          ?safeText(d.lastVaultIntegrity)
+          :'—'
+      )}
+    </div>
+
+    <button class="btn" id="sqliteDiagRefresh">
+      Refrescar diagnóstico SQLite
+    </button>
+
+    <div class="sd-note">
+      Este bloque sólo lee el estado de MLBDB y del plugin nativo.
+      No abre, cierra, crea, repara ni escribe la base de datos.
+      La información importante para la siguiente corrección es:
+      INIT STAGE, INIT ERROR, IS DB OPEN y CONSISTENCIA CONEXIÓN.
+    </div>
+  `;
+
+  document.getElementById(
+    'sqliteDiagRefresh'
+  )?.addEventListener(
+    'click',
+    renderSqliteDiag
+  );
+}
+
+function mount(){
+  if(document.getElementById('sqliteDiagOverlay')) return;
+
+  const settings=
+    document.getElementById('settings');
+
+  if(!settings) return;
+
+  const wrap=
+    document.createElement('div');
+
+  wrap.id=
+    'sqliteDiagOverlay';
+
+  settings.prepend(wrap);
+
+  renderSqliteDiag();
+}
+
+function install(){
+  mount();
+
+  setTimeout(
+    renderSqliteDiag,
+    1200
+  );
+
+  setTimeout(
+    renderSqliteDiag,
+    3000
+  );
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener(
+    'DOMContentLoaded',
+    install,
+    {once:true}
+  );
+}else{
+  install();
+}
+
+})();
+</script>
+
+
 </body>
 </html>
