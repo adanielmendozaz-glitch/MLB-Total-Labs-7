@@ -9143,7 +9143,68 @@ const n=(x,d=0)=>Number.isFinite(+x)?+x:d,clamp=(x,a,b)=>Math.max(a,Math.min(b,x
 const localDay=()=>{const d=new Date;d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)},shift=(iso,x)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+x);return d.toISOString().slice(0,10)},longDate=iso=>new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T12:00:00')),localTime=iso=>new Intl.DateTimeFormat('es-MX',{hour:'numeric',minute:'2-digit'}).format(new Date(iso));
 function status(msg,type=''){const e=$('#status');e.className='status'+(type?' '+type:'');e.firstElementChild.innerHTML=msg}
 async function fetchJ(url,ttl=0){const hit=S.cache.get(url);if(hit&&Date.now()-hit.t<ttl)return hit.v;const c=new AbortController,t=setTimeout(()=>c.abort(),22000);try{const r=await fetch(url,{signal:c.signal,cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);const v=await r.json();S.cache.set(url,{t:Date.now(),v});return v}finally{clearTimeout(t)}}
-function gameMeta(g){const st=g.status||{},live=st.abstractGameState==='Live'||/in progress|warmup|delayed/i.test(st.detailedState||''),final=st.abstractGameState==='Final';const a=n(g.teams?.away?.score),h=n(g.teams?.home?.score),has=g.teams?.away?.score!==undefined||g.teams?.home?.score!==undefined,ls=g.linescore||{};return{live,final,a,h,has,inning:ls.currentInningOrdinal||'',half:ls.inningState||ls.inningHalf||'',state:st.detailedState||'Programado'}}
+/* V7.8.6 LIVE STATE CLASSIFICATION FIX · Warmup != LIVE · Pregame delay != LIVE */
+function gameMeta(g){
+  const st=g.status||{},ls=g.linescore||{};
+  const abstractState=String(st.abstractGameState||'').trim().toLowerCase();
+  const detailedState=String(st.detailedState||'').trim();
+  const detail=detailedState.toLowerCase();
+  const coded=String(st.codedGameState||'').trim().toUpperCase();
+
+  const final=
+    abstractState==='final' ||
+    coded==='F' ||
+    /final|completed/i.test(detailedState);
+
+  const inningNumber=Number(ls.currentInning);
+  const inningOrdinal=String(ls.currentInningOrdinal||'').trim();
+
+  const hasInningEvidence=
+    (Number.isFinite(inningNumber)&&inningNumber>=1) ||
+    !!inningOrdinal;
+
+  const explicitInProgress=
+    /in progress|game in progress/i.test(detailedState) ||
+    coded==='I';
+
+  const pregameState=
+    /warmup|pre-?game|scheduled|preview/i.test(detail);
+
+  const delayed=/delayed/i.test(detail);
+
+  const postponedOrSuspended=
+    /postponed|cancelled|canceled|suspended/i.test(detail);
+
+  const live=
+    !final &&
+    !postponedOrSuspended &&
+    (
+      explicitInProgress ||
+      hasInningEvidence ||
+      (
+        abstractState==='live' &&
+        !pregameState &&
+        (!delayed || hasInningEvidence)
+      )
+    );
+
+  const a=n(g.teams?.away?.score),h=n(g.teams?.home?.score);
+  const has=
+    g.teams?.away?.score!==undefined ||
+    g.teams?.home?.score!==undefined;
+
+  return{
+    live,
+    final,
+    delayed,
+    pregame:!live&&!final&&!postponedOrSuspended,
+    started:live||final||hasInningEvidence,
+    a,h,has,
+    inning:ls.currentInningOrdinal||'',
+    half:ls.inningState||ls.inningHalf||'',
+    state:detailedState||'Programado'
+  };
+}
 function scoreHtml(g){const x=gameMeta(g);if(!x.has&&!x.live&&!x.final)return'';const a=g.teams.away.team.abbreviation||g.teams.away.team.name,h=g.teams.home.team.abbreviation||g.teams.home.team.name,mid=x.live?`${x.half} ${x.inning}`:x.final?'Final':x.state;return`<div class="scorebox"><div class="scoreteam">${esc(a)}<strong>${x.a}</strong></div><div class="scoremid"><b>${esc(mid.trim()||x.state)}</b>${x.live?'<span class="livechip"><span class="pulse"></span> LIVE</span>':''}</div><div class="scoreteam">${esc(h)}<strong>${x.h}</strong></div></div>`}
 function cfg(){const base={prior:.12,edge:.035,prob:.56,dis:.14,weights:{struct:.30,nb:.25,pln:.25,com:.20},odds:{key:'',region:'us',book:'consensus',auto:true,provider:'PUBLIC'},bullpen:{auto:true,cacheMinutes:25,lookbackDays:3},precision:{lineups:true,splits:true,statcast:true,dynamicHook:true,situationalPen:true,minLineup:8,splitPrior:80,lineupCache:30},gameRules:{extras:true,ghostRunner:true},labScope:'SPORTSBOOK'};try{const x=JSON.parse(STORE.getItem('mlb_v5_cfg')||'{}');return{...base,...x,weights:{...base.weights,...(x.weights||{})},odds:{...base.odds,...(x.odds||{})},bullpen:{...base.bullpen,...(x.bullpen||{})},precision:{...base.precision,...(x.precision||{})},gameRules:{...base.gameRules,...(x.gameRules||{})},labScope:'SPORTSBOOK'}}catch{return base}}
 function saveCfg(){const raw={prior:n($('#cfgPrior').value,.12),edge:n($('#cfgEdge').value,.035),prob:n($('#cfgProb').value,.56),dis:n($('#cfgDis').value,.14),weights:{struct:n($('#wStruct').value,.30),nb:n($('#wNB').value,.25),pln:n($('#wPLN').value,.25),com:n($('#wCOM').value,.20)},odds:{key:$('#cfgOddsKey').value.trim(),region:$('#cfgOddsRegion').value,book:$('#cfgBook').value.trim()||'consensus',auto:true,provider:$('#cfgOddsProvider')?.value||'PUBLIC'},bullpen:{auto:$('#cfgBullpenAuto').value==='1',cacheMinutes:clamp(n($('#cfgBullpenCache').value,25),5,120),lookbackDays:clamp(n($('#cfgBullpenDays').value,3),3,4)},precision:{lineups:$('#cfgLineups').value==='1',splits:$('#cfgSplits').value==='1',statcast:$('#cfgStatcast').value==='1',dynamicHook:$('#cfgDynamicHook').value==='1',situationalPen:$('#cfgSituationalPen').value==='1',minLineup:clamp(n($('#cfgMinLineup').value,8),7,9),splitPrior:clamp(n($('#cfgSplitPrior').value,80),30,180),lineupCache:clamp(n($('#cfgLineupCache').value,30),5,120)},gameRules:{extras:$('#cfgExtras').value==='1',ghostRunner:$('#cfgGhost').value==='1'},labScope:'SPORTSBOOK'};STORE.setItem('mlb_v5_cfg',JSON.stringify(raw));status('Ajustes V7.0 guardados.','ok')}
