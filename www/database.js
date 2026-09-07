@@ -12,9 +12,29 @@ const MLBDB = {
   labSqlKey: 'lab_v1',
 
 
+  /* V7.8.6 CANONICAL STORE ACCESS */
+  browserGet(key) {
+    try {
+      if (typeof window.MLB_STORE_GET === 'function') {
+        return window.MLB_STORE_GET(key);
+      }
+    } catch {}
+
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+
   /* V7.8.6 LOCALSTORAGE QUOTA GUARD */
   safeLocalSet(key, value) {
     try {
+      if (typeof window.MLB_STORE_SET === 'function') {
+        window.MLB_STORE_SET(key, String(value));
+        return true;
+      }
+
       localStorage.setItem(key, String(value));
       return true;
     } catch (err) {
@@ -919,7 +939,7 @@ const MLBDB = {
     let localRaw = null;
 
     try {
-      localRaw = localStorage.getItem(this.betsStorageKey);
+      localRaw = this.browserGet(this.betsStorageKey);
     } catch {}
 
     if (localRaw !== null) {
@@ -968,7 +988,7 @@ const MLBDB = {
     let localRaw = null;
 
     try {
-      localRaw = localStorage.getItem(this.bankStorageKey);
+      localRaw = this.browserGet(this.bankStorageKey);
     } catch {}
 
     if (localRaw !== null) {
@@ -1178,7 +1198,7 @@ const MLBDB = {
     try{
 
       const raw =
-        localStorage.getItem(
+        this.browserGet(
           this.betsStorageKey
         );
 
@@ -1460,7 +1480,7 @@ const MLBDB = {
     try{
 
       const raw =
-        localStorage.getItem(
+        this.browserGet(
           this.censusStorageKey
         );
 
@@ -1636,7 +1656,7 @@ const MLBDB = {
     try{
 
       const raw =
-        localStorage.getItem(
+        this.browserGet(
           this.bankStorageKey
         );
 
@@ -1989,28 +2009,28 @@ const MLBDB = {
 
     try{
       localRaw.bets=
-        localStorage.getItem(
+        this.browserGet(
           this.betsStorageKey
         );
     }catch{}
 
     try{
       localRaw.lab=
-        localStorage.getItem(
+        this.browserGet(
           this.labStorageKey
         );
     }catch{}
 
     try{
       localRaw.census=
-        localStorage.getItem(
+        this.browserGet(
           this.censusStorageKey
         );
     }catch{}
 
     try{
       localRaw.bank=
-        localStorage.getItem(
+        this.browserGet(
           this.bankStorageKey
         );
     }catch{}
@@ -2206,7 +2226,7 @@ const MLBDB = {
 
       localBets=
         this.vaultParse(
-          localStorage.getItem(
+          this.browserGet(
             this.betsStorageKey
           ),
           []
@@ -2214,7 +2234,7 @@ const MLBDB = {
 
       localLab=
         this.vaultParse(
-          localStorage.getItem(
+          this.browserGet(
             this.labStorageKey
           ),
           []
@@ -2222,7 +2242,7 @@ const MLBDB = {
 
       localCensus=
         this.vaultParse(
-          localStorage.getItem(
+          this.browserGet(
             this.censusStorageKey
           ),
           {}
@@ -2230,7 +2250,7 @@ const MLBDB = {
 
       localBank=
         this.vaultParse(
-          localStorage.getItem(
+          this.browserGet(
             this.bankStorageKey
           ),
           {}
@@ -2521,7 +2541,7 @@ const MLBDB = {
     try {
 
       const raw =
-        localStorage.getItem(
+        this.browserGet(
           this.labStorageKey
         );
 
@@ -2661,7 +2681,7 @@ const MLBDB = {
     let local = null;
 
     try {
-      const raw = localStorage.getItem(this.censusStorageKey);
+      const raw = this.browserGet(this.censusStorageKey);
       if (raw) local = JSON.parse(raw);
     } catch {}
 
@@ -2758,7 +2778,7 @@ db.vaultSyncV2ReadLocal=function(){
 
   for(const spec of specs){
     try{
-      const raw=localStorage.getItem(spec.localKey);
+      const raw=this.browserGet(spec.localKey);
 
       if(raw===null){
         out[spec.name]={
