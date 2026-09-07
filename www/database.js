@@ -15,7 +15,7 @@ const MLBDB = {
   /* V7.8.6 LOCALSTORAGE QUOTA GUARD */
   safeLocalSet(key, value) {
     try {
-      this.safeLocalSet(key, String(value));
+      localStorage.setItem(key, String(value));
       return true;
     } catch (err) {
       const msg = String(err?.message || err || '');
