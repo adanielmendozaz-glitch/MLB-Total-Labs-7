@@ -11,6 +11,47 @@ const MLBDB = {
   labStorageKey: 'mlb_v5_lab',
   labSqlKey: 'lab_v1',
 
+
+  /* V7.8.6 LOCALSTORAGE QUOTA GUARD */
+  safeLocalSet(key, value) {
+    try {
+      this.safeLocalSet(key, String(value));
+      return true;
+    } catch (err) {
+      const msg = String(err?.message || err || '');
+      const quota =
+        err?.name === 'QuotaExceededError' ||
+        /quota|exceeded/i.test(msg);
+
+      this.lastLocalStorageWarning = {
+        key,
+        quota,
+        message: msg,
+        at: new Date().toISOString()
+      };
+
+      console.warn(
+        quota
+          ? 'LocalStorage quota llena; se conserva SQLite/IndexedDB'
+          : 'LocalStorage write falló',
+        key,
+        err
+      );
+
+      return false;
+    }
+  },
+
+  safeLocalRemove(key) {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (err) {
+      console.warn('LocalStorage remove falló', key, err);
+      return false;
+    }
+  },
+
   showStatus(message, ok) {
     let badge = document.getElementById('mlb-sqlite-status');
 
@@ -901,7 +942,7 @@ const MLBDB = {
           if (typeof window.saveBets === 'function') {
             window.saveBets(native);
           } else {
-            localStorage.setItem(
+            this.safeLocalSet(
               this.betsStorageKey,
               JSON.stringify(native)
             );
@@ -948,7 +989,7 @@ const MLBDB = {
         const native = JSON.parse(nativeRaw);
 
         if (native && typeof native === 'object') {
-          localStorage.setItem(
+          this.safeLocalSet(
             this.bankStorageKey,
             JSON.stringify(native)
           );
@@ -1201,7 +1242,7 @@ const MLBDB = {
       );
 
 
-    localStorage.setItem(
+    this.safeLocalSet(
       this.betsStorageKey,
       JSON.stringify(merged)
     );
@@ -1489,7 +1530,7 @@ const MLBDB = {
       );
 
 
-    localStorage.setItem(
+    this.safeLocalSet(
       this.censusStorageKey,
       JSON.stringify(merged)
     );
@@ -1670,7 +1711,7 @@ const MLBDB = {
     }
 
 
-    localStorage.setItem(
+    this.safeLocalSet(
       this.bankStorageKey,
       JSON.stringify(chosen)
     );
@@ -2548,7 +2589,7 @@ const MLBDB = {
           native
         );
 
-      localStorage.setItem(
+      this.safeLocalSet(
         this.labStorageKey,
         JSON.stringify(merged)
       );
@@ -2586,7 +2627,7 @@ const MLBDB = {
      */
     if (Array.isArray(native)) {
 
-      localStorage.setItem(
+      this.safeLocalSet(
         this.labStorageKey,
         JSON.stringify(native)
       );
@@ -2641,7 +2682,7 @@ const MLBDB = {
         if (typeof window.saveRankCensus === 'function') {
           window.saveRankCensus(native);
         } else {
-          localStorage.setItem(
+          this.safeLocalSet(
             this.censusStorageKey,
             JSON.stringify(native)
           );
