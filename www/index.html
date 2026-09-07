@@ -33252,8 +33252,13 @@ function runCoreSelfTests(){
 
       if(!report){
 
+        assert(
+          false,
+          'SQLite no inicializado'
+        );
+
         return(
-          'SQLite todavía inicializando'
+          'SQLite no inicializado'
         );
       }
 

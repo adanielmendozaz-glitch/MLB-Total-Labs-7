@@ -28,122 +28,342 @@ const MLBDB = {
     badge.style.background = ok ? '#147a38' : '#a92222';
   },
 
+  /* SQLITE STARTUP RECOVERY V3 */
   async init() {
-    try {
-      const sqlite = window.Capacitor?.Plugins?.CapacitorSQLite;
+    if(this.__initPromise){
+      return this.__initPromise;
+    }
 
-      if (!sqlite) throw new Error('CapacitorSQLite no disponible');
+    this.__initPromise=(async()=>{
+      const sqlite=
+        window.Capacitor?.Plugins?.CapacitorSQLite;
 
-      this.sqlite = sqlite;
+      this.lastInitError=null;
+      this.lastInitStage='start';
 
-      try {
-        await sqlite.createConnection({
-          database: this.dbName,
-          encrypted: false,
-          mode: 'no-encryption',
-          version: 1,
-          readonly: false
-        });
-      } catch (err) {
-        const msg = String(err?.message || err || '');
-
-        if (!/already exists|connection .* exists/i.test(msg)) {
-          throw err;
-        }
+      if(!sqlite){
+        this.lastInitError='CapacitorSQLite no disponible';
+        this.lastInitStage='plugin';
+        this.ready=false;
+        this.showStatus('SQLite ERROR · plugin',false);
+        return false;
       }
 
-      await sqlite.open({
-        database: this.dbName,
-        readonly: false
-      });
+      this.sqlite=sqlite;
 
-      await sqlite.execute({
-        database: this.dbName,
-        statements: `
-          CREATE TABLE IF NOT EXISTS app_kv (
-            key TEXT PRIMARY KEY NOT NULL,
-            value TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+      const opts={
+        database:this.dbName,
+        readonly:false
+      };
+
+      const createOpts={
+        database:this.dbName,
+        encrypted:false,
+        mode:'no-encryption',
+        version:1,
+        readonly:false
+      };
+
+      const ensureSchema=async()=>{
+        this.lastInitStage='schema';
+
+        await sqlite.execute({
+          database:this.dbName,
+          statements:`
+            CREATE TABLE IF NOT EXISTS app_kv (
+              key TEXT PRIMARY KEY NOT NULL,
+              value TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS _sqlite_healthcheck (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              token TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            );
+          `,
+          transaction:true,
+          readonly:false
+        });
+      };
+
+      const connectionOpen=async()=>{
+        try{
+          const r=
+            await sqlite.isDBOpen(opts);
+
+          return r?.result===true;
+        }catch{
+          return false;
+        }
+      };
+
+      const createIfNeeded=async()=>{
+        try{
+          await sqlite.createConnection(
+            createOpts
+          );
+          return 'created';
+        }catch(err){
+          const msg=
+            String(
+              err?.message || err || ''
+            );
+
+          if(
+            /already exists|connection .* exists/i
+              .test(msg)
+          ){
+            return 'existing';
+          }
+
+          throw err;
+        }
+      };
+
+      const openStable=async(forceFresh=false)=>{
+        this.lastInitStage=
+          forceFresh
+            ?'connection-recovery'
+            :'connection';
+
+        /*
+         * Si JS y Native quedaron desfasados, el plugin puede
+         * limpiar conexiones inconsistentes por sí mismo.
+         */
+        if(
+          typeof sqlite.checkConnectionsConsistency==='function'
+        ){
+          try{
+            await sqlite.checkConnectionsConsistency({
+              dbNames:[this.dbName],
+              openModes:['RW']
+            });
+          }catch(e){
+            console.warn(
+              'SQLite consistency check:',
+              e
+            );
+          }
+        }
+
+        if(forceFresh){
+          try{
+            const opened=
+              await connectionOpen();
+
+            if(opened){
+              try{
+                await sqlite.close(opts);
+              }catch{}
+            }
+          }catch{}
+
+          try{
+            await sqlite.closeConnection(opts);
+          }catch{}
+        }
+
+        let opened=
+          await connectionOpen();
+
+        if(opened){
+          return true;
+        }
+
+        await createIfNeeded();
+
+        opened=
+          await connectionOpen();
+
+        if(!opened){
+          /*
+           * La documentación del plugin advierte que open()
+           * reabre una DB ya abierta. Por eso sólo se llama
+           * tras confirmar que isDBOpen() es false.
+           */
+          await sqlite.open(opts);
+        }
+
+        opened=
+          await connectionOpen();
+
+        if(!opened){
+          throw new Error(
+            'SQLite no quedó abierto después de open()'
+          );
+        }
+
+        return true;
+      };
+
+      const finishBoot=async()=>{
+        await ensureSchema();
+
+        this.lastInitStage='healthcheck';
+
+        const health=
+          await this.healthCheck();
+
+        if(!health){
+          throw new Error(
+            'SQLite healthcheck falló'
+          );
+        }
+
+        this.ready=true;
+
+        this.lastInitStage='reconcile';
+
+        const censusMode=
+          await this.initCensusReconciled();
+
+        const betsMode=
+          await this.initBetsReconciled();
+
+        const bankMode=
+          await this.initBankReconciled();
+
+        await this.initLabPersistence();
+
+        const vaultHealth=
+          await this.vaultHealth();
+
+        const vaultIntegrity=
+          await this.vaultIntegrityCheck();
+
+        this.lastVaultIntegrity=
+          vaultIntegrity;
+
+        const nativeHealth=
+          await this.nativeReliabilityCheck();
+
+        this.lastNativeHealth=
+          nativeHealth;
+
+        this.lastInitStage='ready';
+
+        if(
+          vaultHealth.ok &&
+          vaultIntegrity.ok &&
+          nativeHealth.ok
+        ){
+          this.showStatus(
+            'SQLite OK · Data Vault protegido',
+            true
+          );
+        }else if(
+          vaultHealth.ok &&
+          !vaultIntegrity.ok
+        ){
+          console.warn(
+            'Data Vault fingerprint mismatch:',
+            vaultIntegrity
           );
 
-          CREATE TABLE IF NOT EXISTS _sqlite_healthcheck (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            token TEXT NOT NULL,
-            created_at TEXT NOT NULL
+          this.showStatus(
+            'SQLite OK · Vault pendiente',
+            true
           );
-        `,
-        transaction: true,
-        readonly: false
-      });
+        }else if(
+          censusMode==='restored'
+        ){
+          this.showStatus(
+            'SQLite OK · Censo restaurado',
+            true
+          );
+        }else if(
+          censusMode==='backed-up'
+        ){
+          this.showStatus(
+            'SQLite OK · Censo protegido',
+            true
+          );
+        }else{
+          this.showStatus(
+            'SQLite OK',
+            true
+          );
+        }
 
-      const ok = await this.healthCheck();
+        return true;
+      };
 
-      if (!ok) throw new Error('SQLite healthcheck falló');
+      let firstError=null;
 
-      this.ready = true;
+      try{
+        await openStable(false);
+        return await finishBoot();
 
-      const censusMode = await this.initCensusReconciled();
-      const betsMode = await this.initBetsReconciled();
-      const bankMode = await this.initBankReconciled();
-      const labMode = await this.initLabPersistence();
-      const vaultHealth = await this.vaultHealth();
-
-      const vaultIntegrity =
-        await this.vaultIntegrityCheck();
-
-      this.lastVaultIntegrity =
-        vaultIntegrity;
-
-
-      const nativeHealth =
-        await this.nativeReliabilityCheck();
-
-
-      this.lastNativeHealth =
-        nativeHealth;
-
-
-      if (
-        vaultHealth.ok &&
-        vaultIntegrity.ok &&
-        nativeHealth.ok
-      ) {
-
-        this.showStatus(
-          'SQLite OK · Data Vault protegido',
-          true
-        );
-
-      } else if (
-        vaultHealth.ok &&
-        !vaultIntegrity.ok
-      ) {
+      }catch(err){
+        firstError=err;
 
         console.warn(
-          'Data Vault fingerprint mismatch:',
-          vaultIntegrity
+          'SQLite primer arranque falló; intentando recuperación:',
+          err
+        );
+
+        this.ready=false;
+      }
+
+      /*
+       * Un solo intento de recuperación limpia.
+       * No borra la DB: sólo cierra la conexión en memoria,
+       * recrea el handle y vuelve a abrir el mismo archivo.
+       */
+      try{
+        await new Promise(
+          r=>setTimeout(r,250)
+        );
+
+        await openStable(true);
+
+        const ok=
+          await finishBoot();
+
+        if(ok){
+          this.lastInitError=null;
+          return true;
+        }
+
+      }catch(err){
+        this.ready=false;
+
+        this.lastInitError=
+          String(
+            err?.message ||
+            err ||
+            firstError?.message ||
+            firstError ||
+            'Error desconocido'
+          );
+
+        this.lastInitStage=
+          'failed';
+
+        console.error(
+          'SQLite recovery failed:',
+          {
+            first:firstError,
+            second:err
+          }
         );
 
         this.showStatus(
-          'SQLite ALERTA · Vault desincronizado',
+          'SQLite ERROR · conexión',
           false
         );
 
-      } else if (censusMode === 'restored') {
-        this.showStatus('SQLite OK · Censo restaurado', true);
-      } else if (censusMode === 'backed-up') {
-        this.showStatus('SQLite OK · Censo protegido', true);
-      } else {
-        this.showStatus('SQLite OK', true);
+        return false;
       }
 
-      return true;
-
-    } catch (err) {
-      console.error('SQLite error:', err);
-      this.ready = false;
-      this.showStatus('SQLite ERROR', false);
       return false;
+    })();
+
+    try{
+      return await this.__initPromise;
+    }finally{
+      this.__initPromise=null;
     }
   },
 
