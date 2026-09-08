@@ -49343,5 +49343,97 @@ if(document.readyState==='loading'){
 <!-- V7.8.6 TEAM SHADOW VAULT DURABLE V1
      Backup Data Vault + Rolling Backups + Safe Import + Durable Commit Guard.
      UI/model/policy unchanged. -->
+
+
+<!-- V7.8.6 NAV FIX CENSO APUESTAS BRIER V1 - UI ONLY -->
+<style>
+@media(max-width:720px){
+  .tabs{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    overflow:visible!important;
+    row-gap:4px!important;
+  }
+  .tabs .tab{
+    min-width:0!important;
+    width:100%!important;
+  }
+  .tabs .tab[data-tab="settings"],
+  .tabs .tab[data-tab="census"],
+  .tabs .tab[data-tab="history"],
+  .tabs .tab[data-tab="lab"]{
+    display:flex!important;
+  }
+}
+</style>
+<script>
+(function(){
+'use strict';
+const MARK='V7.8.6 NAV FIX CENSO APUESTAS BRIER V1';
+
+function activateTab(btn){
+  const id=btn.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==id));
+
+  try{
+    if(id==='history'){ window.renderHistory?.(); window.renderRollingBackupDashboard?.(); }
+    if(id==='lab'){ window.renderLab?.(); window.renderUnifiedSettlementStatus?.(); }
+    if(id==='census'){ window.renderCensus?.(); }
+    if(id==='settings'){ window.renderSettings?.(); }
+  }catch(e){ console.warn(MARK,e); }
+}
+
+function ensureTab(id,label,icon){
+  const tabs=document.querySelector('.tabs');
+  if(!tabs)return null;
+  let btn=tabs.querySelector('.tab[data-tab="'+id+'"]');
+  if(!btn){
+    btn=document.createElement('button');
+    btn.className='tab premium-nav-item';
+    btn.dataset.tab=id;
+    btn.innerHTML='<span aria-hidden="true">'+icon+'</span><span>'+label+'</span>';
+    btn.addEventListener('click',()=>activateTab(btn));
+  }
+  return btn;
+}
+
+function install(){
+  const tabs=document.querySelector('.tabs');
+  if(!tabs)return;
+
+  const settings=ensureTab('settings','Ajustes','⚙');
+  const census=ensureTab('census','Censo','▣');
+  const history=ensureTab('history','Apuestas','🎟');
+  const lab=ensureTab('lab','Brier LAB','⚗');
+
+  // Orden solicitado: ... Auditoría | Ajustes | Censo | Apuestas | Brier LAB
+  // Mueve sólo navegación; no toca paneles, datos ni lógica.
+  [settings,census,history,lab].forEach(btn=>{
+    if(btn) tabs.appendChild(btn);
+  });
+
+  [census,history,lab].forEach(btn=>{
+    if(btn && !btn.__mlbNavFixBound){
+      btn.addEventListener('click',()=>activateTab(btn));
+      btn.__mlbNavFixBound=true;
+    }
+  });
+
+  window.__MLB_NAV_FIX__={
+    version:'V1',
+    order:['settings','census','history','lab'],
+    coreChanged:false
+  };
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',install,{once:true});
+}else{
+  install();
+}
+})();
+</script>
+
 </body>
 </html>
