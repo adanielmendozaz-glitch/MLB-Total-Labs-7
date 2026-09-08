@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build MLB Totals Lab V7.8.6 APK
 
 on:
   workflow_dispatch:
@@ -88,11 +88,11 @@ jobs:
 
       - name: Collect APK
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk MLB_Total_Labs_7_V1-debug.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk MLB_Totals_Lab_V7.8.6-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB_Total_Labs_7_V1_APK
-          path: MLB_Total_Labs_7_V1-debug.apk
+          name: MLB_Totals_Lab_V7.8.6_APK
+          path: MLB_Totals_Lab_V7.8.6-debug.apk
           retention-days: 30

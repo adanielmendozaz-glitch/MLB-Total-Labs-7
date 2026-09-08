@@ -40597,7 +40597,7 @@ async function exportJson(){
 
     dataVault:{
       schema:1,
-      appVersion:'V7.8.1',
+      appVersion:APP_VERSION,
       modelVersion:
         typeof MODEL_VERSION!=='undefined'
           ?MODEL_VERSION
@@ -40684,7 +40684,7 @@ async function exportJson(){
 
   const ok=
     await download(
-      'mlb_v781_data_vault_'+
+      'mlb_v786_data_vault_'+
         stamp+
         '.json',
 
@@ -49849,5 +49849,7 @@ if(document.readyState==='loading'){
 })();
 
 </script>
+
+<!-- V7.8.6 CANONICAL NAMING V1 -->
 </body>
 </html>
