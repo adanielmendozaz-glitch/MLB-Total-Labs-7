@@ -49435,5 +49435,419 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- V7.8.6 TEAM SHADOW SETTLEMENT REPAIR V1 -->
+<script>
+/* V7.8.6 TEAM SHADOW SETTLEMENT REPAIR V1
+ * Alcance: Team Shadow solamente.
+ * - Recorre TODOS los PENDING históricos, no sólo la jornada visible.
+ * - Sólo liquida si MLB confirma FINAL.
+ * - Conserva pick, línea, Team Score, señales y gating originales.
+ * - No modifica Censo, Bets, LAB, pesos ni Motor V7.0.
+ * - Persiste usando saveTeamShadowData + Durable Commit Guard cuando está disponible.
+ */
+(() => {
+  'use strict';
+
+  const MARKER = 'V7.8.6_TEAM_SHADOW_SETTLEMENT_REPAIR_V1';
+  if (window[MARKER]) return;
+  window[MARKER] = true;
+
+  let settlementQueue = Promise.resolve();
+  let lastAutoRun = 0;
+
+  const isPlaySignal = (value) =>
+    String(value || '').toUpperCase() === 'JUGABLE';
+
+  function outcomeFor(row, actual, signal) {
+    if (!isPlaySignal(signal)) return 'NO BET';
+
+    const side = String(row?.officialSide || '').toUpperCase();
+    const line = Number(row?.line);
+
+    if (!Number.isFinite(actual) || !Number.isFinite(line)) return 'NO BET';
+    if (actual === line) return 'PUSH';
+
+    if (side === 'OVER') return actual > line ? 'WIN' : 'LOSS';
+    if (side === 'UNDER') return actual < line ? 'WIN' : 'LOSS';
+
+    return 'NO BET';
+  }
+
+  async function fetchFinalShadowScore(gamePk) {
+    const pk = Number(gamePk);
+    if (!Number.isFinite(pk)) return null;
+
+    try {
+      const url =
+        (typeof API11 !== 'undefined' ? API11 : 'https://statsapi.mlb.com/api/v1.1') +
+        '/game/' + encodeURIComponent(pk) + '/feed/live';
+
+      const data =
+        typeof fetchJ === 'function'
+          ? await fetchJ(url, 0)
+          : await fetch(url, { cache: 'no-store' }).then(r => {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+            });
+
+      const st = data?.gameData?.status || {};
+      const abstractState = String(st.abstractGameState || '').toLowerCase();
+      const coded = String(st.codedGameState || '').toUpperCase();
+      const detailed = String(st.detailedState || '');
+
+      const final =
+        abstractState === 'final' ||
+        coded === 'F' ||
+        /final|completed/i.test(detailed);
+
+      if (!final) return null;
+
+      const away = Number(data?.liveData?.linescore?.teams?.away?.runs);
+      const home = Number(data?.liveData?.linescore?.teams?.home?.runs);
+
+      if (!Number.isFinite(away) || !Number.isFinite(home)) return null;
+
+      return {
+        away,
+        home,
+        actual: away + home,
+        detailedState: detailed || 'Final'
+      };
+    } catch (err) {
+      console.warn('Team Shadow Settlement Repair · score fetch', gamePk, err);
+      return null;
+    }
+  }
+
+  function settleOneShadowRow(row, score, stamp) {
+    const actual = Number(score.actual);
+    const line = Number(row.line);
+
+    const status =
+      Number.isFinite(line) && actual === line
+        ? 'PUSH'
+        : 'FINAL';
+
+    const officialOutcome =
+      outcomeFor(row, actual, row.officialSignal);
+
+    const hypotheticalOutcome =
+      outcomeFor(row, actual, row.hypotheticalSignal);
+
+    const lossesAvoided =
+      officialOutcome === 'LOSS' &&
+      hypotheticalOutcome === 'NO BET'
+        ? 1
+        : 0;
+
+    const winnersBlocked =
+      officialOutcome === 'WIN' &&
+      hypotheticalOutcome === 'NO BET'
+        ? 1
+        : 0;
+
+    const promoted =
+      String(row.officialSignal || '').toUpperCase() === 'LEAN' &&
+      String(row.hypotheticalSignal || '').toUpperCase() === 'JUGABLE';
+
+    return {
+      ...row,
+
+      status,
+      actual,
+
+      awayScore: score.away,
+      homeScore: score.home,
+
+      officialOutcome,
+      hypotheticalOutcome,
+
+      lossesAvoided,
+      winnersBlocked,
+
+      leanPromotedWin:
+        promoted && hypotheticalOutcome === 'WIN'
+          ? 1
+          : 0,
+
+      leanPromotedLoss:
+        promoted && hypotheticalOutcome === 'LOSS'
+          ? 1
+          : 0,
+
+      settled: stamp,
+      updated: stamp,
+
+      settlementSource: 'MLB_FINAL_FEED',
+      settlementRepairVersion: 'V7.8.6_SHADOW_SETTLEMENT_REPAIR_1'
+    };
+  }
+
+  async function persistShadowSettlement(state) {
+    if (typeof saveTeamShadowData !== 'function') {
+      throw new Error('saveTeamShadowData no está disponible.');
+    }
+
+    saveTeamShadowData(state);
+
+    const guard = window.MLB_DURABILITY_GUARD;
+    if (guard && typeof guard.commit === 'function') {
+      try {
+        await guard.commit('shadow', state);
+      } catch (err) {
+        console.warn('Team Shadow Settlement Repair · Durable Guard', err);
+        throw err;
+      }
+    }
+
+    return true;
+  }
+
+  async function runShadowSettlementRepair(options = {}) {
+    const silent = options.silent === true;
+
+    if (typeof teamShadowState !== 'function') {
+      if (!silent && typeof status === 'function') {
+        status('Team Shadow no está disponible para liquidación.', 'err');
+      }
+      return { ok: false, reason: 'NO_TEAM_SHADOW_STATE' };
+    }
+
+    const state = teamShadowState();
+    const sourceRows = Array.isArray(state?.rows) ? state.rows : [];
+    const pending = sourceRows.filter(
+      r => String(r?.status || '').toUpperCase() === 'PENDING'
+    );
+
+    if (!pending.length) {
+      if (!silent && typeof status === 'function') {
+        status('Team Shadow: no hay resultados pendientes.', 'ok');
+      }
+      try {
+        if (typeof renderTeamShadow === 'function') renderTeamShadow();
+      } catch {}
+      return {
+        ok: true,
+        checked: 0,
+        settled: 0,
+        stillPending: 0,
+        errors: 0
+      };
+    }
+
+    if (!silent && typeof status === 'function') {
+      status(
+        'Team Shadow · verificando ' + pending.length + ' pendientes históricos…'
+      );
+    }
+
+    const cache = new Map();
+    let settled = 0;
+    let errors = 0;
+    const now = () => new Date().toISOString();
+
+    const nextRows = sourceRows.map(r => ({ ...r }));
+    const indexById = new Map();
+
+    nextRows.forEach((r, i) => {
+      const key =
+        r?.id != null
+          ? 'id:' + String(r.id)
+          : 'fallback:' +
+            String(r?.gamePk || '') + '|' +
+            String(r?.date || '') + '|' +
+            String(r?.line || '') + '|' +
+            String(r?.officialSide || '') + '|' +
+            String(r?.created || '');
+
+      indexById.set(key, i);
+    });
+
+    for (const original of pending) {
+      const pk = Number(original?.gamePk);
+      if (!Number.isFinite(pk)) {
+        errors++;
+        continue;
+      }
+
+      let score;
+      if (cache.has(pk)) {
+        score = cache.get(pk);
+      } else {
+        score = await fetchFinalShadowScore(pk);
+        cache.set(pk, score);
+      }
+
+      if (!score) continue;
+
+      const key =
+        original?.id != null
+          ? 'id:' + String(original.id)
+          : 'fallback:' +
+            String(original?.gamePk || '') + '|' +
+            String(original?.date || '') + '|' +
+            String(original?.line || '') + '|' +
+            String(original?.officialSide || '') + '|' +
+            String(original?.created || '');
+
+      const idx = indexById.get(key);
+      if (!Number.isInteger(idx)) {
+        errors++;
+        continue;
+      }
+
+      nextRows[idx] = settleOneShadowRow(
+        nextRows[idx],
+        score,
+        now()
+      );
+
+      settled++;
+    }
+
+    if (settled > 0) {
+      const stamp = now();
+
+      const nextState = {
+        ...state,
+        rows: nextRows,
+        updatedAt: stamp
+      };
+
+      await persistShadowSettlement(nextState);
+    }
+
+    const remaining =
+      nextRows.filter(
+        r => String(r?.status || '').toUpperCase() === 'PENDING'
+      ).length;
+
+    try {
+      if (typeof renderTeamShadow === 'function') {
+        renderTeamShadow();
+      } else if (typeof renderShadow === 'function') {
+        renderShadow();
+      }
+    } catch (err) {
+      console.warn('Team Shadow Settlement Repair · render', err);
+    }
+
+    if (!silent && typeof status === 'function') {
+      status(
+        'Team Shadow: ' +
+          settled +
+          ' liquidados · ' +
+          remaining +
+          ' pendientes · ' +
+          errors +
+          ' errores.',
+        errors ? '' : 'ok'
+      );
+    }
+
+    return {
+      ok: errors === 0,
+      checked: pending.length,
+      settled,
+      stillPending: remaining,
+      errors
+    };
+  }
+
+  window.MLB_SHADOW_SETTLEMENT_REPAIR = {
+    version: 'V7.8.6_SHADOW_SETTLEMENT_REPAIR_1',
+    run: (options = {}) => {
+      settlementQueue = settlementQueue
+        .catch(() => {})
+        .then(() => runShadowSettlementRepair(options));
+
+      return settlementQueue;
+    },
+    fetchFinal: fetchFinalShadowScore,
+    outcomeFor
+  };
+
+  function bindRepairButton() {
+    const btn = document.getElementById('shadowSettleNow');
+    if (!btn || btn.dataset.shadowSettlementRepair === '1') return;
+
+    btn.dataset.shadowSettlementRepair = '1';
+
+    btn.addEventListener(
+      'click',
+      event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        window.MLB_SHADOW_SETTLEMENT_REPAIR
+          .run({ silent: false })
+          .catch(err => {
+            console.error('Team Shadow Settlement Repair', err);
+            if (typeof status === 'function') {
+              status(
+                'Team Shadow: error al sincronizar resultados. ' +
+                  String(err?.message || err),
+                'err'
+              );
+            }
+          });
+      },
+      true
+    );
+  }
+
+  function autoRun(reason) {
+    const now = Date.now();
+
+    // Evita duplicar tráfico al volver varias veces a la app.
+    if (now - lastAutoRun < 60000) return;
+    lastAutoRun = now;
+
+    window.MLB_SHADOW_SETTLEMENT_REPAIR
+      .run({ silent: true, reason })
+      .catch(err =>
+        console.warn(
+          'Team Shadow Settlement Repair · auto',
+          reason,
+          err
+        )
+      );
+  }
+
+  function boot() {
+    bindRepairButton();
+
+    // Espera a que IndexedDB / SQLite / Shadow terminen su inicialización.
+    setTimeout(() => autoRun('STARTUP'), 9000);
+
+    // Revisa otra vez al regresar a la app.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(() => autoRun('FOREGROUND'), 1200);
+      }
+    });
+
+    // Si el usuario usa "Actualizar todo", Shadow se revisa al finalizar
+    // sin alterar el comportamiento del botón original.
+    const refresh = document.getElementById('refreshAll');
+    if (refresh && refresh.dataset.shadowSettlementRepair !== '1') {
+      refresh.dataset.shadowSettlementRepair = '1';
+      refresh.addEventListener(
+        'click',
+        () => setTimeout(() => autoRun('REFRESH_ALL'), 5000),
+        false
+      );
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+
+</script>
 </body>
 </html>
