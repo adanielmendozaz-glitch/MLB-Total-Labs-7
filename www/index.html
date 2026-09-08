@@ -42322,11 +42322,16 @@ window.addEventListener(
 
     setInterval(
       ()=>{
-        if(!document.hidden){
+        const dailyPanel=document.getElementById('daily');
+        if(
+          !document.hidden &&
+          dailyPanel &&
+          !dailyPanel.classList.contains('hidden')
+        ){
           renderHomeDashboard();
         }
       },
-      1500
+      8000
     );
   }
 );
@@ -49078,6 +49083,130 @@ window.addEventListener('pagehide',()=>{
   if(state.pending>0) console.warn(MARK,'pagehide con commits pendientes:',state.pending);
 });
 
+})();
+</script>
+
+
+
+<!-- V7.8.6 UI OPTIMIZATION V1 - AUDIT HUB - UI ONLY -->
+<style>
+#uiAuditHub .ui-audit-head{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+  margin-bottom:12px;padding:14px;border:1px solid rgba(99,180,255,.20);
+  border-radius:18px;background:linear-gradient(145deg,rgba(11,31,50,.98),rgba(5,17,29,.99))
+}
+#uiAuditHub .ui-audit-head h2{margin:0;font-size:1.15rem}
+#uiAuditHub .ui-audit-head p{margin:5px 0 0;color:#91a8bf;font-size:.72rem;line-height:1.45}
+#uiAuditContent{display:grid;gap:12px}
+#uiAuditContent:empty::before{
+  content:"Las auditorías aparecerán aquí cuando exista información analizada.";
+  display:block;padding:20px;border:1px dashed #31506d;border-radius:16px;color:#91a8bf;text-align:center
+}
+@media(max-width:720px){
+  #uiAuditHub .ui-audit-head{align-items:flex-start;flex-direction:column}
+}
+</style>
+<script>
+(function(){
+'use strict';
+
+const UI_OPT_VERSION='V7.8.6 UI OPTIMIZATION V1';
+const AUDIT_IDS=[
+  'b2c3HomeRankingGuard',
+  'b2c4WeightAudit',
+  'b2c4bAudit',
+  'b2c5jLedger',
+  'b2c5kAudit',
+  'b2c5lAudit'
+];
+
+function switchToAudit(tab){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('hidden',x.id!=='uiAuditHub'));
+  relocateAudits();
+}
+
+function ensureAuditHub(){
+  let tab=document.querySelector('.tab[data-tab="uiAuditHub"]');
+  if(!tab){
+    tab=document.createElement('button');
+    tab.className='tab premium-nav-item';
+    tab.dataset.tab='uiAuditHub';
+    tab.innerHTML='<span aria-hidden="true">▦</span><span>Auditoría</span>';
+    const settingsTab=document.querySelector('.tab[data-tab="settings"]');
+    if(settingsTab?.parentNode) settingsTab.parentNode.insertBefore(tab,settingsTab);
+    else document.querySelector('.tabs')?.appendChild(tab);
+    tab.addEventListener('click',()=>switchToAudit(tab));
+  }
+
+  let panel=document.getElementById('uiAuditHub');
+  if(!panel){
+    panel=document.createElement('section');
+    panel.id='uiAuditHub';
+    panel.className='panel hidden';
+    panel.innerHTML=
+      '<div class="ui-audit-head">'+
+        '<div><h2>Centro de Auditoría</h2>'+
+        '<p>Paneles B2C de diagnóstico y replay separados de Jornada. Sólo lectura; Motor V7.0, pesos, picks y persistencia no cambian.</p></div>'+
+        '<button type="button" class="btn" id="uiAuditRefresh">↻ Refrescar auditoría</button>'+
+      '</div>'+
+      '<div id="uiAuditContent"></div>';
+    const settings=document.getElementById('settings');
+    if(settings?.parentNode) settings.parentNode.insertBefore(panel,settings);
+    else document.querySelector('.app')?.appendChild(panel);
+
+    panel.querySelector('#uiAuditRefresh')?.addEventListener('click',()=>{
+      try{ if(typeof renderHomeDashboard==='function') renderHomeDashboard(); }catch(e){console.warn(UI_OPT_VERSION,e)}
+      setTimeout(relocateAudits,60);
+    });
+  }
+  return panel;
+}
+
+let relocating=false;
+function relocateAudits(){
+  if(relocating)return;
+  relocating=true;
+  try{
+    ensureAuditHub();
+    const dest=document.getElementById('uiAuditContent');
+    if(!dest)return;
+    for(const id of AUDIT_IDS){
+      const node=document.getElementById(id);
+      if(node && node.parentNode!==dest) dest.appendChild(node);
+    }
+  }finally{
+    relocating=false;
+  }
+}
+
+function install(){
+  ensureAuditHub();
+  relocateAudits();
+
+  const home=document.getElementById('homeDashboard');
+  if(home){
+    const obs=new MutationObserver(()=>queueMicrotask(relocateAudits));
+    obs.observe(home,{childList:true,subtree:false});
+    window.__MLB_UI_AUDIT_OBSERVER__=obs;
+  }
+
+  [250,700,1200,2200,4000].forEach(ms=>setTimeout(relocateAudits,ms));
+
+  window.__MLB_UI_OPTIMIZATION__={
+    version:UI_OPT_VERSION,
+    auditIds:[...AUDIT_IDS],
+    homeRefreshMs:8000,
+    dailyOnlyRefresh:true,
+    coreChanged:false
+  };
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',install,{once:true});
+}else{
+  install();
+}
 })();
 </script>
 
