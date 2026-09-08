@@ -50321,5 +50321,369 @@ if(document.readyState==='loading'){
 })();
 
 </script>
+
+<!-- V7.8.6 SHADOW CANONICAL STATE FIX V1 -->
+<script>
+/* V7.8.6 SHADOW CANONICAL STATE FIX V1
+ * Sin tocar el motor:
+ * - Lee Team Shadow desde estado actual, STORE e SQLite.
+ * - Fusiona con teamShadowMergeRows(), que prioriza FINAL/PUSH sobre PENDING.
+ * - Persiste sólo la unión canónica.
+ * - Renderiza Shadow desde esa unión.
+ */
+(() => {
+  'use strict';
+
+  const VERSION = 'V7.8.6_SHADOW_CANONICAL_STATE_FIX_V1';
+  const BROWSER_KEY = 'mlb_v786_team_shadow_lab';
+  const SQL_KEY = 'team_shadow_v1';
+
+  if (window[VERSION]) return;
+  window[VERSION] = true;
+
+  let queue = Promise.resolve();
+
+  const parseState = raw => {
+    try {
+      if (!raw) return null;
+      const x = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return x && typeof x === 'object' ? x : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const rowCount = state =>
+    Array.isArray(state?.rows) ? state.rows.length : 0;
+
+  const pendingCount = state =>
+    (Array.isArray(state?.rows) ? state.rows : [])
+      .filter(r => String(r?.status || '').toUpperCase() === 'PENDING')
+      .length;
+
+  const settledCount = state =>
+    (Array.isArray(state?.rows) ? state.rows : [])
+      .filter(r => ['FINAL', 'PUSH'].includes(
+        String(r?.status || '').toUpperCase()
+      )).length;
+
+  function browserRawState() {
+    try {
+      if (typeof window.MLB_STORE_GET === 'function') {
+        return parseState(window.MLB_STORE_GET(BROWSER_KEY));
+      }
+    } catch {}
+
+    try {
+      return parseState(localStorage.getItem(BROWSER_KEY));
+    } catch {
+      return null;
+    }
+  }
+
+  async function nativeState() {
+    try {
+      const db = window.MLBDB;
+      if (!db || typeof db.getKV !== 'function') return null;
+      const raw = await db.getKV(SQL_KEY);
+      return parseState(raw);
+    } catch (err) {
+      console.warn('Shadow Canonical · SQLite read', err);
+      return null;
+    }
+  }
+
+  function currentState() {
+    try {
+      return typeof teamShadowState === 'function'
+        ? teamShadowState()
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function mergeStates(states) {
+    const valid = states.filter(x => x && typeof x === 'object');
+
+    if (!valid.length) {
+      return {
+        version: 'V7.8.6_TEAM_SHADOW_1',
+        rows: [],
+        updatedAt: null
+      };
+    }
+
+    let rows = [];
+
+    for (const st of valid) {
+      const incoming = Array.isArray(st.rows) ? st.rows : [];
+
+      if (typeof teamShadowMergeRows === 'function') {
+        rows = teamShadowMergeRows(rows, incoming);
+      } else {
+        // Fallback conservador: nunca sustituir un FINAL/PUSH por PENDING.
+        const map = new Map();
+        const rank = s => {
+          s = String(s || '').toUpperCase();
+          if (s === 'FINAL') return 3;
+          if (s === 'PUSH') return 2;
+          if (s === 'PENDING') return 1;
+          return 0;
+        };
+
+        for (const r of [...rows, ...incoming]) {
+          const key =
+            String(r?.id || '') ||
+            [
+              r?.gamePk,
+              r?.date,
+              r?.line,
+              r?.officialSide,
+              r?.created
+            ].join('|');
+
+          const old = map.get(key);
+
+          if (!old || rank(r?.status) > rank(old?.status)) {
+            map.set(key, r);
+          } else if (
+            rank(r?.status) === rank(old?.status) &&
+            String(r?.updated || r?.settled || r?.created || '') >
+              String(old?.updated || old?.settled || old?.created || '')
+          ) {
+            map.set(key, r);
+          }
+        }
+
+        rows = [...map.values()];
+      }
+    }
+
+    const newest = valid
+      .map(x => String(x.updatedAt || ''))
+      .sort()
+      .at(-1) || null;
+
+    return {
+      ...valid[0],
+      rows,
+      updatedAt: newest || new Date().toISOString()
+    };
+  }
+
+  async function persistCanonical(state) {
+    if (typeof saveTeamShadowData !== 'function') {
+      throw new Error('saveTeamShadowData no disponible');
+    }
+
+    saveTeamShadowData(state);
+
+    // Confirmación explícita SQLite: no dependemos sólo del write fire-and-forget.
+    try {
+      const db = window.MLBDB;
+      if (db && typeof db.setKV === 'function') {
+        await db.setKV(SQL_KEY, JSON.stringify(state));
+      }
+    } catch (err) {
+      console.warn('Shadow Canonical · SQLite write', err);
+    }
+
+    // Durable Guard si está presente.
+    try {
+      const guard = window.MLB_DURABILITY_GUARD;
+      if (guard && typeof guard.commit === 'function') {
+        const r = guard.commit('shadow', state);
+        if (r && typeof r.then === 'function') await r;
+      }
+    } catch (err) {
+      console.warn('Shadow Canonical · Guard', err);
+    }
+  }
+
+  function renderCanonical() {
+    try {
+      if (typeof renderShadowIntegrity === 'function') {
+        renderShadowIntegrity();
+      }
+      if (typeof renderShadowLab === 'function') {
+        renderShadowLab();
+      }
+    } catch (err) {
+      console.warn('Shadow Canonical · render', err);
+    }
+  }
+
+  async function reconcile(options = {}) {
+    const silent = options.silent === true;
+
+    const before = currentState();
+    const browser = browserRawState();
+    const native = await nativeState();
+
+    const canonical = mergeStates([
+      before,
+      browser,
+      native
+    ]);
+
+    const beforePending = pendingCount(before);
+    const canonicalPending = pendingCount(canonical);
+    const canonicalSettled = settledCount(canonical);
+
+    const changed =
+      JSON.stringify(before?.rows || []) !==
+      JSON.stringify(canonical?.rows || []);
+
+    if (changed) {
+      await persistCanonical(canonical);
+    }
+
+    renderCanonical();
+
+    const report = {
+      ok: true,
+      changed,
+      currentRows: rowCount(before),
+      browserRows: rowCount(browser),
+      nativeRows: rowCount(native),
+      canonicalRows: rowCount(canonical),
+      pendingBefore: beforePending,
+      pending: canonicalPending,
+      settled: canonicalSettled,
+      ranAt: new Date().toISOString()
+    };
+
+    window.MLB_SHADOW_CANONICAL_LAST = report;
+
+    if (!silent && typeof status === 'function') {
+      status(
+        'TEAM SHADOW · estado canónico · ' +
+          canonicalSettled + ' cerrados · ' +
+          canonicalPending + ' pendientes' +
+          (changed ? ' · vista reconciliada' : ' · ya estaba sincronizado'),
+        'ok'
+      );
+    }
+
+    return report;
+  }
+
+  window.MLB_SHADOW_CANONICAL = {
+    version: VERSION,
+    reconcile: options => {
+      queue = queue
+        .catch(() => {})
+        .then(() => reconcile(options));
+      return queue;
+    }
+  };
+
+  function bind() {
+    const refresh = document.getElementById('shadowRefresh');
+
+    if (refresh && refresh.dataset.shadowCanonical !== '1') {
+      refresh.dataset.shadowCanonical = '1';
+
+      refresh.addEventListener(
+        'click',
+        ev => {
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+
+          window.MLB_SHADOW_CANONICAL
+            .reconcile({ silent: false })
+            .catch(err => {
+              console.error('Shadow Canonical', err);
+              if (typeof status === 'function') {
+                status(
+                  'TEAM SHADOW · error al reconciliar vista: ' +
+                    String(err?.message || err),
+                  'err'
+                );
+              }
+            });
+        },
+        true
+      );
+    }
+
+    // Tras "Sincronizar resultados", esperamos a que settlement y SQLite terminen,
+    // luego reconciliamos y volvemos a renderizar.
+    const settle = document.getElementById('shadowSettleNow');
+
+    if (settle && settle.dataset.shadowCanonical !== '1') {
+      settle.dataset.shadowCanonical = '1';
+
+      settle.addEventListener(
+        'click',
+        () => {
+          setTimeout(
+            () => window.MLB_SHADOW_CANONICAL
+              .reconcile({ silent: true })
+              .catch(() => {}),
+            1800
+          );
+
+          setTimeout(
+            () => window.MLB_SHADOW_CANONICAL
+              .reconcile({ silent: false })
+              .catch(() => {}),
+            4500
+          );
+        },
+        false
+      );
+    }
+
+    // Cuando se entra a la pestaña Shadow, refrescar desde las fuentes reales.
+    document.addEventListener(
+      'click',
+      ev => {
+        const tab = ev.target?.closest?.('[data-tab="shadow"]');
+        if (!tab) return;
+
+        setTimeout(
+          () => window.MLB_SHADOW_CANONICAL
+            .reconcile({ silent: true })
+            .catch(() => {}),
+          250
+        );
+      },
+      false
+    );
+  }
+
+  function boot() {
+    bind();
+
+    // Espera a que STORE + SQLite terminen el arranque.
+    setTimeout(
+      () => window.MLB_SHADOW_CANONICAL
+        .reconcile({ silent: true })
+        .catch(err => console.warn('Shadow Canonical · boot', err)),
+      10000
+    );
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(
+          () => window.MLB_SHADOW_CANONICAL
+            .reconcile({ silent: true })
+            .catch(() => {}),
+          1000
+        );
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+
+</script>
 </body>
 </html>
