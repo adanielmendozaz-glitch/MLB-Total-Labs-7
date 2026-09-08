@@ -48862,5 +48862,224 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+
+<!-- V7.8.6 DURABLE COMMIT GUARD V1 -->
+<script>
+(function(){
+'use strict';
+
+const MARK='V7.8.6 DURABLE COMMIT GUARD V1';
+const JKEY='mlb_v786_durable_commit_journal_v1';
+const CACHE_KEYS=[
+  'mlb_v53_bullpen_cache',
+  'mlb_v56_lineup_cache',
+  'mlb_v61_public_odds_cache'
+];
+const SPEC={
+  census:{browser:'mlb_v60_rank_census',sql:'rank_census_v1'},
+  bets:{browser:'mlb_v5_bets',sql:'bets_v1'},
+  lab:{browser:'mlb_v5_lab',sql:'lab_v1'},
+  bank:{browser:'mlb_v71_bank',sql:'bank_v1'}
+};
+const state={pending:0,lastOk:null,lastError:null,lastKind:null,recovered:0};
+window.MLB_DURABILITY_GUARD={version:'V1',state};
+
+function now(){return new Date().toISOString()}
+function parse(raw,fallback){try{return raw==null?fallback:JSON.parse(raw)}catch{return fallback}}
+function readJournal(){return parse(localStorage.getItem(JKEY),{version:1,entries:{}})||{version:1,entries:{}}}
+function show(msg,ok=true){
+  try{
+    const db=window.MLBDB;
+    if(db&&typeof db.showStatus==='function') db.showStatus(msg,ok);
+  }catch{}
+}
+function writeJournal(j){
+  const text=JSON.stringify(j);
+  try{localStorage.setItem(JKEY,text);return true}catch(e){
+    const msg=String(e?.message||e||'');
+    if(e?.name==='QuotaExceededError'||/quota|exceeded/i.test(msg)){
+      for(const k of CACHE_KEYS){try{localStorage.removeItem(k)}catch{}}
+      try{localStorage.setItem(JKEY,text);return true}catch(e2){state.lastError=String(e2?.message||e2);return false}
+    }
+    state.lastError=msg;return false;
+  }
+}
+function removeJournalKind(kind){
+  try{
+    const j=readJournal();
+    if(j.entries&&j.entries[kind]) delete j.entries[kind];
+    if(!j.entries||!Object.keys(j.entries).length) localStorage.removeItem(JKEY);
+    else writeJournal(j);
+  }catch{}
+}
+function rowKey(r){
+  if(r&&r.id!=null) return String(r.id);
+  return [r?.gamePk??'',r?.date??'',r?.market??'',r?.side??'',r?.line??''].join('|');
+}
+function mergeRows(base,patch){
+  const out=new Map();
+  for(const r of Array.isArray(base)?base:[]) if(r&&typeof r==='object') out.set(rowKey(r),r);
+  for(const r of Array.isArray(patch)?patch:[]) if(r&&typeof r==='object') out.set(rowKey(r),{...(out.get(rowKey(r))||{}),...r});
+  return [...out.values()];
+}
+function latestCensusDay(data){
+  const days=data&&typeof data==='object'&&data.days&&typeof data.days==='object'?data.days:{};
+  const keys=Object.keys(days).sort();
+  const date=keys[keys.length-1]||'';
+  return date?{date,day:days[date]}:null;
+}
+function compact(kind,data){
+  if(kind==='census'){
+    const d=latestCensusDay(data);
+    if(!d)return null;
+    return {date:d.date,day:d.day};
+  }
+  if(kind==='bets') return (Array.isArray(data)?data:[]).slice(-12);
+  if(kind==='lab') return (Array.isArray(data)?data:[]).slice(-8);
+  if(kind==='bank') return data&&typeof data==='object'?data:null;
+  return null;
+}
+function mergeFragment(kind,base,frag){
+  if(kind==='census'){
+    const b=base&&typeof base==='object'?base:{version:'V7.0',days:{}};
+    const days={...(b.days||{})};
+    const date=frag?.date;
+    if(date){
+      const old=days[date]||{date,rows:[]};
+      const inc=frag.day||{};
+      days[date]={...old,...inc,date,rows:mergeRows(old.rows||[],inc.rows||[])};
+    }
+    return {...b,days};
+  }
+  if(kind==='bets'||kind==='lab') return mergeRows(Array.isArray(base)?base:[],Array.isArray(frag)?frag:[]);
+  if(kind==='bank') return frag&&typeof frag==='object'?frag:(base||{});
+  return base;
+}
+function persistJournal(kind,data){
+  const frag=compact(kind,data);
+  if(frag==null)return false;
+  const j=readJournal();
+  j.version=1;j.updatedAt=now();j.entries=j.entries||{};
+  j.entries[kind]={kind,at:now(),fragment:frag};
+  const ok=writeJournal(j);
+  if(!ok) show('PERSISTENCIA ALERTA · journal no guardado',false);
+  return ok;
+}
+async function verifyNative(kind,data){
+  const db=window.MLBDB,spec=SPEC[kind];
+  if(!db||!db.sqlite||db.ready!==true||!spec) return false;
+  const text=JSON.stringify(data);
+  if(kind==='census') await db.saveCensusSnapshot(data);
+  else if(kind==='bets') await db.saveBetsSnapshot(data);
+  else if(kind==='lab') await db.saveLabSnapshot(data);
+  else if(kind==='bank') await db.saveBankSnapshot(data);
+  else return false;
+  const back=await db.getKV(spec.sql);
+  return back===text;
+}
+async function verifyIDB(kind,data){
+  try{
+    if(typeof IDBSTORE==='undefined')return false;
+    const spec=SPEC[kind],text=JSON.stringify(data);
+    const ok=await IDBSTORE.set(spec.browser,text);
+    if(!ok)return false;
+    const back=await IDBSTORE.get(spec.browser);
+    return back===text;
+  }catch{return false}
+}
+async function durableCommit(kind,data){
+  if(!SPEC[kind])return false;
+  state.pending++;state.lastKind=kind;
+  show('Guardando seguro · '+kind.toUpperCase(),true);
+  try{
+    const idbP=verifyIDB(kind,data);
+    let native=false;
+    for(let i=0;i<8&&!native;i++){
+      try{native=await verifyNative(kind,data)}catch(e){state.lastError=String(e?.message||e)}
+      if(!native) await new Promise(r=>setTimeout(r,180));
+    }
+    const idb=await idbP.catch(()=>false);
+    if(native){
+      removeJournalKind(kind);
+      state.lastOk=now();state.lastError=null;
+      show('Guardado seguro · SQLite confirmado',true);
+      return true;
+    }
+    if(idb){
+      state.lastOk=now();
+      show('Guardado local · SQLite pendiente',true);
+      return true;
+    }
+    state.lastError=state.lastError||'Sin confirmación durable';
+    show('PERSISTENCIA ALERTA · sin confirmación',false);
+    return false;
+  }finally{state.pending=Math.max(0,state.pending-1)}
+}
+window.MLB_DURABILITY_GUARD.commit=durableCommit;
+
+function queue(kind,data){
+  try{persistJournal(kind,data)}catch(e){state.lastError=String(e?.message||e)}
+  Promise.resolve().then(()=>durableCommit(kind,data)).catch(e=>{state.lastError=String(e?.message||e);show('PERSISTENCIA ALERTA',false)});
+}
+function wrap(name,kind){
+  const original=window[name];
+  if(typeof original!=='function'||original.__durabilityGuardV1)return false;
+  const wrapped=function(){
+    const args=[...arguments];
+    const result=original.apply(this,args);
+    try{queue(kind,args[0])}catch(e){console.warn(MARK,kind,e)}
+    return result;
+  };
+  Object.defineProperty(wrapped,'__durabilityGuardV1',{value:true});
+  Object.defineProperty(wrapped,'__durabilityOriginal',{value:original});
+  window[name]=wrapped;
+  return true;
+}
+
+async function recover(){
+  let j;
+  try{j=readJournal()}catch{return 0}
+  const entries=j?.entries||{};
+  let recovered=0;
+  for(const kind of ['census','bets','lab','bank']){
+    const entry=entries[kind];if(!entry)continue;
+    const spec=SPEC[kind];
+    let base;
+    try{base=parse(STORE.getItem(spec.browser),kind==='census'?{version:'V7.0',days:{}}:kind==='bank'?{}:[])}catch{base=kind==='census'?{version:'V7.0',days:{}}:kind==='bank'?{}:[]}
+    const merged=mergeFragment(kind,base,entry.fragment);
+    try{STORE.setItem(spec.browser,JSON.stringify(merged))}catch{}
+    let ok=false;
+    for(let i=0;i<10&&!ok;i++){
+      try{ok=await verifyNative(kind,merged)}catch{}
+      if(!ok)await new Promise(r=>setTimeout(r,220));
+    }
+    if(ok){removeJournalKind(kind);recovered++;}
+  }
+  state.recovered+=recovered;
+  if(recovered) show('Recuperación durable · '+recovered+' almacén(es)',true);
+  return recovered;
+}
+window.MLB_DURABILITY_GUARD.recover=recover;
+
+function install(){
+  const r={};
+  r.census=wrap('saveRankCensus','census');
+  r.bets=wrap('saveBets','bets');
+  r.lab=wrap('saveLab','lab');
+  r.bank=wrap('saveBankCfg','bank');
+  window.MLB_DURABILITY_GUARD.wrapped=r;
+  setTimeout(()=>recover().catch(()=>{}),1200);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+else install();
+
+window.addEventListener('pagehide',()=>{
+  if(state.pending>0) console.warn(MARK,'pagehide con commits pendientes:',state.pending);
+});
+
+})();
+</script>
+
 </body>
 </html>
