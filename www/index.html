@@ -48795,5 +48795,72 @@ if(
 </script>
 
 
+
+
+<!-- V7.8.6 PERSISTENCE FORENSICS READ ONLY -->
+<style>
+.pf-card{border:1px solid #7a6330;background:#17140b;border-radius:16px;padding:14px;margin:12px 0}
+.pf-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.pf-box,.pf-row{border:1px solid #3b3a31;background:#0c1118;border-radius:12px;padding:10px}
+.pf-ok{color:#43dda0}.pf-warn{color:#ffd06a}
+@media(max-width:520px){.pf-grid{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+'use strict';
+function jp(x){try{return x==null?null:JSON.parse(x)}catch{return null}}
+function rows(name,v){if(name==='census')return Object.values(v?.days||{}).flatMap(d=>Array.isArray(d?.rows)?d.rows:[]);return Array.isArray(v)?v:[]}
+function cnt(name,v){if(name==='census')return rows(name,v).length;if(Array.isArray(v))return v.length;if(v&&typeof v==='object'&&Array.isArray(v.movements))return v.movements.length;return 0}
+function candidates(name,v){
+ const rs=rows(name,v), pairs=[['STL','SF'],['CIN','LAD'],['TOR','ATH'],['TOR','OAK']];
+ return rs.filter(r=>{const t=JSON.stringify(r).toUpperCase();return pairs.some(([a,b])=>t.includes(a)&&t.includes(b))}).slice(-20);
+}
+async function idbGet(k){
+ try{
+  const db=await new Promise(res=>{const q=indexedDB.open('mlb_totals_lab_v5',1);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);q.onblocked=()=>res(null)});
+  if(!db)return null;
+  return await new Promise(res=>{try{const q=db.transaction('kv','readonly').objectStore('kv').get(k);q.onsuccess=()=>res(q.result??null);q.onerror=()=>res(null)}catch{res(null)}})
+ }catch{return null}
+}
+async function sqlGet(k){try{return await window.MLBDB?.getKV?.(k)??null}catch{return null}}
+async function scan(){
+ const out=document.getElementById('pf-out'),btn=document.getElementById('pf-scan');
+ btn.disabled=true;btn.textContent='Escaneando…';
+ const specs=[
+  ['bets','mlb_v5_bets','bets_v1'],
+  ['lab','mlb_v5_lab','lab_v1'],
+  ['census','mlb_v60_rank_census','rank_census_v1'],
+  ['bank','mlb_v71_bank','bank_v1']
+ ];
+ let html='<div class="pf-grid">', found=[];
+ for(const [name,lk,sk] of specs){
+  let l=null;try{l=localStorage.getItem(lk)}catch{}
+  const i=await idbGet(lk), q=await sqlGet(sk);
+  const lv=jp(l),iv=jp(i),qv=jp(q);
+  const a=cnt(name,lv),b=cnt(name,iv),c=cnt(name,qv);
+  html+=`<div class="pf-box"><b>${name.toUpperCase()}</b><br>local ${a} · IDB ${b} · SQLite ${c}<br><span class="${a===b&&b===c?'pf-ok':'pf-warn'}">${a===b&&b===c?'alineado':'diferencias detectadas'}</span></div>`;
+  for(const [src,val] of [['localStorage',lv],['IndexedDB',iv],['SQLite',qv]]) candidates(name,val).forEach(r=>found.push({name,src,r}));
+ }
+ html+='</div><div style="display:grid;gap:7px;margin-top:10px">';
+ if(!found.length) html+='<div class="pf-row pf-warn">No encontré rastros de STL-SF, CIN-LAD o TOR-ATH/OAK en las copias persistentes actuales.</div>';
+ else{
+  html+=`<div class="pf-row pf-ok">Encontré ${found.length} coincidencia(s) potencial(es). No se restauró nada.</div>`;
+  found.slice(-30).forEach(x=>{const r=x.r||{};html+=`<div class="pf-row"><b>${x.name} · ${x.src}</b><br>${r.awayAbbr||r.away||'?'} @ ${r.homeAbbr||r.home||'?'} · ${r.side||''} ${r.line??''} · p=${r.p??r.prob??'—'} · ${r.status??'—'}<br>id=${r.id??'—'} · gamePk=${r.gamePk??'—'}</div>`})
+ }
+ html+='</div>';out.innerHTML=html;btn.disabled=false;btn.textContent='Escanear persistencia';
+}
+function mount(){
+ if(document.getElementById('pf-card'))return;
+ const host=[...document.querySelectorAll('.panel,.section')].find(x=>/SQLite Diagnostic Overlay|Diagnóstico interno/i.test(x.textContent||''));
+ if(!host)return;
+ const c=document.createElement('section');c.id='pf-card';c.className='pf-card';
+ c.innerHTML='<h3>Persistencia · Forense READ ONLY</h3><div class="note">Lee localStorage, IndexedDB y SQLite. No escribe ni restaura.</div><button id="pf-scan" class="btn" type="button">Escanear persistencia</button><div id="pf-out" style="margin-top:10px"></div>';
+ host.after(c);c.querySelector('#pf-scan').addEventListener('click',scan);
+}
+const o=new MutationObserver(mount);function init(){mount();o.observe(document.body,{childList:true,subtree:true})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
 </body>
 </html>
