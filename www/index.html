@@ -16369,9 +16369,11 @@ function teamShadowOutcomeCounts(
   ){
 
     const value=
-      String(
-        r?.[field] || ''
-      ).toUpperCase();
+      field==='pickOutcome'
+        ?teamShadowEffectivePickOutcome(r)
+        :String(
+            r?.[field] || ''
+          ).toUpperCase();
 
 
     if(value==='WIN'){
@@ -16425,6 +16427,117 @@ function teamShadowPrimaryRows(
 
 }
 
+/* V7.8.6 SHADOW FINAL RESULT RENDER FIX V1 */
+
+function teamShadowEffectivePickOutcome(row){
+
+  const stored=
+    String(
+      row?.pickOutcome || ''
+    ).toUpperCase();
+
+  if(
+    ['WIN','LOSS','PUSH']
+      .includes(stored)
+  ){
+    return stored;
+  }
+
+  const status=
+    String(
+      row?.status || ''
+    ).toUpperCase();
+
+  if(status==='PUSH'){
+    return 'PUSH';
+  }
+
+  if(
+    status==='FINAL' &&
+    Number.isFinite(
+      Number(row?.actual)
+    ) &&
+    Number.isFinite(
+      Number(row?.line)
+    ) &&
+    typeof teamShadowPickOutcome==='function'
+  ){
+    return teamShadowPickOutcome(
+      row?.officialSide,
+      Number(row?.line),
+      Number(row?.actual)
+    ) || '';
+  }
+
+  return '';
+}
+
+function teamShadowEffectiveOfficialBet(row){
+
+  if(row?.officialBet===true){
+    return true;
+  }
+
+  if(row?.officialBet===false){
+    return false;
+  }
+
+  const out=
+    String(
+      row?.officialOutcome || ''
+    ).toUpperCase();
+
+  if(
+    ['WIN','LOSS','PUSH']
+      .includes(out)
+  ){
+    return true;
+  }
+
+  if(out==='NO BET'){
+    return false;
+  }
+
+  return(
+    String(
+      row?.officialSignal || ''
+    ).toUpperCase()==='JUGABLE'
+  );
+}
+
+function teamShadowEffectiveHypotheticalBet(row){
+
+  if(row?.hypotheticalBet===true){
+    return true;
+  }
+
+  if(row?.hypotheticalBet===false){
+    return false;
+  }
+
+  const out=
+    String(
+      row?.hypotheticalOutcome || ''
+    ).toUpperCase();
+
+  if(
+    ['WIN','LOSS','PUSH']
+      .includes(out)
+  ){
+    return true;
+  }
+
+  if(out==='NO BET'){
+    return false;
+  }
+
+  return(
+    String(
+      row?.hypotheticalSignal || ''
+    ).toUpperCase()==='JUGABLE'
+  );
+}
+
 function teamShadowSettledRows(
   rows=[]
 ){
@@ -16432,24 +16545,26 @@ function teamShadowSettledRows(
   return teamShadowPrimaryRows(
     rows
   ).filter(
-    r=>
-      (
+    r=>{
+      const status=
         String(
           r?.status || ''
-        ).toUpperCase()==='FINAL' ||
-        String(
-          r?.status || ''
-        ).toUpperCase()==='PUSH'
-      ) &&
-      [
-        'WIN',
-        'LOSS',
-        'PUSH'
-      ].includes(
-        String(
-          r?.pickOutcome || ''
-        ).toUpperCase()
-      )
+        ).toUpperCase();
+
+      return(
+        (
+          status==='FINAL' ||
+          status==='PUSH'
+        ) &&
+        [
+          'WIN',
+          'LOSS',
+          'PUSH'
+        ].includes(
+          teamShadowEffectivePickOutcome(r)
+        )
+      );
+    }
   );
 
 }
@@ -16478,13 +16593,13 @@ function teamShadowStatsFromRows(
 
   const officialBets=
     settled.filter(
-      r=>r?.officialBet===true
+      r=>teamShadowEffectiveOfficialBet(r)
     );
 
 
   const hypotheticalBets=
     settled.filter(
-      r=>r?.hypotheticalBet===true
+      r=>teamShadowEffectiveHypotheticalBet(r)
     );
 
 
@@ -17145,14 +17260,19 @@ function teamShadowDashboardHtml(){
               ) || 0;
 
 
+            const effectiveOutcome=
+              teamShadowEffectivePickOutcome(r);
+
             const result=
-              r?.pickOutcome ||
+              effectiveOutcome ||
               (
                 String(
                   r?.status || ''
                 ).toUpperCase()==='PENDING'
                   ?'PENDING'
-                  :'—'
+                  :String(
+                      r?.status || '—'
+                    ).toUpperCase()
               );
 
 
