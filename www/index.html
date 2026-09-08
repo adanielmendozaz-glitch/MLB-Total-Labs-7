@@ -49851,5 +49851,475 @@ if(document.readyState==='loading'){
 </script>
 
 <!-- V7.8.6 CANONICAL NAMING V1 -->
+
+<!-- V7.8.6 TEAM SHADOW SETTLEMENT V2 -->
+<script>
+/* V7.8.6 TEAM SHADOW SETTLEMENT V2
+ * Objetivo:
+ * - Resolver PENDING históricos de Team Shadow.
+ * - Fuente 1: Censo oficial final por gamePk.
+ * - Fuente 2: MLB schedule por fecha + gamePk.
+ * - Fallback: MLB live feed.
+ * - Preservar línea, pick, probabilidad, Team Score y gating originales.
+ * - No tocar Motor V7.0, Censo, Bets, LAB ni calibración.
+ */
+(() => {
+  'use strict';
+
+  const VERSION = 'V7.8.6_TEAM_SHADOW_SETTLEMENT_V2';
+  if (window[VERSION]) return;
+  window[VERSION] = true;
+
+  let queue = Promise.resolve();
+  let lastAuto = 0;
+
+  const upper = v => String(v || '').toUpperCase();
+
+  const isFinalState = st => {
+    const abs = String(st?.abstractGameState || '').toLowerCase();
+    const det = String(st?.detailedState || '');
+    const code = String(st?.codedGameState || '').toUpperCase();
+    return abs === 'final' || code === 'F' || /final|completed/i.test(det);
+  };
+
+  const pickOutcome = (side, line, actual) => {
+    side = upper(side);
+    line = Number(line);
+    actual = Number(actual);
+
+    if (!Number.isFinite(line) || !Number.isFinite(actual)) return null;
+    if (actual === line) return 'PUSH';
+    if (side === 'OVER') return actual > line ? 'WIN' : 'LOSS';
+    if (side === 'UNDER') return actual < line ? 'WIN' : 'LOSS';
+    return null;
+  };
+
+  const betOutcome = (signal, pick) =>
+    upper(signal) === 'JUGABLE'
+      ? (pick || 'NO BET')
+      : 'NO BET';
+
+  function censoFinalFor(row) {
+    try {
+      if (typeof rankCensus !== 'function') return null;
+
+      const c = rankCensus();
+      const days = c?.days && typeof c.days === 'object' ? c.days : {};
+      const pk = String(row?.gamePk ?? '');
+
+      const candidates = [];
+
+      if (row?.date && days[row.date]?.rows) {
+        candidates.push(...days[row.date].rows);
+      } else {
+        for (const d of Object.values(days)) {
+          if (Array.isArray(d?.rows)) candidates.push(...d.rows);
+        }
+      }
+
+      const hit = candidates.find(r =>
+        String(r?.gamePk ?? '') === pk &&
+        upper(r?.status) === 'FINAL' &&
+        Number.isFinite(Number(r?.actual))
+      );
+
+      if (!hit) return null;
+
+      return {
+        source: 'OFFICIAL_CENSUS',
+        actual: Number(hit.actual),
+        awayScore: Number.isFinite(Number(hit.awayScore)) ? Number(hit.awayScore) : null,
+        homeScore: Number.isFinite(Number(hit.homeScore)) ? Number(hit.homeScore) : null,
+        detailedState: 'Final'
+      };
+    } catch (err) {
+      console.warn('Shadow V2 · censo', err);
+      return null;
+    }
+  }
+
+  async function scheduleFinalFor(row) {
+    const pk = String(row?.gamePk ?? '').trim();
+    const date = String(row?.date ?? '').trim();
+
+    if (!pk || !date) return null;
+
+    try {
+      const base =
+        typeof API !== 'undefined'
+          ? API
+          : 'https://statsapi.mlb.com/api/v1';
+
+      const url =
+        base +
+        '/schedule?sportId=1&date=' +
+        encodeURIComponent(date) +
+        '&hydrate=linescore';
+
+      const data =
+        typeof fetchJ === 'function'
+          ? await fetchJ(url, 0)
+          : await fetch(url, { cache: 'no-store' }).then(r => {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+            });
+
+      const games = [];
+      for (const d of Array.isArray(data?.dates) ? data.dates : []) {
+        if (Array.isArray(d?.games)) games.push(...d.games);
+      }
+
+      const g = games.find(x => String(x?.gamePk ?? '') === pk);
+      if (!g || !isFinalState(g.status)) return null;
+
+      const away = Number(g?.teams?.away?.score);
+      const home = Number(g?.teams?.home?.score);
+
+      if (!Number.isFinite(away) || !Number.isFinite(home)) return null;
+
+      return {
+        source: 'MLB_SCHEDULE_FINAL',
+        actual: away + home,
+        awayScore: away,
+        homeScore: home,
+        detailedState: String(g?.status?.detailedState || 'Final')
+      };
+    } catch (err) {
+      console.warn('Shadow V2 · schedule', row?.gamePk, err);
+      return null;
+    }
+  }
+
+  async function feedFinalFor(row) {
+    const pk = String(row?.gamePk ?? '').trim();
+    if (!pk) return null;
+
+    try {
+      const base =
+        typeof API11 !== 'undefined'
+          ? API11
+          : 'https://statsapi.mlb.com/api/v1.1';
+
+      const url =
+        base + '/game/' + encodeURIComponent(pk) + '/feed/live';
+
+      const data =
+        typeof fetchJ === 'function'
+          ? await fetchJ(url, 0)
+          : await fetch(url, { cache: 'no-store' }).then(r => {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+            });
+
+      if (!isFinalState(data?.gameData?.status)) return null;
+
+      const away = Number(data?.liveData?.linescore?.teams?.away?.runs);
+      const home = Number(data?.liveData?.linescore?.teams?.home?.runs);
+
+      if (!Number.isFinite(away) || !Number.isFinite(home)) return null;
+
+      return {
+        source: 'MLB_FEED_FINAL',
+        actual: away + home,
+        awayScore: away,
+        homeScore: home,
+        detailedState: String(data?.gameData?.status?.detailedState || 'Final')
+      };
+    } catch (err) {
+      console.warn('Shadow V2 · feed fallback', row?.gamePk, err);
+      return null;
+    }
+  }
+
+  async function resolveFinal(row) {
+    const censo = censoFinalFor(row);
+    if (censo) return censo;
+
+    const schedule = await scheduleFinalFor(row);
+    if (schedule) return schedule;
+
+    return await feedFinalFor(row);
+  }
+
+  function settleRow(row, result) {
+    const actual = Number(result.actual);
+    const pick = pickOutcome(row.officialSide, row.line, actual);
+
+    if (!pick) return null;
+
+    const official = betOutcome(row.officialSignal, pick);
+    const hypothetical = betOutcome(row.hypotheticalSignal, pick);
+
+    const officialBet = upper(row.officialSignal) === 'JUGABLE';
+    const hypotheticalBet = upper(row.hypotheticalSignal) === 'JUGABLE';
+
+    const lossesAvoided =
+      official === 'LOSS' && hypothetical === 'NO BET' ? 1 : 0;
+
+    const winnersBlocked =
+      official === 'WIN' && hypothetical === 'NO BET' ? 1 : 0;
+
+    const promoted =
+      upper(row.officialSignal) === 'LEAN' &&
+      upper(row.hypotheticalSignal) === 'JUGABLE';
+
+    const stamp = new Date().toISOString();
+
+    return {
+      ...row,
+
+      status: pick === 'PUSH' ? 'PUSH' : 'FINAL',
+      actual,
+
+      awayScore:
+        Number.isFinite(Number(result.awayScore))
+          ? Number(result.awayScore)
+          : row.awayScore ?? null,
+
+      homeScore:
+        Number.isFinite(Number(result.homeScore))
+          ? Number(result.homeScore)
+          : row.homeScore ?? null,
+
+      pickOutcome: pick,
+      officialOutcome: official,
+      hypotheticalOutcome: hypothetical,
+
+      officialBet,
+      hypotheticalBet,
+
+      lossesAvoided,
+      winnersBlocked,
+      netSaves: lossesAvoided - winnersBlocked,
+
+      leanPromotedWin:
+        promoted && pick === 'WIN' ? 1 : 0,
+
+      leanPromotedLoss:
+        promoted && pick === 'LOSS' ? 1 : 0,
+
+      leanPromotedPush:
+        promoted && pick === 'PUSH' ? 1 : 0,
+
+      settled: stamp,
+      updated: stamp,
+      settlementSource: result.source,
+      settlementRepairVersion: VERSION
+    };
+  }
+
+  async function persistState(state) {
+    if (typeof saveTeamShadowData !== 'function') {
+      throw new Error('saveTeamShadowData no disponible');
+    }
+
+    saveTeamShadowData(state);
+
+    const guard = window.MLB_DURABILITY_GUARD;
+    if (guard && typeof guard.commit === 'function') {
+      try {
+        const r = guard.commit('shadow', state);
+        if (r && typeof r.then === 'function') await r;
+      } catch (err) {
+        console.warn('Shadow V2 · Durable Guard', err);
+      }
+    }
+
+    const db = window.MLBDB;
+    if (db && typeof db.setKV === 'function') {
+      try {
+        await db.setKV('team_shadow_v1', JSON.stringify(state));
+      } catch (err) {
+        console.warn('Shadow V2 · SQLite confirm', err);
+      }
+    }
+
+    return true;
+  }
+
+  async function run(options = {}) {
+    const silent = options.silent === true;
+
+    if (typeof teamShadowState !== 'function') {
+      throw new Error('teamShadowState no disponible');
+    }
+
+    const state = teamShadowState();
+    const rows = Array.isArray(state?.rows) ? state.rows.map(r => ({ ...r })) : [];
+    const pendingIdx = [];
+
+    rows.forEach((r, i) => {
+      if (upper(r?.status) === 'PENDING') pendingIdx.push(i);
+    });
+
+    let settled = 0;
+    let unresolved = 0;
+    let errors = 0;
+    const sources = {};
+
+    if (!silent && typeof status === 'function') {
+      status(
+        'TEAM SHADOW V2 · revisando ' +
+        pendingIdx.length +
+        ' pendientes históricos…'
+      );
+    }
+
+    for (const idx of pendingIdx) {
+      const row = rows[idx];
+
+      try {
+        const final = await resolveFinal(row);
+
+        if (!final) {
+          unresolved++;
+          continue;
+        }
+
+        const next = settleRow(row, final);
+
+        if (!next) {
+          errors++;
+          continue;
+        }
+
+        rows[idx] = next;
+        settled++;
+
+        sources[final.source] = (sources[final.source] || 0) + 1;
+      } catch (err) {
+        errors++;
+        console.error('Shadow V2 · row', row?.gamePk, err);
+      }
+    }
+
+    if (settled > 0) {
+      const nextState = {
+        ...state,
+        rows,
+        updatedAt: new Date().toISOString()
+      };
+
+      await persistState(nextState);
+    }
+
+    try {
+      if (typeof renderShadowIntegrity === 'function') renderShadowIntegrity();
+      if (typeof renderShadowLab === 'function') renderShadowLab();
+    } catch (err) {
+      console.warn('Shadow V2 · render', err);
+    }
+
+    const remaining =
+      rows.filter(r => upper(r?.status) === 'PENDING').length;
+
+    const report = {
+      ok: errors === 0,
+      checked: pendingIdx.length,
+      settled,
+      unresolved,
+      remaining,
+      errors,
+      sources,
+      ranAt: new Date().toISOString()
+    };
+
+    window.MLB_SHADOW_SETTLEMENT_V2_LAST = report;
+
+    if (!silent && typeof status === 'function') {
+      const srcText = Object.entries(sources)
+        .map(([k, v]) => k + ':' + v)
+        .join(' · ');
+
+      status(
+        'TEAM SHADOW V2 · ' +
+          settled +
+          ' liquidados · ' +
+          remaining +
+          ' pendientes · ' +
+          errors +
+          ' errores' +
+          (srcText ? ' · ' + srcText : ''),
+        errors ? '' : 'ok'
+      );
+    }
+
+    return report;
+  }
+
+  window.MLB_SHADOW_SETTLEMENT_V2 = {
+    version: VERSION,
+    run: options => {
+      queue = queue.catch(() => {}).then(() => run(options));
+      return queue;
+    },
+    resolveFinal,
+    pickOutcome
+  };
+
+  function bindButton() {
+    const btn = document.getElementById('shadowSettleNow');
+    if (!btn || btn.dataset.shadowSettlementV2 === '1') return;
+
+    btn.dataset.shadowSettlementV2 = '1';
+
+    // Captura el evento antes del handler antiguo.
+    btn.addEventListener(
+      'click',
+      ev => {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+
+        window.MLB_SHADOW_SETTLEMENT_V2
+          .run({ silent: false })
+          .catch(err => {
+            console.error('TEAM SHADOW V2', err);
+            if (typeof status === 'function') {
+              status(
+                'TEAM SHADOW V2 · error: ' +
+                  String(err?.message || err),
+                'err'
+              );
+            }
+          });
+      },
+      true
+    );
+  }
+
+  function autoRun(reason) {
+    const now = Date.now();
+    if (now - lastAuto < 60000) return;
+    lastAuto = now;
+
+    window.MLB_SHADOW_SETTLEMENT_V2
+      .run({ silent: true, reason })
+      .catch(err =>
+        console.warn('TEAM SHADOW V2 · auto', reason, err)
+      );
+  }
+
+  function boot() {
+    bindButton();
+
+    // Primero arreglamos manualmente; el auto queda activado después
+    // de que la app ya terminó de restaurar persistencia.
+    setTimeout(() => autoRun('STARTUP'), 12000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        setTimeout(() => autoRun('FOREGROUND'), 1500);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+
+</script>
 </body>
 </html>
