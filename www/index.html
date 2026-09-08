@@ -39158,6 +39158,9 @@ function rollingBackupPayload(
     lab:
       lab(),
 
+    teamShadow:
+      teamShadowState(),
+
     rankCensus:
       rankCensus(),
 
@@ -39214,6 +39217,11 @@ function rollingBackupSummary(
     lab:
       Array.isArray(payload.lab)
         ?payload.lab.length
+        :0,
+
+    teamShadow:
+      Array.isArray(payload?.teamShadow?.rows)
+        ?payload.teamShadow.rows.length
         :0,
 
     census:
@@ -40536,6 +40544,9 @@ async function exportJson(){
   const bankData=
     bankCfg();
 
+  const shadowData=
+    teamShadowState();
+
   const marketsData=
     markets();
 
@@ -40601,6 +40612,10 @@ async function exportJson(){
       counts:{
         bets:betsData.length,
         lab:labData.length,
+        teamShadow:
+          Array.isArray(shadowData?.rows)
+            ?shadowData.rows.length
+            :0,
         censusDays,
         censusRows,
         bankMovements:
@@ -40638,6 +40653,9 @@ async function exportJson(){
 
     lab:
       labData,
+
+    teamShadow:
+      shadowData,
 
     cfg:
       cfgData,
@@ -41906,6 +41924,8 @@ function importJson(file){
 
         lab:null,
 
+        teamShadow:null,
+
         census:null,
 
         markets:null,
@@ -41990,6 +42010,71 @@ function importJson(file){
           report.conflicts+=
             report.lab.conflicts ||
             0;
+
+        }
+
+
+        if(
+          x.teamShadow &&
+          typeof x.teamShadow==='object'
+        ){
+
+          const currentShadow=
+            teamShadowState();
+
+          const incomingShadow=
+            teamShadowNormalizeState(
+              x.teamShadow
+            );
+
+          const beforeKeys=
+            new Set(
+              (currentShadow.rows||[])
+                .map(teamShadowRowKey)
+            );
+
+          const mergedShadow={
+            ...currentShadow,
+            ...incomingShadow,
+
+            createdAt:
+              currentShadow.createdAt ||
+              incomingShadow.createdAt,
+
+            rows:
+              teamShadowMergeRows(
+                currentShadow.rows||[],
+                incomingShadow.rows||[]
+              )
+          };
+
+          const savedShadow=
+            saveTeamShadowData(
+              mergedShadow
+            );
+
+          const addedShadow=
+            (savedShadow.rows||[])
+              .reduce(
+                (n,row)=>
+                  n+
+                  (
+                    beforeKeys.has(
+                      teamShadowRowKey(row)
+                    )
+                      ?0
+                      :1
+                  ),
+                0
+              );
+
+          report.teamShadow={
+            added:addedShadow,
+            total:
+              Array.isArray(savedShadow.rows)
+                ?savedShadow.rows.length
+                :0
+          };
 
         }
 
@@ -42131,6 +42216,11 @@ function importJson(file){
           0
         )+
         ' LAB nuevos · '+
+        (
+          report.teamShadow?.added ||
+          0
+        )+
+        ' Shadow nuevos · '+
         (
           report.census?.added ||
           0
@@ -48885,7 +48975,8 @@ const SPEC={
   census:{browser:'mlb_v60_rank_census',sql:'rank_census_v1'},
   bets:{browser:'mlb_v5_bets',sql:'bets_v1'},
   lab:{browser:'mlb_v5_lab',sql:'lab_v1'},
-  bank:{browser:'mlb_v71_bank',sql:'bank_v1'}
+  bank:{browser:'mlb_v71_bank',sql:'bank_v1'},
+  shadow:{browser:'mlb_v786_team_shadow_lab',sql:'team_shadow_v1'}
 };
 const state={pending:0,lastOk:null,lastError:null,lastKind:null,recovered:0};
 window.MLB_DURABILITY_GUARD={version:'V1',state};
@@ -48943,6 +49034,13 @@ function compact(kind,data){
   if(kind==='bets') return (Array.isArray(data)?data:[]).slice(-12);
   if(kind==='lab') return (Array.isArray(data)?data:[]).slice(-8);
   if(kind==='bank') return data&&typeof data==='object'?data:null;
+  if(kind==='shadow'){
+    const src=data&&typeof data==='object'?data:{};
+    return {
+      ...src,
+      rows:(Array.isArray(src.rows)?src.rows:[]).slice(-8)
+    };
+  }
   return null;
 }
 function mergeFragment(kind,base,frag){
@@ -48959,6 +49057,15 @@ function mergeFragment(kind,base,frag){
   }
   if(kind==='bets'||kind==='lab') return mergeRows(Array.isArray(base)?base:[],Array.isArray(frag)?frag:[]);
   if(kind==='bank') return frag&&typeof frag==='object'?frag:(base||{});
+  if(kind==='shadow'){
+    const b=base&&typeof base==='object'?base:{};
+    const f=frag&&typeof frag==='object'?frag:{};
+    const rows=
+      typeof teamShadowMergeRows==='function'
+        ?teamShadowMergeRows(b.rows||[],f.rows||[])
+        :mergeRows(b.rows||[],f.rows||[]);
+    return {...b,...f,rows};
+  }
   return base;
 }
 function persistJournal(kind,data){
@@ -48979,6 +49086,7 @@ async function verifyNative(kind,data){
   else if(kind==='bets') await db.saveBetsSnapshot(data);
   else if(kind==='lab') await db.saveLabSnapshot(data);
   else if(kind==='bank') await db.saveBankSnapshot(data);
+  else if(kind==='shadow') await db.setKV(spec.sql,JSON.stringify(data));
   else return false;
   const back=await db.getKV(spec.sql);
   return back===text;
@@ -49047,11 +49155,31 @@ async function recover(){
   try{j=readJournal()}catch{return 0}
   const entries=j?.entries||{};
   let recovered=0;
-  for(const kind of ['census','bets','lab','bank']){
+  for(const kind of ['census','bets','lab','bank','shadow']){
     const entry=entries[kind];if(!entry)continue;
     const spec=SPEC[kind];
     let base;
-    try{base=parse(STORE.getItem(spec.browser),kind==='census'?{version:'V7.0',days:{}}:kind==='bank'?{}:[])}catch{base=kind==='census'?{version:'V7.0',days:{}}:kind==='bank'?{}:[]}
+    try{
+      base=parse(
+        STORE.getItem(spec.browser),
+        kind==='census'
+          ?{version:'V7.0',days:{}}
+          :kind==='bank'
+            ?{}
+            :kind==='shadow'
+              ?{version:'V7.8.6_TEAM_SHADOW_1',schema:1,rows:[]}
+              :[]
+      )
+    }catch{
+      base=
+        kind==='census'
+          ?{version:'V7.0',days:{}}
+          :kind==='bank'
+            ?{}
+            :kind==='shadow'
+              ?{version:'V7.8.6_TEAM_SHADOW_1',schema:1,rows:[]}
+              :[]
+    }
     const merged=mergeFragment(kind,base,entry.fragment);
     try{STORE.setItem(spec.browser,JSON.stringify(merged))}catch{}
     let ok=false;
@@ -49073,6 +49201,7 @@ function install(){
   r.bets=wrap('saveBets','bets');
   r.lab=wrap('saveLab','lab');
   r.bank=wrap('saveBankCfg','bank');
+  r.shadow=wrap('saveTeamShadowData','shadow');
   window.MLB_DURABILITY_GUARD.wrapped=r;
   setTimeout(()=>recover().catch(()=>{}),1200);
 }
@@ -49210,5 +49339,9 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<!-- V7.8.6 TEAM SHADOW VAULT DURABLE V1
+     Backup Data Vault + Rolling Backups + Safe Import + Durable Commit Guard.
+     UI/model/policy unchanged. -->
 </body>
 </html>
