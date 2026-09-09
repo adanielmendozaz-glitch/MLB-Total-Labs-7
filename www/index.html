@@ -19487,7 +19487,43 @@ window.addEventListener('pagehide', () => {
 
 
 async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);await mlbSafeCommit('lab',lab());let shadowCapture=null;try{shadowCapture=teamShadowCaptureOfficial(g,ev,built,best)}catch(shadowError){console.warn('TEAM SHADOW capture',shadowError)}$('#results').innerHTML=resultHtml(g,built,ev,best,N)+teamShadowAnalysisCardHtml(g,best,shadowCapture?.row||null);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();await mlbSafeCommit('census',rankCensus());renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
-function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
+/* V7.8.6 BETS STARTUP ROLLBACK PROTECTION V1 */
+function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}
+function saveBets(x,options={}){
+  const incoming=Array.isArray(x)?x:[];
+  const allowDelete=options?.allowDelete===true;
+  let safe=incoming;
+
+  if(!allowDelete){
+    const current=bets();
+    const byId=new Map();
+
+    for(const row of current){
+      const key=String(row?.id||'');
+      if(key)byId.set(key,row);
+    }
+
+    for(const row of incoming){
+      const key=String(row?.id||'');
+      if(!key)continue;
+      const old=byId.get(key);
+      byId.set(key,old?{...old,...row,created:old.created||row.created}:row);
+    }
+
+    safe=[...byId.values()];
+  }
+
+  STORE.setItem('mlb_v5_bets',JSON.stringify(safe));
+
+  window.MLBDB?.saveBetsSnapshot?.(
+    safe,
+    {allowDelete}
+  ).catch(e=>console.warn('Apuestas SQLite',e));
+
+  if(typeof renderBank==='function')renderBank();
+
+  return safe;
+}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
 function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,
 
@@ -19839,7 +19875,7 @@ predictionSnapshot:predictionSnapshot(
   built,
   g
 )};row.snapshotLocked=true;row.snapshotLockedAt=row.created||new Date().toISOString();const a=bets();a.push(row);saveBets(a);const readBack=bets();const savedNow=readBack.some(x=>String(x?.id)===String(row.id));renderHistory();const note=$('#betSaveStatus');if(note){note.className=savedNow?'okbox':'danger';note.innerHTML=savedNow?`Guardada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`:`ERROR: la apuesta no pasó la verificación inmediata de almacenamiento.`;}status(savedNow?'Apuesta Full Game registrada · Durable Guard verificando en segundo plano.':'ERROR · la apuesta no quedó registrada.',savedNow?'ok':'err');if(!savedNow){console.error('V7.8.6 BET SAVE HOTFIX V1','readback falló',row);}}
-window.deleteBet=id=>{if(!confirm('¿Eliminar esta apuesta del historial?'))return;saveBets(bets().filter(x=>String(x.id)!==String(id)));renderHistory()};
+window.deleteBet=id=>{if(!confirm('¿Eliminar esta apuesta del historial?'))return;saveBets(bets().filter(x=>String(x.id)!==String(id)),{allowDelete:true});renderHistory()};
 function settleValue(row,a,h){const total=row.market==='AWAY_TT'?a:row.market==='HOME_TT'?h:a+h;if(row.market==='F5')return null;if(total===row.line)return'PUSH';const win=row.side==='OVER'?total>row.line:total<row.line;return win?'WIN':'LOSS'}
 
 /* V7.8.6G1 UNIFIED SETTLEMENT CORE */
@@ -42876,7 +42912,7 @@ function importJson(file){
 
 
 $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history'){renderHistory();renderRollingBackupDashboard();}if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='shadow'){renderShadowIntegrity();renderShadowLab();}if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
-$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([]);renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#shadowSettleNow').onclick=()=>{const r=teamShadowSettleFromOfficial();renderShadowLab();status('TEAM SHADOW · '+r.settled+' nuevos liquidados · '+r.pending+' pendientes.','ok')};$('#shadowRefresh').onclick=()=>{renderShadowIntegrity();renderShadowLab()};$('#shadowExport').onclick=exportTeamShadowCsv;
+$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([],{allowDelete:true});renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#shadowSettleNow').onclick=()=>{const r=teamShadowSettleFromOfficial();renderShadowLab();status('TEAM SHADOW · '+r.settled+' nuevos liquidados · '+r.pending+' pendientes.','ok')};$('#shadowRefresh').onclick=()=>{renderShadowIntegrity();renderShadowLab()};$('#shadowExport').onclick=exportTeamShadowCsv;
 /* V7.8.5A2 SAFE RESET HANDLER */
 
 $('#resetAll').onclick=async()=>{

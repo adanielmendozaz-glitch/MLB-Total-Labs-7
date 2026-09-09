@@ -930,9 +930,37 @@ const MLBDB = {
     );
   },
 
-  async saveBetsSnapshot(rows) {
-    const safe = Array.isArray(rows) ? rows : [];
-    return this.setKV(this.betsSqlKey, JSON.stringify(safe));
+  /* V7.8.6 BETS STARTUP ROLLBACK PROTECTION V1 */
+  async saveBetsSnapshot(rows, options={}) {
+    const incoming = Array.isArray(rows) ? rows : [];
+    const allowDelete = options?.allowDelete === true;
+
+    if(allowDelete){
+      return this.setKV(
+        this.betsSqlKey,
+        JSON.stringify(incoming)
+      );
+    }
+
+    let native=[];
+
+    try{
+      const raw=await this.getKV(this.betsSqlKey);
+      const parsed=raw!==null?JSON.parse(raw):[];
+      if(Array.isArray(parsed))native=parsed;
+    }catch(e){
+      console.warn('Bets rollback guard · lectura SQLite',e);
+    }
+
+    const merged=this.mergeBetSnapshots(
+      native,
+      incoming
+    );
+
+    return this.setKV(
+      this.betsSqlKey,
+      JSON.stringify(merged)
+    );
   },
 
   async initBetsPersistence() {
@@ -2932,8 +2960,78 @@ db.vaultDeferredReconcile=async function(reason='deferred'){
         }
 
         /*
-         * En este punto init ya fusionó/restauró ambas copias.
-         * LocalStorage representa el estado activo de la app.
+         * V7.8.6 BETS STARTUP ROLLBACK PROTECTION V1
+         *
+         * Bets es un journal de eventos del usuario.
+         * Una reconciliación automática jamás puede reducir
+         * el conjunto de IDs. Si una copia tiene 54 y otra 53,
+         * la reconciliación conserva la unión de 54.
+         */
+        if(name==='bets'){
+          let nativeRows=[];
+          let localRows=[];
+
+          try{
+            const p=JSON.parse(nativeRaw||'[]');
+            if(Array.isArray(p))nativeRows=p;
+          }catch{}
+
+          try{
+            const p=JSON.parse(item.raw||'[]');
+            if(Array.isArray(p))localRows=p;
+          }catch{}
+
+          const merged=
+            this.mergeBetSnapshots(
+              nativeRows,
+              localRows
+            );
+
+          const mergedRaw=
+            JSON.stringify(merged);
+
+          this.safeLocalSet(
+            item.browserKey,
+            mergedRaw
+          );
+
+          await this.setKV(
+            item.sqlKey,
+            mergedRaw
+          );
+
+          const verify=
+            await this.getKV(
+              item.sqlKey
+            );
+
+          if(verify!==mergedRaw){
+            throw new Error(
+              'bets union readback mismatch'
+            );
+          }
+
+          if(
+            merged.length <
+            Math.max(
+              nativeRows.length,
+              localRows.length
+            )
+          ){
+            throw new Error(
+              'bets union intentó reducir IDs'
+            );
+          }
+
+          report.changed.push(
+            name+':union'
+          );
+
+          continue;
+        }
+
+        /*
+         * Otros almacenes conservan el comportamiento existente.
          */
         await this.setKV(
           item.sqlKey,
