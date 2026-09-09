@@ -32162,13 +32162,15 @@ function selfTestDashboardHtml(
 
 
 function renderSelfTestDashboard(){
+ const root=$('#selfTestPanel');
+ if(!root)return;
+ const fpState=window.MLB_FINGERPRINT_STARTUP_V2?.snapshot();
+ if(!window.MLBDB?.ready || window.MLBDB?.lastInitStage!=='ready' || !window.MLBDB?.lastVaultIntegrity || fpState?.phase==='PENDING'){
+  const error=fpState?.phase==='ERROR';
+  root.innerHTML='<div class="section"><h3>Diagnóstico interno · Self Tests</h3><div class="'+(error?'danger':'warn')+'"><b>'+(error?'INICIALIZACIÓN FALLIDA':'INICIALIZANDO')+'</b><br>'+esc(fpState?.reason||'Esperando SQLite y fingerprint.')+'</div></div>';
+  return;
+ }
 
-  const root=
-    $('#selfTestPanel');
-
-  if(!root){
-    return;
-  }
 
 
   let report=
@@ -33939,64 +33941,8 @@ function runCoreSelfTests(){
 }
 
 
-/*
- * Ejecución automática.
- *
- * setTimeout permite que todo
- * el script termine de inicializar
- * antes de correr los tests.
- */
-
-setTimeout(
-  ()=>{
-
-    const report=
-      runCoreSelfTests();
-
-
-    window.MLB_SELF_TESTS=
-      report;
-
-
-    document.documentElement
-      .dataset
-      .mlbSelfTest=
-        report.ok
-          ?'ok'
-          :'fail';
-
-
-    if(report.ok){
-
-      console.info(
-        'MLB Self Tests:',
-        report.passed+
-        '/'+
-        report.total+
-        ' OK'
-      );
-
-    }else{
-
-      console.error(
-        'MLB SELF TEST FAILURE',
-        report
-      );
-    }
-
-
-    try{
-
-      console.table(
-        report.results
-      );
-
-    }catch{}
-
-  },
-  0
-);
-
+/* V7.8.6 FINGERPRINT STARTUP V2 · el coordinador es el único disparador inicial de Core. */
+setTimeout(()=>window.MLB_FINGERPRINT_STARTUP_V2?.request(),0);
 
 /* V7.8.4D1 DECISION AUDIT PANEL */
 
@@ -51819,152 +51765,94 @@ if(document.readyState==='loading'){
 </script>
 
 <script>
-/* V7.8.6 INTEGRITY STARTUP COORDINATOR V1 */
+/* V7.8.6 FINGERPRINT STARTUP V2 · REPORT/DOM ONLY */
 (function(){
 'use strict';
-
-if(window.__MLB_INTEGRITY_STARTUP_COORDINATOR_V1__) return;
-window.__MLB_INTEGRITY_STARTUP_COORDINATOR_V1__=true;
-
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-
+const VERSION='V7.8.6 FINGERPRINT STARTUP V2';
+if(window.MLB_FINGERPRINT_STARTUP_V2)return;
+let flight=null;
+let state={phase:'PENDING',reason:'Esperando SQLite',at:new Date().toISOString()};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const escapeText=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 function nativeReady(){
+ const db=window.MLBDB;
+ return !!(db?.ready===true&&db.lastInitStage==='ready'&&db.lastVaultIntegrity);
+}
+function pendingHtml(){
+ const bad=state.phase==='ERROR';
+ return '<div class="section"><h3>Diagnóstico interno · Self Tests</h3><div class="'+(bad?'danger':'warn')+'"><b>'+(bad?'INICIALIZACIÓN FALLIDA':'INICIALIZANDO')+'</b><br>'+escapeText(state.reason)+'</div></div>';
+}
+function refresh(){
+ try{
+  if(typeof renderSelfTestDashboard==='function')renderSelfTestDashboard();
+ }catch(e){console.warn(VERSION,'Core render',e)}
+ try{
+  if(state.phase!=='PENDING' && typeof finalIntegrityDashboardHtml==='function'){
+   const roots=[document.getElementById('labContent'),document.getElementById('uiAuditContent')].filter(Boolean);
+   for(const root of roots){
+    const headings=[...root.querySelectorAll('h3')].filter(h=>h.textContent.trim()==='Final Integrity Suite');
+    for(const h of headings){const panel=h.closest('.section');if(panel)panel.outerHTML=finalIntegrityDashboardHtml()}
+   }
+  }
+ }catch(e){console.warn(VERSION,'Final render',e)}
+ try{
+  if(state.phase!=='PENDING' && typeof premiumHomeIntegrityCompactHtml==='function'){
+   const panel=document.querySelector('.premium-integrity-compact, .home-integrity-compact');
+   if(panel)panel.outerHTML=premiumHomeIntegrityCompactHtml();
+  }
+ }catch(e){console.warn(VERSION,'Home render',e)}
+}
+function publish(phase,reason,extra={}){
+ state={phase,reason,at:new Date().toISOString(),...extra};
+ window.MLB_FINGERPRINT_STARTUP_RESULT_V2=state;
+ refresh();
+ return state;
+}
+async function run(){
+ publish('PENDING','Esperando que SQLite termine su inicialización y reconciliación.');
+ const deadline=Date.now()+30000;
+ while(!nativeReady()){
   const db=window.MLBDB;
-  return !!(
-    db &&
-    db.ready===true &&
-    db.lastInitStage==='ready' &&
-    db.lastVaultIntegrity
-  );
+  if(db?.lastInitStage==='failed'||db?.lastInitStage==='plugin'){
+   return publish('ERROR',db.lastInitError||'SQLite no pudo inicializarse.',{stage:db.lastInitStage});
+  }
+  if(db?.ready===true&&db.lastInitStage==='ready'&&!db.lastVaultIntegrity){
+   return publish('ERROR','SQLite terminó, pero no publicó el resultado del fingerprint.',{stage:db.lastInitStage});
+  }
+  if(Date.now()>=deadline){
+   return publish('ERROR','SQLite no terminó en 30 segundos. No se fuerza PASS ni se reinicia la base.',{stage:db?.lastInitStage||'sin iniciar'});
+  }
+  await sleep(100);
+ }
+ const db=window.MLBDB;
+ try{
+  // La comprobación nativa ya fue ejecutada por init(). No se hace otra escritura ni reconciliación.
+  const native=db.lastVaultIntegrity;
+  const core=runCoreSelfTests();
+  window.MLB_SELF_TESTS=core;
+  document.documentElement.dataset.mlbSelfTest=core.ok?'ok':'fail';
+  window.__MLB_FINAL_INTEGRITY__=null;
+  const final=finalIntegrityRunSuite();
+  const result=publish(core.ok&&native.ok===true?'PASS':'FAIL',
+   native.ok===true?'Diagnóstico actualizado después de SQLite.':'El fingerprint nativo reportó una diferencia real.',{
+    stage:db.lastInitStage,nativeOk:native.ok===true,nativeReport:native,
+    corePassed:core.passed,coreTotal:core.total,coreFailed:core.failed,
+    finalPassed:final.passed,finalTotal:final.total,finalOk:final.ok===true
+   });
+  console.info(VERSION,{phase:result.phase,core:core.passed+'/'+core.total,final:final.passed+'/'+final.total});
+  return result;
+ }catch(e){return publish('ERROR',String(e?.message||e),{stage:db.lastInitStage})}
 }
-
-function refreshVisibleIntegrity(){
-  try{
-    const panel=
-      document.querySelector(
-        '#finalIntegrityPending, .final-integrity-suite, [data-final-integrity]'
-      );
-
-    if(panel && typeof window.finalIntegrityDashboardHtml==='function'){
-      panel.outerHTML=window.finalIntegrityDashboardHtml();
-    }
-  }catch(e){
-    console.warn(MARK,'panel refresh',e);
-  }
-
-  try{
-    const btn=document.getElementById('uiAuditRefresh');
-    if(btn && !btn.disabled){
-      btn.click();
-    }
-  }catch(e){
-    console.warn(MARK,'audit refresh',e);
-  }
+function request(){
+ if(flight)return flight;
+ flight=run().finally(()=>{flight=null});
+ return flight;
 }
-
-async function runAfterNativeReady(){
-  const db=window.MLBDB;
-
-  /*
-   * SQLite ya tiene su propio init. Sólo esperamos.
-   * Máximo 30 s: no forzamos una segunda conexión.
-   */
-  for(let i=0;i<150 && !nativeReady();i++){
-    await sleep(200);
-  }
-
-  if(!db?.ready){
-    console.warn(MARK,'SQLite no llegó a ready; no se fuerza PASS');
-    return false;
-  }
-
-  /*
-   * Si DB está ready pero falta fingerprint por alguna razón,
-   * hacemos UNA lectura/check oficial, sin modificar datos.
-   */
-  if(
-    !db.lastVaultIntegrity &&
-    typeof db.vaultIntegrityCheck==='function'
-  ){
-    try{
-      db.lastVaultIntegrity=
-        await db.vaultIntegrityCheck();
-    }catch(e){
-      console.warn(MARK,'vaultIntegrityCheck',e);
-      return false;
-    }
-  }
-
-  if(!nativeReady()){
-    console.warn(MARK,'fingerprint no disponible; no se fuerza PASS');
-    return false;
-  }
-
-  /*
-   * ÉSTE ES EL BUG PRINCIPAL:
-   * runCoreSelfTests() pudo ejecutarse antes de SQLite y dejar
-   * window.MLB_SELF_TESTS con 19/20. Final Integrity reutiliza
-   * esa copia y por eso permanece rojo aunque SQLite ya esté OK.
-   *
-   * Recalculamos sólo los reportes de diagnóstico.
-   */
-  try{
-    if(typeof window.runCoreSelfTests==='function'){
-      window.MLB_SELF_TESTS=
-        window.runCoreSelfTests();
-    }
-
-    window.__MLB_FINAL_INTEGRITY__=null;
-
-    if(typeof window.finalIntegrityRunSuite==='function'){
-      window.__MLB_FINAL_INTEGRITY__=
-        window.finalIntegrityRunSuite();
-    }
-
-    window.__MLB_INTEGRITY_STARTUP_RESULT__={
-      at:new Date().toISOString(),
-      sqliteReady:db.ready===true,
-      sqliteStage:db.lastInitStage,
-      vaultOk:db.lastVaultIntegrity?.ok===true,
-      corePassed:
-        window.MLB_SELF_TESTS?.filter?.(x=>x?.ok===true)?.length ?? null,
-      coreTotal:
-        Array.isArray(window.MLB_SELF_TESTS)
-          ?window.MLB_SELF_TESTS.length
-          :null,
-      finalOk:
-        window.__MLB_FINAL_INTEGRITY__?.ok===true,
-      finalPassed:
-        window.__MLB_FINAL_INTEGRITY__?.passed ?? null,
-      finalTotal:
-        window.__MLB_FINAL_INTEGRITY__?.total ?? null
-    };
-
-    refreshVisibleIntegrity();
-
-    console.info(
-      MARK,
-      window.__MLB_INTEGRITY_STARTUP_RESULT__
-    );
-
-    return true;
-  }catch(e){
-    console.error(MARK,e);
-    return false;
-  }
-}
-
-function start(){
-  runAfterNativeReady();
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',start,{once:true});
-}else{
-  start();
-}
-
+window.MLB_FINGERPRINT_STARTUP_V2={request,refresh,snapshot:()=>state};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{request()},{once:true});
+else request();
 })();
+
 </script>
 </body>
 </html>
