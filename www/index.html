@@ -8998,6 +8998,21 @@ strong{
 </div>
 <dialog id="analysis"><div class="mh"><div><h2 id="modalTitle">Análisis</h2><div class="meta" id="modalMeta"></div></div><button class="close" id="close">✕</button></div><div class="mb"><div id="analysisBody"></div></div></dialog>
 <script>
+/* V7.8.6 CLEAN STARTUP + SHADOW ONLY V1 */
+(function cleanAuditUI(){
+  const removeAuditUI=()=>{
+    document.querySelectorAll(
+      '[data-tab="audit"],[data-tab="auditoria"],#audit,#auditoria,#auditPanel,#audit-panel'
+    ).forEach(el=>el.remove());
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',removeAuditUI,{once:true});
+  }else{
+    removeAuditUI();
+  }
+})();
+
 'use strict';
 const API='https://statsapi.mlb.com/api/v1',API11='https://statsapi.mlb.com/api/v1.1',ODDS_API='https://api.the-odds-api.com/v4/sports/baseball_mlb/odds',ESPN_SCOREBOARD='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',ESPN_HEADER='https://site.api.espn.com/apis/v2/scoreboard/header?lang=en',AUTO_ODDS_ENDPOINT='/.netlify/functions/odds',COVERS_ODDS='https://www.covers.com/sport/baseball/mlb/odds',JINA_READER='https://r.jina.ai/';
 const APP_VERSION='V7.8.6',MODEL_VERSION='V7.0',DATA_SCHEMA=2,MARKOV_REACH_CAL=1.04,DIST_STRUCT_WEIGHT=.55;
@@ -43050,7 +43065,51 @@ $('#resetAll').onclick=async()=>{
   }
 };
 
-async function boot(){rankAuditRunInvariantSelfTest();window.__MLB_SETTLEMENT_INTEGRITY__=settlementIntegritySelfTest();decisionTraceRunIntegritySelfTest();safeOddsRunIntegritySelfTest();safeImportRunIntegritySelfTest();policyCohortRunIntegritySelfTest();crossSystemRunIntegritySelfTest();finalIntegrityRunSuite();renderOriginWarning();await initPersistentStore();/* V7.8.6 FINAL INTEGRITY POST-INIT REFRESH */try{const next=runCoreSelfTests();window.MLB_SELF_TESTS=next;finalIntegrityRunSuite();}catch(e){console.warn('Final Integrity post-init refresh',e)}migrateV70Focus();if(!STORE.getItem('mlb_v5_history_migrated'))migrateLegacyHistory(false);repairLabHistory();$('#date').value=localDay();loadCfg();migrateRankingToCensus();renderHistory();renderRollingBackupDashboard();renderLab();renderUnifiedSettlementStatus();renderTeams();renderCensus();renderRanking();await loadDay();rollingBackupNativeRestore().then(()=>rollingBackupCreate('DAILY')).then(()=>renderRollingBackupDashboard()).catch(()=>{});settleAllUnified(true,40).catch(()=>{})}boot();
+async function boot(){
+  /*
+   * V7.8.6 CLEAN STARTUP + SHADOW ONLY V1
+   * Arranque operacional únicamente.
+   * NO ejecuta suites de Auditoría/Core Self Tests durante startup.
+   */
+  renderOriginWarning();
+
+  await initPersistentStore();
+
+  migrateV70Focus();
+
+  if(!STORE.getItem('mlb_v5_history_migrated')){
+    migrateLegacyHistory(false);
+  }
+
+  repairLabHistory();
+
+  $('#date').value=localDay();
+  loadCfg();
+
+  /*
+   * La migración histórica ya existente se conserva.
+   * No ejecutamos auditorías ni replays retrospectivos.
+   */
+  migrateRankingToCensus();
+
+  renderHistory();
+  renderRollingBackupDashboard();
+  renderLab();
+  renderUnifiedSettlementStatus();
+  renderTeams();
+  renderCensus();
+  renderRanking();
+
+  await loadDay();
+
+  rollingBackupNativeRestore()
+    .then(()=>rollingBackupCreate('DAILY'))
+    .then(()=>renderRollingBackupDashboard())
+    .catch(()=>{});
+
+  settleAllUnified(true,40).catch(()=>{});
+}
+boot();
 
 /* V7.8.3B HOME DASHBOARD REFRESH */
 

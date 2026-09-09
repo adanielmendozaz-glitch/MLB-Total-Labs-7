@@ -3167,75 +3167,18 @@ db.vaultDeferredReconcile=async function(reason='deferred'){
 };
 
 /*
- * Envolvemos init, pero NO alteramos su lógica.
- * La reparación empieza sólo DESPUÉS de que init terminó con éxito.
+ * V7.8.6 CLEAN STARTUP + SHADOW ONLY V1
+ *
+ * Data Vault Sync Guard V2:
+ * se conserva el código de reconciliación manual,
+ * pero se DESACTIVAN sus disparadores automáticos:
+ * - no post-init a 900 ms
+ * - no intervalo cada 15 s
+ * - no reconcile automático al resume
+ *
+ * La inicialización SQLite normal sigue intacta.
  */
-const originalInit=
-  db.init.bind(db);
-
-db.init=async function(){
-  const ok=
-    await originalInit();
-
-  if(ok!==true){
-    return ok;
-  }
-
-  clearTimeout(
-    this.__vaultSyncV2Timer
-  );
-
-  this.__vaultSyncV2Timer=
-    setTimeout(()=>{
-      this.vaultDeferredReconcile(
-        'post-init'
-      ).catch(e=>
-        console.warn(
-          'Vault post-init:',
-          e
-        )
-      );
-    },900);
-
-  return true;
-};
-
-/*
- * Guardia ligera en runtime:
- * sólo compara/repara si la app está visible.
- * No ejecuta escrituras si ambas copias ya coinciden.
- */
-db.__vaultSyncV2Interval=
-  setInterval(()=>{
-    if(
-      document.visibilityState==='visible' &&
-      db.ready===true
-    ){
-      db.vaultDeferredReconcile(
-        'runtime'
-      ).catch(()=>{});
-    }
-  },15000);
-
-document.addEventListener(
-  'visibilitychange',
-  ()=>{
-    if(
-      document.visibilityState==='visible' &&
-      db.ready===true
-    ){
-      setTimeout(()=>{
-        db.vaultDeferredReconcile(
-          'resume'
-        ).catch(()=>{});
-      },700);
-    }
-  }
-);
-
-console.info(
-  'V7.8.6 Data Vault Sync Guard V2 activo'
-);
+console.info('V7.8.6 Clean Startup · reconciliación diferida automática desactivada');
 
 })();
 
