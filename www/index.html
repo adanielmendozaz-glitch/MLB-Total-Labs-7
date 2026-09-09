@@ -11648,7 +11648,58 @@ async function loadAutoOdds(
 async function requestPersistentStorage(){try{if(navigator.storage?.persist){const ok=await navigator.storage.persist();return ok}}catch{}return false}
 function unstableLocalOrigin(){return location.protocol==='file:'||location.protocol==='content:'||location.origin==='null'||String(location.href).startsWith('content:')}
 function renderOriginWarning(){const e=$('#originWarning');if(!e)return;if(unstableLocalOrigin()){e.className='origin-warning';e.innerHTML='<b>Modo archivo local de Android:</b> Chrome puede asignar un origen temporal a content:// y borrar/aislar localStorage e IndexedDB al cerrar por completo. El Censo no puede garantizar permanencia en este modo. Para historial realmente persistente usa la versión PWA instalada desde HTTPS.'}else{e.className='origin-warning ok';e.innerHTML='<b>Origen estable:</b> historial, Censo y caché de líneas usan almacenamiento del mismo sitio. La app solicitará almacenamiento persistente cuando pulses Actualizar todo.'}}
-async function refreshEverything(){if(S.refreshingAll)return;S.refreshingAll=true;const b=$('#refreshAll');if(b){b.disabled=true;b.innerHTML='<span class="loader"></span> Actualizando'}try{await requestPersistentStorage();status('<span class="loader"></span> 1/3 Cargando jornada MLB…');await loadDay(true,true);status('<span class="loader"></span> 2/3 Actualizando líneas y momios automáticos…');let lines=0;try{lines=await loadAutoOdds($('#date').value,true)}catch(e){status(`Jornada cargada; líneas automáticas fallaron: ${esc(e.message)}. Se usarán líneas guardadas/modelo donde falten.`,'err')}renderGames();status(`<span class="loader"></span> 3/3 Ejecutando Escaneo LAB Full Game · ${lines} líneas automáticas…`);await scanDay('lab');document.querySelector('.tab[data-tab="ranking"]')?.click();status(`Actualización terminada · ${S.games.length} juegos · ${S.odds.size} líneas Full Game (${esc(S.publicOddsStatus.source||'sin fuente')}) · Ranking censado.`,'ok')}finally{S.refreshingAll=false;if(b){b.disabled=false;b.textContent='↻ Actualizar todo'}}}
+async function refreshEverything(){
+  if(S.refreshingAll)return;
+
+  S.refreshingAll=true;
+  const b=$('#refreshAll');
+
+  if(b){
+    b.disabled=true;
+    b.innerHTML='<span class="loader"></span> Actualizando datos';
+  }
+
+  try{
+    await requestPersistentStorage();
+
+    status('<span class="loader"></span> 1/2 Cargando jornada MLB…');
+    await loadDay(true,true);
+
+    status('<span class="loader"></span> 2/2 Actualizando líneas y momios automáticos…');
+
+    let lines=0;
+
+    try{
+      lines=await loadAutoOdds($('#date').value,true);
+    }catch(e){
+      status(
+        'Jornada cargada; líneas automáticas fallaron: '+esc(e.message)+
+        '. Se usarán líneas guardadas/modelo donde falten.',
+        'err'
+      );
+    }
+
+    restoreCurrentAnalysesFromLab($('#date').value,{force:false});
+
+    renderGames();
+    renderRanking();
+    renderCensus();
+
+    status(
+      'Datos actualizados · '+S.games.length+
+      ' juegos · '+S.odds.size+
+      ' líneas Full Game ('+esc(S.publicOddsStatus.source||'sin fuente')+
+      ') · NO se ejecutó Escaneo LAB.',
+      'ok'
+    );
+  }finally{
+    S.refreshingAll=false;
+    if(b){
+      b.disabled=false;
+      b.textContent='↻ Actualizar datos';
+    }
+  }
+}
 
 function firstStat(d){for(const b of d?.stats||[])if(b.splits?.length)return b.splits[0].stat||{};return{}}function innings(x){const s=String(x||'0');if(!s.includes('.'))return n(s);const [a,b]=s.split('.');return n(a)+clamp(n(b?.[0]),0,2)/3}
 async function teamStats(id){const [h,p]=await Promise.all([fetchJ(`${API}/teams/${id}/stats?stats=season&group=hitting`,3600000),fetchJ(`${API}/teams/${id}/stats?stats=season&group=pitching`,3600000)]);return{hit:firstStat(h),pitch:firstStat(p)}}
@@ -19130,7 +19181,312 @@ function renderShadowIntegrity(){
 }
 
 
-async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);let shadowCapture=null;try{shadowCapture=teamShadowCaptureOfficial(g,ev,built,best)}catch(shadowError){console.warn('TEAM SHADOW capture',shadowError)}$('#results').innerHTML=resultHtml(g,built,ev,best,N)+teamShadowAnalysisCardHtml(g,best,shadowCapture?.row||null);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
+
+/* V7.8.6 CURRENT ANALYSIS + SAFE WORKFLOW V1 */
+
+function mlbLabQualityScore(row){
+  const direct = Number(row?.dataQualitySnapshot?.score);
+  if(Number.isFinite(direct)) return direct;
+
+  const snap = Number(row?.predictionSnapshot?.dataQuality?.score);
+  if(Number.isFinite(snap)) return snap;
+
+  let score = 0;
+  if(row?.awayLineupConfirmed) score += 20;
+  if(row?.homeLineupConfirmed) score += 20;
+  if(row?.awayBullpenAutomatic) score += 10;
+  if(row?.homeBullpenAutomatic) score += 10;
+  score += Math.min(40, Math.max(0, Number(row?.statcastReady)||0) * (40/18));
+  return Math.round(score);
+}
+
+function mlbLabRowTime(row){
+  const t = Date.parse(
+    row?.updated ||
+    row?.analysisLineAt ||
+    row?.predictionSnapshot?.capturedAt ||
+    row?.created ||
+    ''
+  );
+  return Number.isFinite(t) ? t : 0;
+}
+
+function mlbLineEqual(a,b){
+  const x = Number(a), y = Number(b);
+  return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x-y) < 0.001;
+}
+
+/*
+ * Protección monotónica de calidad LAB:
+ * una fila PENDING de peor calidad no puede reemplazar
+ * una PENDING mejor con el mismo id/mercado/línea/lado.
+ * FINAL/PUSH siempre pueden avanzar el estado.
+ */
+(function installLabQualityGuard(){
+  const original = window.saveLab;
+  if(typeof original !== 'function' || original.__qualityGuardV1) return;
+
+  const wrapped = function(nextRows){
+    if(!Array.isArray(nextRows)) return original.apply(this, arguments);
+
+    const previous = typeof lab === 'function' ? lab() : [];
+    const oldById = new Map(
+      (Array.isArray(previous) ? previous : [])
+        .filter(r => r?.id)
+        .map(r => [String(r.id), r])
+    );
+
+    const protectedRows = nextRows.map(incoming => {
+      const old = oldById.get(String(incoming?.id || ''));
+      if(!old) return incoming;
+
+      const oldStatus = String(old?.status || '').toUpperCase();
+      const newStatus = String(incoming?.status || '').toUpperCase();
+
+      if(oldStatus !== 'PENDING' || newStatus !== 'PENDING'){
+        return incoming;
+      }
+
+      const sameIdentity =
+        String(old?.gamePk) === String(incoming?.gamePk) &&
+        String(old?.market || '') === String(incoming?.market || '') &&
+        String(old?.side || '') === String(incoming?.side || '') &&
+        mlbLineEqual(old?.line, incoming?.line);
+
+      if(!sameIdentity) return incoming;
+
+      const oldQ = mlbLabQualityScore(old);
+      const newQ = mlbLabQualityScore(incoming);
+
+      if(newQ < oldQ){
+        return old;
+      }
+
+      if(newQ === oldQ && mlbLabRowTime(incoming) < mlbLabRowTime(old)){
+        return old;
+      }
+
+      return incoming;
+    });
+
+    return original.call(this, protectedRows);
+  };
+
+  wrapped.__qualityGuardV1 = true;
+  wrapped.__original = original;
+  window.saveLab = wrapped;
+})();
+
+async function mlbSafeCommit(kind, data, timeoutMs=12000){
+  const guard = window.MLB_DURABILITY_GUARD;
+
+  if(!guard || typeof guard.commit !== 'function'){
+    console.warn(MARK, 'Durable Guard no disponible para', kind);
+    return false;
+  }
+
+  try{
+    const result = await Promise.race([
+      Promise.resolve(guard.commit(kind, data)),
+      new Promise(resolve => setTimeout(() => resolve(false), timeoutMs))
+    ]);
+    return result === true;
+  }catch(err){
+    console.warn(MARK, 'commit durable', kind, err);
+    return false;
+  }
+}
+
+async function mlbFlushCriticalState(){
+  try{
+    const jobs = [];
+
+    if(typeof bets === 'function'){
+      jobs.push(mlbSafeCommit('bets', bets(), 6000));
+    }
+    if(typeof lab === 'function'){
+      jobs.push(mlbSafeCommit('lab', lab(), 6000));
+    }
+    if(typeof rankCensus === 'function'){
+      jobs.push(mlbSafeCommit('census', rankCensus(), 6000));
+    }
+
+    await Promise.allSettled(jobs);
+  }catch(err){
+    console.warn(MARK, 'flush', err);
+  }
+}
+
+/*
+ * Reconstruye la vista actual desde LAB al abrir/reabrir.
+ * No modifica LAB, Censo, Bets ni el Motor.
+ *
+ * Preferencia:
+ * 1. línea vigente del sportsbook si existe;
+ * 2. mayor Data Quality;
+ * 3. snapshot más reciente.
+ */
+function restoreCurrentAnalysesFromLab(date, options={}){
+  if(typeof lab !== 'function' || !window.S?.analyses) return 0;
+
+  const force = options.force === true;
+  const rows = (lab() || []).filter(r =>
+    String(r?.date || '') === String(date || '') &&
+    String(r?.market || 'TOTAL').toUpperCase() === 'TOTAL' &&
+    ['PENDING','FINAL','PUSH'].includes(String(r?.status || '').toUpperCase()) &&
+    Number.isFinite(Number(r?.line))
+  );
+
+  const byPair = new Map();
+
+  for(const r of rows){
+    const key = [
+      String(r.gamePk),
+      Number(r.line).toFixed(3)
+    ].join('|');
+
+    if(!byPair.has(key)){
+      byPair.set(key, {gamePk:Number(r.gamePk), line:Number(r.line), rows:[]});
+    }
+    byPair.get(key).rows.push(r);
+  }
+
+  const candidatesByGame = new Map();
+
+  for(const pair of byPair.values()){
+    const over = pair.rows
+      .filter(r => String(r?.side || '').toUpperCase() === 'OVER')
+      .sort((a,b) => mlbLabRowTime(b)-mlbLabRowTime(a))[0];
+
+    const under = pair.rows
+      .filter(r => String(r?.side || '').toUpperCase() === 'UNDER')
+      .sort((a,b) => mlbLabRowTime(b)-mlbLabRowTime(a))[0];
+
+    if(!over || !under) continue;
+
+    const q = Math.min(
+      mlbLabQualityScore(over),
+      mlbLabQualityScore(under)
+    );
+
+    const t = Math.max(
+      mlbLabRowTime(over),
+      mlbLabRowTime(under)
+    );
+
+    const candidate = {
+      gamePk:pair.gamePk,
+      line:pair.line,
+      over,
+      under,
+      quality:q,
+      time:t
+    };
+
+    if(!candidatesByGame.has(pair.gamePk)){
+      candidatesByGame.set(pair.gamePk, []);
+    }
+    candidatesByGame.get(pair.gamePk).push(candidate);
+  }
+
+  let restored = 0;
+
+  for(const [gamePk, candidates] of candidatesByGame){
+    if(!force && S.analyses.has(gamePk)) continue;
+
+    const bookLine = Number(S.odds?.get(gamePk)?.line);
+
+    candidates.sort((a,b) => {
+      const am = Number.isFinite(bookLine) && mlbLineEqual(a.line, bookLine) ? 1 : 0;
+      const bm = Number.isFinite(bookLine) && mlbLineEqual(b.line, bookLine) ? 1 : 0;
+      return (bm-am) || (b.quality-a.quality) || (b.time-a.time);
+    });
+
+    const c = candidates[0];
+    if(!c) continue;
+
+    const makeSide = r => ({
+      p:Number(r?.ensembleP),
+      win:Number(r?.winProb),
+      loss:Number(r?.lossProb),
+      raw:Number(r?.rawP),
+      models:r?.modelProbs || {}
+    });
+
+    const push = Number.isFinite(Number(c.over?.pushProb))
+      ? Number(c.over.pushProb)
+      : Number(c.under?.pushProb) || 0;
+
+    const ev = {
+      market:'TOTAL',
+      key:'total',
+      label:c.over?.label || c.under?.label || 'Total juego completo',
+      line:c.line,
+      source:c.over?.lineSource || c.under?.lineSource || 'LAB',
+      labType:c.over?.labType || c.under?.labType || 'SPORTSBOOK',
+      push,
+      over:makeSide(c.over),
+      under:makeSide(c.under)
+    };
+
+    let best = null;
+    try{
+      best = selectBest([ev]);
+    }catch(err){
+      console.warn(MARK, 'selectBest restore', gamePk, err);
+      continue;
+    }
+
+    const ref = c.over || c.under;
+
+    S.analyses.set(gamePk, {
+      built:{
+        mean:{
+          total:Number(ref?.mean),
+          f5:Number(ref?.f5Mean),
+          away:Number(ref?.awayMean),
+          home:Number(ref?.homeMean)
+        },
+        ctx:null
+      },
+      ev:[ev],
+      best,
+      inputs:{
+        line:c.line,
+        oo:null,
+        uo:null,
+        lineSource:ev.source
+      },
+      restoredFromLab:true,
+      canonicalQuality:c.quality,
+      canonicalUpdated:new Date(c.time || Date.now()).toISOString()
+    });
+
+    restored++;
+  }
+
+  return restored;
+}
+
+window.MLB_CURRENT_ANALYSIS_V1 = {
+  version:'V1',
+  restore:restoreCurrentAnalysesFromLab,
+  flush:mlbFlushCriticalState,
+  quality:mlbLabQualityScore
+};
+
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden'){
+    mlbFlushCriticalState();
+  }
+});
+
+window.addEventListener('pagehide', () => {
+  mlbFlushCriticalState();
+});
+
+
+async function runCurrent(g,d){const rs=$('#runStatus');rs.classList.remove('hidden');rs.className='status';rs.firstElementChild.innerHTML='<span class="loader"></span> Ejecutando V7.0 · Full Game O/U únicamente…';rs.lastElementChild.textContent='0%';$('#results').innerHTML='';const inputs=readMarketInputs();if(!Number.isFinite(inputs.line)){rs.className='status err';rs.firstElementChild.textContent='Se necesita una línea válida de Total de juego completo.';rs.lastElementChild.textContent='';return}saveMarket(g.gamePk,inputs);const ctx=contextFromInputs(g,d),N=Math.max(500,n($('#sims').value,8000)),seedExtra=JSON.stringify(inputs);try{const built=await buildModels(ctx,N,p=>rs.lastElementChild.textContent=`${Math.round(p)}%`,seedExtra);built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',inputs.line,inputs.oo,inputs.uo,'TOTAL',inputs.lineSource),key:'total',label:'Total juego completo'}];const best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs});addLabForecast(g,ev,built);await mlbSafeCommit('lab',lab());let shadowCapture=null;try{shadowCapture=teamShadowCaptureOfficial(g,ev,built,best)}catch(shadowError){console.warn('TEAM SHADOW capture',shadowError)}$('#results').innerHTML=resultHtml(g,built,ev,best,N)+teamShadowAnalysisCardHtml(g,best,shadowCapture?.row||null);bindBetSelector(ev,best);$('#saveBet').onclick=()=>saveBetFromResult(g,ev,built);rs.classList.add('hidden');renderGames();renderRanking();persistRankingDraft();await mlbSafeCommit('census',rankCensus());renderLab();renderTeams()}catch(e){rs.className='status err';rs.firstElementChild.textContent=`Error: ${e.message}`;rs.lastElementChild.textContent=''}}
 function bets(){try{const x=JSON.parse(STORE.getItem('mlb_v5_bets')||'[]');return Array.isArray(x)?x:[]}catch{return[]}}function saveBets(x){const safe=Array.isArray(x)?x:[];STORE.setItem('mlb_v5_bets',JSON.stringify(safe));window.MLBDB?.saveBetsSnapshot?.(safe).catch(e=>console.warn('Apuestas SQLite',e));if(typeof renderBank==='function')renderBank()}
 function legacyStatus(x){const v=String(x.status??x.outcome??'').toUpperCase();if(['WIN','W','GANADA'].includes(v))return'WIN';if(['LOSS','L','PERDIDA','PERDIDA'].includes(v))return'LOSS';if(['PUSH','P','VOID','NULA'].includes(v))return'PUSH';return'PENDING'}
 function normalizeBetRow(r={},i=0,source='import'){const po=parseOdds(r.oddsDecimal??r.odds),odds=po.valid?po.decimal:1.91,american=po.valid?po.american:-110,status=legacyStatus(r),stake=n(r.stake)>0?n(r.stake):1,legacyStake=!(n(r.stake)>0),pval=Number.isFinite(+r.p)?+r.p:Number.isFinite(+r.prob)?+r.prob:NaN,profit=Number.isFinite(+r.profit)?+r.profit:(status==='WIN'?stake*(odds-1):status==='LOSS'?-stake:status==='PUSH'?0:null);return{id:String(r.id??`legacy_${source}_${Date.now()}_${i}`),gamePk:n(r.gamePk,r.gameId||0),date:String(r.date||r.gameDate||r.officialDate||''),away:String(r.away||r.awayTeam||'Visitante'),home:String(r.home||r.homeTeam||'Local'),market:String(r.market||'TOTAL').toUpperCase(),label:String(r.label||r.market||'Total juego'),line:n(r.line),side:String(r.side||'OVER').toUpperCase(),odds,american,stake,p:pval,edge:Number.isFinite(+r.edge)?+r.edge:NaN,status,created:r.created||new Date().toISOString(),settled:r.settled||null,profit,awayScore:r.awayScore??null,homeScore:r.homeScore??null,actual:r.actual??null,legacy:source!=='v5',legacyStake,sourceVersion:source,
@@ -19447,7 +19803,7 @@ function refreshDisciplinePreview(evals){
 
 
 /* V7.8.2C PERSISTENT PREDICTION SNAPSHOTS */
-function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value),stake=n($('#betStake').value),choice=selectedBetChoice(evals);if(!o.valid||stake<=0){alert('Captura un momio válido y stake mayor a cero.');return}const risk=betRiskSnapshot(stake);
+async function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value),stake=n($('#betStake').value),choice=selectedBetChoice(evals);if(!o.valid||stake<=0){alert('Captura un momio válido y stake mayor a cero.');return}const risk=betRiskSnapshot(stake);
      const discipline=disciplineSnapshot(evals,choice);
      const e=choice.ev,p=choice.assessment,z=e[choice.side.toLowerCase()],row={id:`b_${Date.now()}_${rand()}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built?.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built?.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built?.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built?.ctx?.home?.bullpen?.automatic,market:'TOTAL',label:'Total juego completo',line:e.line,lineSource:e.source,side:choice.side,odds:o.decimal,american:o.american,
      stake,
@@ -19481,7 +19837,7 @@ predictionSnapshot:predictionSnapshot(
   choice.side,
   built,
   g
-)};const a=bets();a.push(row);saveBets(a);renderHistory();const note=$('#betSaveStatus');if(note){note.className='okbox';note.innerHTML=`Guardada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`}status(STORAGE_MODE==='memoria temporal'?'Apuesta guardada sólo durante esta sesión; exporta JSON.':'Apuesta Full Game guardada y persistida.',STORAGE_MODE==='memoria temporal'?'err':'ok')}
+)};row.snapshotLocked=true;row.snapshotLockedAt=row.created||new Date().toISOString();const a=bets();a.push(row);saveBets(a);renderHistory();const durableOk=await mlbSafeCommit('bets',a);const note=$('#betSaveStatus');if(note){note.className=durableOk?'okbox':'danger';note.innerHTML=durableOk?`Guardada y confirmada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`:`La apuesta aparece en pantalla, pero <b>no recibió confirmación durable</b>. No cierres la app y exporta Data Vault.`;}status(durableOk?'Apuesta Full Game guardada · SQLite/almacenamiento confirmados.':'PERSISTENCIA ALERTA · apuesta sin confirmación durable.',durableOk?'ok':'err')}
 window.deleteBet=id=>{if(!confirm('¿Eliminar esta apuesta del historial?'))return;saveBets(bets().filter(x=>String(x.id)!==String(id)));renderHistory()};
 function settleValue(row,a,h){const total=row.market==='AWAY_TT'?a:row.market==='HOME_TT'?h:a+h;if(row.market==='F5')return null;if(total===row.line)return'PUSH';const win=row.side==='OVER'?total>row.line:total<row.line;return win?'WIN':'LOSS'}
 
@@ -34510,9 +34866,47 @@ gameDate:
 awayAbbr:r.g.teams.away.team.abbreviation||r.g.teams.away.team.name,homeAbbr:r.g.teams.home.team.abbreviation||r.g.teams.home.team.name,label:r.ev.label,market:r.ev.market,side:r.pick.side,line:r.ev.line,p:r.pick.p,pushProb:r.ev.push,lineSource:r.ev.source,edge:r.pick.edge,odds:o.valid?o.decimal:null,signal:sig.txt,signalClass:sig.cls,pass:r.pick.pass,...decisionAuditRowFields(r.pick,r.ev)}})}
 function persistRankingDraft(){const date=$('#date')?.value||'',rows=currentRankViewRows(currentRankingRows(),true);if(rows.length){saveRankDraft(date,rows);syncRankingCensus(date,rows);renderCensus()}return rows.length}
 function rankArchiveDates(){const a=new Set;for(const [d,x] of Object.entries(rankCensus().days||{}))if((x.rows||[]).some(r=>!r.market||r.market==='TOTAL'))a.add(d);for(const [d,x] of Object.entries(rankDraftStore()))if((x.rows||[]).some(r=>!r.market||r.market==='TOTAL'))a.add(d);return[...a].sort().reverse()}
-function rankViewForDate(date){const live=S.loadedDay===date?currentRankingRows():[];if(live.length){const rows=currentRankViewRows(live,false);const pre=currentRankViewRows(live,true);if(pre.length){saveRankDraft(date,pre);syncRankingCensus(date,pre)}const day=censusDay(date);return{kind:'LIVE',rows:day?.rows?.length?day.rows:rows,when:day?.updated||new Date().toISOString()}}const day=censusDay(date);if(day?.rows?.length)return{kind:'CENSUS',rows:day.rows.map((r,i)=>({...r,rank:r.rank||i+1,signalClass:r.signalClass||censusSignalClass(r.signal),pass:r.pass??r.signal==='PASS'})),when:day.updated||day.created};const draft=rankDraft(date);if(draft?.rows?.length){syncRankingCensus(date,draft.rows);const c=censusDay(date);return{kind:'CENSUS',rows:c?.rows||draft.rows,when:c?.updated||draft.savedAt}}return{kind:'EMPTY',rows:[],when:null}}
+function rankViewForDate(date){
+  const live=S.loadedDay===date?currentRankingRows():[];
+
+  if(live.length){
+    const rows=currentRankViewRows(live,false);
+    return{
+      kind:'LIVE',
+      rows,
+      when:new Date().toISOString()
+    };
+  }
+
+  const day=censusDay(date);
+
+  if(day?.rows?.length){
+    return{
+      kind:'CENSUS',
+      rows:day.rows.map((r,i)=>({
+        ...r,
+        rank:r.rank||i+1,
+        signalClass:r.signalClass||censusSignalClass(r.signal),
+        pass:r.pass??r.signal==='PASS'
+      })),
+      when:day.updated||day.created
+    };
+  }
+
+  const draft=rankDraft(date);
+
+  if(draft?.rows?.length){
+    return{
+      kind:'DRAFT',
+      rows:draft.rows,
+      when:draft.savedAt
+    };
+  }
+
+  return{kind:'EMPTY',rows:[],when:null};
+}
 function rankingDirectionAudit(rows=[]){const live=rows.filter(r=>String(r.signal||'').toUpperCase()!=='PASS'&&(r.side==='OVER'||r.side==='UNDER')),nn=live.length;if(!nn)return{n:0,over:0,under:0,share:0,side:''};const over=live.filter(r=>r.side==='OVER').length,under=nn-over,share=Math.max(over,under)/nn,side=over>=under?'OVER':'UNDER';return{n:nn,over,under,share,side}}
-function renderRanking(){const date=$('#date').value,view=rankViewForDate(date),rows=view.rows||[],dates=rankArchiveDates(),mode=view.kind==='LIVE'?'Análisis actual · guardado en Censo':view.kind==='CENSUS'?'Censo persistente · disponible sin internet':'Sin ranking guardado',modeCls=view.kind==='CENSUS'?'live':'',time=view.when?new Date(view.when).toLocaleString('es-MX'):'—',dir=rankingDirectionAudit(rows),biasWarn=dir.n>=8&&dir.share>=.80?`<div class="warn" style="margin:10px 0"><b>Auditoría direccional:</b> ${Math.round(dir.share*100)}% de los picks no-PASS son ${dir.side}. No se fuerza equilibrio; esta alerta sólo detecta una posible inclinación para revisar.</div>`:'';$('#rankContent').innerHTML=`${biasWarn}<div class="rank-head"><div><b>Ranking del día</b><div class="rank-snapshot"><span class="tag ${modeCls}">${esc(mode)}</span> ${rows.length?`· ${rows.length} picks · ${esc(time)}`:''}</div></div><div class="actions"><button class="btn primary small" id="openCensus">Abrir Censo</button></div></div>${dates.length?`<div class="section" style="padding:10px;margin-bottom:10px"><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div class="field" style="min-width:180px;flex:1"><label>Historial permanente</label><select id="rankArchiveDate">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(d)}${censusDay(d)?' · censado':' · respaldo'}</option>`).join('')}</select></div><button class="btn small" id="openArchivedRank">Abrir fecha guardada</button></div><div class="smalltxt" style="margin-top:7px">El Ranking entra automáticamente al Censo. No hay botón de congelar ni depende de tener internet para volver a verlo.</div></div>`:''}${rows.length?`<div class="rank">${rows.map((r,i)=>{const sigCls=r.signalClass||censusSignalClass(r.signal),sigTxt=r.signal||'LAB',o=Number.isFinite(+r.odds)?{valid:true,decimal:+r.odds}:{valid:false};return`<div class="rankrow"><div class="num">${r.rank||i+1}</div><div><b>${esc(r.awayAbbr)} @ ${esc(r.homeAbbr)} · ${esc(r.side)} ${r.line} <span class="signalchip ${sigCls}">${esc(sigTxt)}</span></b><div class="meta">${esc(r.label||r.market)} · decisión ${pct(r.p)} · push ${pct(n(r.pushProb))} · ${sourceLabel(r.lineSource)} ${Number.isFinite(+r.edge)?`· edge ${pct(+r.edge)}`:''} ${o.valid?`· ${oddsBoth(o.decimal)}`:'· sin momio'}</div></div><div class="kpi ${r.pass?'pre pass':r.side==='OVER'?'pre over':'pre under'}">${pct(r.p)}</div></div>`}).join('')}</div>`:'<div class="empty">Todavía no hay ranking para esta fecha. En cuanto el modelo produzca uno, quedará censado automáticamente y no desaparecerá al perder conexión.</div>'}`;$('#openCensus').onclick=()=>document.querySelector('.tab[data-tab="census"]')?.click();const b=$('#openArchivedRank');if(b)b.onclick=()=>{const v=$('#rankArchiveDate')?.value;if(!v)return;$('#date').value=v;S.loadedDay='';renderRanking();renderCensus();status(`Ranking censado de ${v} abierto sin depender de conexión.`,'ok')}}
+function renderRanking(){const date=$('#date').value,view=rankViewForDate(date),rows=view.rows||[],dates=rankArchiveDates(),mode=view.kind==='LIVE'?'Análisis actual · estado canónico':view.kind==='CENSUS'?'Censo persistente · disponible sin internet':view.kind==='DRAFT'?'Respaldo Ranking · sólo lectura':'Sin ranking guardado',modeCls=view.kind==='CENSUS'?'live':'',time=view.when?new Date(view.when).toLocaleString('es-MX'):'—',dir=rankingDirectionAudit(rows),biasWarn=dir.n>=8&&dir.share>=.80?`<div class="warn" style="margin:10px 0"><b>Auditoría direccional:</b> ${Math.round(dir.share*100)}% de los picks no-PASS son ${dir.side}. No se fuerza equilibrio; esta alerta sólo detecta una posible inclinación para revisar.</div>`:'';$('#rankContent').innerHTML=`${biasWarn}<div class="rank-head"><div><b>Ranking del día</b><div class="rank-snapshot"><span class="tag ${modeCls}">${esc(mode)}</span> ${rows.length?`· ${rows.length} picks · ${esc(time)}`:''}</div></div><div class="actions"><button class="btn primary small" id="openCensus">Abrir Censo</button></div></div>${dates.length?`<div class="section" style="padding:10px;margin-bottom:10px"><div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div class="field" style="min-width:180px;flex:1"><label>Historial permanente</label><select id="rankArchiveDate">${dates.map(d=>`<option value="${esc(d)}" ${d===date?'selected':''}>${esc(d)}${censusDay(d)?' · censado':' · respaldo'}</option>`).join('')}</select></div><button class="btn small" id="openArchivedRank">Abrir fecha guardada</button></div><div class="smalltxt" style="margin-top:7px">El Ranking entra automáticamente al Censo. No hay botón de congelar ni depende de tener internet para volver a verlo.</div></div>`:''}${rows.length?`<div class="rank">${rows.map((r,i)=>{const sigCls=r.signalClass||censusSignalClass(r.signal),sigTxt=r.signal||'LAB',o=Number.isFinite(+r.odds)?{valid:true,decimal:+r.odds}:{valid:false};return`<div class="rankrow"><div class="num">${r.rank||i+1}</div><div><b>${esc(r.awayAbbr)} @ ${esc(r.homeAbbr)} · ${esc(r.side)} ${r.line} <span class="signalchip ${sigCls}">${esc(sigTxt)}</span></b><div class="meta">${esc(r.label||r.market)} · decisión ${pct(r.p)} · push ${pct(n(r.pushProb))} · ${sourceLabel(r.lineSource)} ${Number.isFinite(+r.edge)?`· edge ${pct(+r.edge)}`:''} ${o.valid?`· ${oddsBoth(o.decimal)}`:'· sin momio'}</div></div><div class="kpi ${r.pass?'pre pass':r.side==='OVER'?'pre over':'pre under'}">${pct(r.p)}</div></div>`}).join('')}</div>`:'<div class="empty">Todavía no hay ranking para esta fecha. En cuanto el modelo produzca uno, quedará censado automáticamente y no desaparecerá al perder conexión.</div>'}`;$('#openCensus').onclick=()=>document.querySelector('.tab[data-tab="census"]')?.click();const b=$('#openArchivedRank');if(b)b.onclick=()=>{const v=$('#rankArchiveDate')?.value;if(!v)return;$('#date').value=v;S.loadedDay='';renderRanking();renderCensus();status(`Ranking censado de ${v} abierto sin depender de conexión.`,'ok')}}
 
 /* V7.8.6 PREMIUM RANKING R2B */
 function premiumRankingBodyHtml(rows=[]){
@@ -35029,7 +35423,7 @@ function gameGroupKey(g){const x=gameMeta(g);return x.live?'LIVE':x.final?'FINAL
 function cardAnalysisHtml(g){const a=S.analyses.get(g.gamePk);if(!a)return'';const s=cardSummary(g),one=x=>x?`<div class="sc-market"><small>Full Game O/U</small><b class="${x.sig.cls}">${esc(x.pick)} · ${pct(x.p)}</b></div>`:`<div class="sc-market"><small>Full Game O/U</small><b>—</b></div>`;return `<div class="sc-analysis">${one(s.total)}</div>`}
 function gameScoreCard(g){const x=gameMeta(g),q=S.odds.get(g.gamePk),away=g.teams.away,home=g.teams.home,a=away.probablePitcher?.fullName||'Por confirmar',h=home.probablePitcher?.fullName||'Por confirmar',status=x.live?inningSpanish(g):x.final?'Final':localTime(g.gameDate),stateCls=x.live?'live':x.final?'final':'',cardCls=x.live?'live-game':x.final?'final-game':'',ls=g.linescore||{},balls=n(ls.balls),strikes=n(ls.strikes),outs=n(ls.outs),ou=q?.line??'—',score=(side)=>x.has?`<span class="sc-score">${n(side.score)}</span>`:`<span class="sc-score scheduled">${teamRecordText(side)}</span>`;return `<article class="game scorecard ${cardCls}" data-open="${g.gamePk}" role="button" tabindex="0" aria-label="Abrir ${esc(away.team.name)} contra ${esc(home.team.name)}"><div class="sc-head"><span class="sc-state ${stateCls}">${x.live?'<span class="sc-dot"></span>':''}${esc(status)}</span><span class="sc-ou">O/U ${esc(String(ou))}</span></div><div class="sc-teams"><div class="sc-team">${teamLogoHtml(away.team)}<div class="sc-name"><div class="sc-abbr">${esc(away.team.abbreviation||away.team.name)}</div><div class="sc-record">${esc(x.has?teamRecordText(away):'Visitante')}</div></div>${score(away)}</div><div class="sc-team">${teamLogoHtml(home.team)}<div class="sc-name"><div class="sc-abbr">${esc(home.team.abbreviation||home.team.name)}</div><div class="sc-record">${esc(x.has?teamRecordText(home):'Local')}</div></div>${score(home)}</div></div>${x.live?`<div class="sc-live-row"><div class="sc-count"><div class="inning">${esc(inningSpanish(g))}</div><div>B-S: <b>${balls}-${strikes}</b> · Outs: <b>${outs}</b></div></div>${diamondHtml(g)}</div>`:`<div class="sc-schedule"><div class="sc-time">${esc(x.final?'Partido terminado':localTime(g.gameDate))}</div><div class="sc-venue">${esc(g.venue?.name||'Sede por confirmar')}</div></div>`}<div class="sc-pitchers"><div class="sc-pitcher"><span class="side">V:</span><b>${esc(a)}</b></div><div class="sc-pitcher"><span class="side">L:</span><b>${esc(h)}</b></div></div>${cardAnalysisHtml(g)}<div class="sc-tap">Toca el cuadro para analizar</div></article>`}
 function renderGames(){const e=$('#games');if(!S.games.length){e.innerHTML='<div class="empty">No hay partidos para esta fecha o no se pudieron cargar.</div>';return}const order=[['LIVE','En vivo'],['UPCOMING','Próximos'],['FINAL','Finalizados']],groups=new Map(order.map(([k])=>[k,[]]));for(const g of S.games)groups.get(gameGroupKey(g)).push(g);e.innerHTML=order.map(([key,label])=>{const rows=groups.get(key);if(!rows.length)return'';return `<section class="game-group"><div class="game-group-title">${label}<span class="tag">${rows.length}</span></div><div class="game-grid">${rows.map(gameScoreCard).join('')}</div></section>`}).join('');$$('[data-open]').forEach(card=>{const open=()=>openGame(+card.dataset.open);card.onclick=open;card.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open()}}})}
-async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.loadedDay='';status('<span class="loader"></span> Cargando jornada, abridores y líneas…');try{const u=`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`;const d=await fetchJ(u,force?0:30000);S.games=(d.dates||[]).flatMap(x=>x.games||[]);S.loadedDay=day;if(!skipOdds)await loadAutoOdds(day,false).catch(e=>status(`Jornada cargada; líneas automáticas no disponibles: ${esc(e.message)}`));renderGames();renderRanking();renderCensus();$('#statusRight').textContent=`${S.games.length} juegos${S.odds.size?` · ${S.odds.size} líneas`:''}${S.oddsRemaining?` · API ${S.oddsRemaining}`:''}`;status(`${longDate(day)} · ${S.games.length} juegos cargados.`,'ok');startLive()}catch(e){const saved=rankViewForDate(day).rows.length;status(saved?`Sin conexión para cargar la jornada. Ranking guardado disponible offline: ${saved} picks.`:`No pude cargar la jornada: ${esc(e.message)}. No hay ranking guardado para esta fecha.` ,saved?'ok':'err');renderGames();renderRanking();renderCensus()}}
+async function loadDay(force=false,skipOdds=false){const day=$('#date').value;S.loadedDay='';status('<span class="loader"></span> Cargando jornada, abridores y líneas…');try{const u=`${API}/schedule?sportId=1&date=${day}&hydrate=probablePitcher,team,venue,linescore,weather,lineups`;const d=await fetchJ(u,force?0:30000);S.games=(d.dates||[]).flatMap(x=>x.games||[]);S.loadedDay=day;if(!skipOdds)await loadAutoOdds(day,false).catch(e=>status(`Jornada cargada; líneas automáticas no disponibles: ${esc(e.message)}`));restoreCurrentAnalysesFromLab(day,{force:false});renderGames();renderRanking();renderCensus();$('#statusRight').textContent=`${S.games.length} juegos${S.odds.size?` · ${S.odds.size} líneas`:''}${S.oddsRemaining?` · API ${S.oddsRemaining}`:''}`;status(`${longDate(day)} · ${S.games.length} juegos cargados.`,'ok');startLive()}catch(e){const saved=rankViewForDate(day).rows.length;status(saved?`Sin conexión para cargar la jornada. Ranking guardado disponible offline: ${saved} picks.`:`No pude cargar la jornada: ${esc(e.message)}. No hay ranking guardado para esta fecha.` ,saved?'ok':'err');renderGames();renderRanking();renderCensus()}}
 async function refreshLive(){
 
   if(
@@ -39014,7 +39408,105 @@ document.addEventListener(
 
 
 function startLive(){clearInterval(S.liveTimer);if(S.liveOn)S.liveTimer=setInterval(refreshLive,n($('#liveEvery').value,60)*1000);startClosingLineWatcher()}
-async function scanDay(mode='preview'){const isLab=mode==='lab',N=isLab?Math.max(3000,n($('#sims').value,8000)):2000,btn=isLab?$('#scanLab'):$('#scanDay');if(btn)btn.disabled=true;status(`<span class="loader"></span> ${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} · ${N.toLocaleString()} simulaciones…`);let done=0,labSaved=0,modelSkipped=0;for(const g of S.games){try{const d=await hydrateGame(g),ctx=autoContext(g,d),pre=meanProjection(ctx),def=defaultLines(g,pre),built=await buildModels(ctx,N,()=>{},JSON.stringify(def));built.ctx=ctx;const ev=[{...evaluateMarket(built.models,'total',def.line,def.oo,def.uo,'TOTAL',def.lineSource),key:'total',label:'Total juego completo'}],best=selectBest(ev);S.analyses.set(g.gamePk,{built,ev,best,inputs:def});if(isLab){const r=addLabForecast(g,ev,built,{realOnly:true});labSaved+=r.saved+r.updated;modelSkipped+=r.skippedModel||0}done++;status(`${isLab?'Escaneo LAB Full Game':'Vista rápida Full Game'} ${done}/${S.games.length}…`)}catch(e){console.warn('scan',g.gamePk,e)}}renderGames();renderRanking();persistRankingDraft();renderLab();renderCensus();renderTeams();if(btn)btn.disabled=false;status(isLab?`Escaneo LAB terminado: ${done} juegos · ${labSaved} Totales reales actualizados · ${modelSkipped} juegos sin línea real excluidos.`:`Vista rápida terminada: ${done} juegos Full Game. No modificó aprendizaje ni Brier.`,'ok')}
+async function scanDay(mode='preview'){
+  const isLab=mode==='lab';
+  const N=isLab
+    ?Math.max(3000,n($('#sims').value,8000))
+    :2000;
+  const btn=isLab?$('#scanLab'):$('#scanDay');
+
+  if(btn)btn.disabled=true;
+
+  status(
+    '<span class="loader"></span> '+
+    (isLab?'Escaneo LAB Full Game':'Vista rápida Full Game · SOLO LECTURA')+
+    ' · '+N.toLocaleString()+' simulaciones…'
+  );
+
+  let done=0,labSaved=0,modelSkipped=0;
+
+  for(const g of S.games){
+    try{
+      const d=await hydrateGame(g),
+            ctx=autoContext(g,d),
+            pre=meanProjection(ctx),
+            def=defaultLines(g,pre),
+            built=await buildModels(ctx,N,()=>{},JSON.stringify(def));
+
+      built.ctx=ctx;
+
+      const ev=[{
+        ...evaluateMarket(
+          built.models,
+          'total',
+          def.line,
+          def.oo,
+          def.uo,
+          'TOTAL',
+          def.lineSource
+        ),
+        key:'total',
+        label:'Total juego completo'
+      }];
+
+      const best=selectBest(ev);
+
+      S.analyses.set(g.gamePk,{built,ev,best,inputs:def});
+
+      if(isLab){
+        const r=addLabForecast(g,ev,built,{realOnly:true});
+        labSaved+=r.saved+r.updated;
+        modelSkipped+=r.skippedModel||0;
+      }
+
+      done++;
+
+      status(
+        (isLab?'Escaneo LAB Full Game':'Vista rápida Full Game · SOLO LECTURA')+
+        ' '+done+'/'+S.games.length+'…'
+      );
+    }catch(e){
+      console.warn('scan',g.gamePk,e);
+    }
+  }
+
+  renderGames();
+  renderRanking();
+
+  if(isLab){
+    const labOk=await mlbSafeCommit('lab',lab());
+
+    persistRankingDraft();
+    const censusOk=await mlbSafeCommit('census',rankCensus());
+
+    renderLab();
+    renderCensus();
+    renderTeams();
+
+    status(
+      'Escaneo LAB terminado: '+done+
+      ' juegos · '+labSaved+
+      ' Totales reales actualizados · '+modelSkipped+
+      ' juegos sin línea real excluidos · persistencia '+
+      (labOk&&censusOk?'CONFIRMADA':'CON ALERTA')+'.',
+      labOk&&censusOk?'ok':'err'
+    );
+  }else{
+    /*
+     * PREVIEW NO ESCRIBE:
+     * - no LAB
+     * - no Ranking Draft
+     * - no Censo
+     */
+    status(
+      'Vista rápida terminada: '+done+
+      ' juegos Full Game · SOLO LECTURA · no modificó LAB, Ranking ni Censo.',
+      'ok'
+    );
+  }
+
+  if(btn)btn.disabled=false;
+}
 /* V7.8 NATIVE EXPORT FIX */
 async function download(
   name,
