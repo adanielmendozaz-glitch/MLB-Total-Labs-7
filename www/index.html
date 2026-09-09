@@ -8979,7 +8979,7 @@ strong{
   </div>
   <div id="shadowIntegrity"></div><div id="shadowContent"></div>
 </section>
-<section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar todo</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Backup Data Vault</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="rollingBackupPanel"></div><div id="historyContent"></div></section>
+<section id="history" class="panel hidden"><div class="histbar"><button class="btn green" id="settleBets">Liquidar todo</button><button class="btn" id="migrateV4">Migrar historial V4</button><button class="btn" id="exportCsv">Exportar CSV</button><button class="btn" id="exportJson">Backup Data Vault</button><button class="btn green" id="exportRescueTotal">⤓ Exportar RESCATE TOTAL</button><label class="btn ghost" style="text-align:center">Importar JSON<input id="importJson" type="file" accept="application/json" hidden></label><button class="btn red" id="clearBets">Borrar apuestas</button></div><div id="rollingBackupPanel"></div><div id="historyContent"></div></section>
 <section id="bank" class="panel hidden">
   <div id="bankContent"></div>
 </section>
@@ -41189,6 +41189,395 @@ function renderRollingBackupDashboard(){
 }
 
 
+
+/* V7.8.6 RESCATE TOTAL EXPORT V1 */
+
+async function rescueSha256(text){
+  try{
+    if(!globalThis.crypto?.subtle)return null;
+    const data=new TextEncoder().encode(String(text));
+    const hash=await crypto.subtle.digest('SHA-256',data);
+    return [...new Uint8Array(hash)]
+      .map(x=>x.toString(16).padStart(2,'0'))
+      .join('');
+  }catch{
+    return null;
+  }
+}
+
+function rescueJsonOrRaw(raw){
+  if(raw===null || raw===undefined)return null;
+  try{return JSON.parse(raw)}
+  catch{return {__raw:String(raw)}}
+}
+
+function rescueAllLocalStorage(){
+  const out={};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(!key)continue;
+      if(
+        key.startsWith('mlb_') ||
+        key.startsWith('MLB_')
+      ){
+        out[key]=localStorage.getItem(key);
+      }
+    }
+  }catch(e){
+    out.__error=String(e?.message||e);
+  }
+  return out;
+}
+
+async function rescueAllIndexedDB(){
+  const out={};
+  try{
+    const db=await IDBSTORE.open();
+    if(!db){
+      out.__error='IndexedDB no disponible';
+      return out;
+    }
+
+    await new Promise((resolve)=>{
+      try{
+        const tx=db.transaction('kv','readonly');
+        const store=tx.objectStore('kv');
+        const req=store.openCursor();
+
+        req.onsuccess=(ev)=>{
+          const cursor=ev.target.result;
+          if(!cursor)return;
+          out[String(cursor.key)]=String(cursor.value);
+          cursor.continue();
+        };
+
+        tx.oncomplete=()=>resolve();
+        tx.onerror=()=>{
+          out.__error='IndexedDB cursor error';
+          resolve();
+        };
+      }catch(e){
+        out.__error=String(e?.message||e);
+        resolve();
+      }
+    });
+  }catch(e){
+    out.__error=String(e?.message||e);
+  }
+  return out;
+}
+
+async function rescueAllSQLite(){
+  const out={
+    ready:!!window.MLBDB?.ready,
+    rows:[]
+  };
+
+  try{
+    const db=window.MLBDB;
+    const sqlite=db?.sqlite;
+
+    if(!db?.ready || !sqlite){
+      out.error='SQLite no inicializado';
+      return out;
+    }
+
+    if(typeof sqlite.query!=='function'){
+      out.error='SQLite query() no disponible';
+      return out;
+    }
+
+    const result=await sqlite.query({
+      database:db.dbName,
+      statement:'SELECT key,value,updated_at FROM app_kv ORDER BY key',
+      values:[],
+      readonly:true
+    });
+
+    out.rows=Array.isArray(result?.values)
+      ?result.values
+      :[];
+  }catch(e){
+    out.error=String(e?.message||e);
+  }
+
+  return out;
+}
+
+function rescueCall(name,fallback=null){
+  try{
+    const fn=globalThis[name];
+    if(typeof fn==='function')return fn();
+  }catch{}
+  return fallback;
+}
+
+function rescueCurrentAnalyses(){
+  const rows=[];
+  try{
+    if(window.S?.analyses instanceof Map){
+      for(const [gamePk,value] of S.analyses.entries()){
+        rows.push({gamePk,value});
+      }
+    }
+  }catch{}
+  return rows;
+}
+
+async function exportRescateTotal(){
+  const startedAt=new Date().toISOString();
+
+  status(
+    '<span class="loader"></span> Preparando RESCATE TOTAL · sólo lectura…'
+  );
+
+  const persistentKeys=
+    Array.isArray(PERSIST_KEYS)
+      ?[...PERSIST_KEYS]
+      :[];
+
+  const canonicalStore={};
+
+  for(const key of persistentKeys){
+    try{
+      canonicalStore[key]=STORE.getItem(key);
+    }catch(e){
+      canonicalStore[key]=null;
+    }
+  }
+
+  const [
+    indexedDBRaw,
+    sqliteRaw
+  ]=await Promise.all([
+    rescueAllIndexedDB(),
+    rescueAllSQLite()
+  ]);
+
+  const localStorageRaw=
+    rescueAllLocalStorage();
+
+  const semantic={
+    bets:
+      typeof bets==='function'
+        ?bets()
+        :rescueJsonOrRaw(canonicalStore.mlb_v5_bets),
+
+    lab:
+      typeof lab==='function'
+        ?lab()
+        :rescueJsonOrRaw(canonicalStore.mlb_v5_lab),
+
+    teamShadow:
+      typeof teamShadowState==='function'
+        ?teamShadowState()
+        :rescueJsonOrRaw(canonicalStore.mlb_v786_team_shadow_lab),
+
+    rankCensus:
+      typeof rankCensus==='function'
+        ?rankCensus()
+        :rescueJsonOrRaw(canonicalStore.mlb_v60_rank_census),
+
+    rankDrafts:
+      typeof rankDraftStore==='function'
+        ?rankDraftStore()
+        :rescueJsonOrRaw(canonicalStore.mlb_v59_rank_drafts),
+
+    legacyRankArchive:
+      typeof legacyRankArchive==='function'
+        ?legacyRankArchive()
+        :rescueJsonOrRaw(canonicalStore.mlb_v58_rank_tracker),
+
+    bank:
+      typeof bankCfg==='function'
+        ?bankCfg()
+        :rescueJsonOrRaw(canonicalStore.mlb_v71_bank),
+
+    cfg:
+      typeof cfg==='function'
+        ?cfg()
+        :rescueJsonOrRaw(canonicalStore.mlb_v5_cfg),
+
+    markets:
+      typeof markets==='function'
+        ?markets()
+        :rescueJsonOrRaw(canonicalStore.mlb_v5_markets),
+
+    rollingBackups:
+      rescueJsonOrRaw(
+        canonicalStore.mlb_v786_rolling_backups
+      ),
+
+    bullpenCache:
+      rescueJsonOrRaw(
+        canonicalStore.mlb_v53_bullpen_cache
+      ),
+
+    lineupCache:
+      rescueJsonOrRaw(
+        canonicalStore.mlb_v56_lineup_cache
+      ),
+
+    publicOddsCache:
+      rescueJsonOrRaw(
+        canonicalStore.mlb_v61_public_odds_cache
+      ),
+
+    legacyHistories:{
+      mlb_v4_history:
+        rescueJsonOrRaw(canonicalStore.mlb_v4_history),
+      mlb_v45_history:
+        rescueJsonOrRaw(canonicalStore.mlb_v45_history),
+      mlb_v44_history:
+        rescueJsonOrRaw(canonicalStore.mlb_v44_history),
+      mlb_totals_history:
+        rescueJsonOrRaw(canonicalStore.mlb_totals_history),
+      mlb_history:
+        rescueJsonOrRaw(canonicalStore.mlb_history)
+    },
+
+    currentSession:{
+      loadedDay:window.S?.loadedDay||null,
+      games:Array.isArray(window.S?.games)?window.S.games:[],
+      odds:window.S?.odds instanceof Map
+        ?[...window.S.odds.entries()]
+        :[],
+      analyses:rescueCurrentAnalyses()
+    }
+  };
+
+  const counts={
+    bets:Array.isArray(semantic.bets)?semantic.bets.length:0,
+    lab:Array.isArray(semantic.lab)?semantic.lab.length:0,
+    shadow:Array.isArray(semantic.teamShadow?.rows)
+      ?semantic.teamShadow.rows.length
+      :0,
+    censusDays:Object.keys(semantic.rankCensus?.days||{}).length,
+    censusRows:Object.values(semantic.rankCensus?.days||{})
+      .reduce((sum,d)=>sum+(Array.isArray(d?.rows)?d.rows.length:0),0),
+    rankDraftDays:Object.keys(semantic.rankDrafts||{}).length,
+    markets:semantic.markets&&typeof semantic.markets==='object'
+      ?Object.keys(semantic.markets).length
+      :0,
+    localStorageKeys:Object.keys(localStorageRaw).filter(k=>k!=='__error').length,
+    indexedDBKeys:Object.keys(indexedDBRaw).filter(k=>k!=='__error').length,
+    sqliteKeys:Array.isArray(sqliteRaw?.rows)?sqliteRaw.rows.length:0
+  };
+
+  const identity={
+    appVersion:
+      typeof APP_VERSION!=='undefined'
+        ?APP_VERSION
+        :null,
+    modelVersion:
+      typeof MODEL_VERSION!=='undefined'
+        ?MODEL_VERSION
+        :null,
+    policyVersion:
+      typeof POLICY_VERSION!=='undefined'
+        ?POLICY_VERSION
+        :null,
+    cohortId:
+      typeof COHORT_ID!=='undefined'
+        ?COHORT_ID
+        :null,
+    storageMode:
+      typeof STORAGE_MODE!=='undefined'
+        ?STORAGE_MODE
+        :null,
+    userAgent:navigator.userAgent,
+    platform:navigator.platform||null
+  };
+
+  const payload={
+    rescue:{
+      schema:'mlb-v786-rescue-total-v1',
+      purpose:'FULL_MIGRATION_AND_FORENSIC_RESCUE',
+      readOnly:true,
+      createdAt:startedAt,
+      identity,
+      counts,
+      warnings:[
+        'Este archivo contiene datos históricos y copias crudas de almacenamiento.',
+        'No editar manualmente si se usará para migración.',
+        'No sustituye el APK ni el código fuente de la app.'
+      ]
+    },
+
+    /*
+     * CAPA 1 · datos semánticos listos para importar
+     */
+    semantic,
+
+    /*
+     * CAPA 2 · copia exacta de todos los PERSIST_KEYS
+     */
+    canonicalStore,
+
+    /*
+     * CAPA 3 · copias crudas independientes
+     */
+    rawStores:{
+      localStorage:localStorageRaw,
+      indexedDB:indexedDBRaw,
+      sqlite:sqliteRaw
+    },
+
+    /*
+     * Compatibilidad con el Data Vault existente.
+     * Una app nueva puede reutilizar estos nombres.
+     */
+    bets:semantic.bets,
+    lab:semantic.lab,
+    teamShadow:semantic.teamShadow,
+    cfg:semantic.cfg,
+    markets:semantic.markets,
+    rankCensus:semantic.rankCensus,
+    rankDrafts:semantic.rankDrafts,
+    bank:semantic.bank
+  };
+
+  const semanticText=JSON.stringify(semantic);
+  const canonicalText=JSON.stringify(canonicalStore);
+  const rawText=JSON.stringify(payload.rawStores);
+
+  payload.rescue.hashes={
+    semanticSha256:await rescueSha256(semanticText),
+    canonicalStoreSha256:await rescueSha256(canonicalText),
+    rawStoresSha256:await rescueSha256(rawText)
+  };
+
+  const stamp=
+    new Date()
+      .toISOString()
+      .replace(/[:.]/g,'-');
+
+  const ok=await download(
+    'MLB_V786_RESCATE_TOTAL_'+stamp+'.json',
+    JSON.stringify(payload,null,2),
+    'application/json'
+  );
+
+  if(ok!==false){
+    status(
+      'RESCATE TOTAL exportado · '+
+      counts.bets+' apuestas · '+
+      counts.lab+' LAB · '+
+      counts.shadow+' Shadow · '+
+      counts.censusRows+' Censo · '+
+      counts.localStorageKeys+' local · '+
+      counts.indexedDBKeys+' IDB · '+
+      counts.sqliteKeys+' SQLite.',
+      'ok'
+    );
+  }
+
+  return ok;
+}
+
+window.exportRescateTotal=exportRescateTotal;
+
 /* V7.8.1D2 INTEGRAL DATA VAULT BACKUP */
 
 async function exportJson(){
@@ -42927,7 +43316,7 @@ function importJson(file){
 
 
 $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('hidden',x.id!==t.dataset.tab));if(t.dataset.tab==='history'){renderHistory();renderRollingBackupDashboard();}if(t.dataset.tab==='bank')renderBank();if(t.dataset.tab==='lab'){renderLab();renderUnifiedSettlementStatus();}if(t.dataset.tab==='teams')renderTeams();if(t.dataset.tab==='shadow'){renderShadowIntegrity();renderShadowLab();}if(t.dataset.tab==='ranking')renderRanking();if(t.dataset.tab==='census')renderCensus()});
-$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([],{allowDelete:true});renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#shadowSettleNow').onclick=()=>{const r=teamShadowSettleFromOfficial();renderShadowLab();status('TEAM SHADOW · '+r.settled+' nuevos liquidados · '+r.pending+' pendientes.','ok')};$('#shadowRefresh').onclick=()=>{renderShadowIntegrity();renderShadowLab()};$('#shadowExport').onclick=exportTeamShadowCsv;
+$('#prev').onclick=()=>{$('#date').value=shift($('#date').value,-1);loadDay(true)};$('#next').onclick=()=>{$('#date').value=shift($('#date').value,1);loadDay(true)};$('#load').onclick=()=>loadDay(true);$('#scanDay').onclick=()=>scanDay('preview');$('#scanLab').onclick=()=>scanDay('lab');$('#close').onclick=()=>$('#analysis').close();$('#analysis').addEventListener('click',e=>{if(e.target===$('#analysis'))$('#analysis').close()});$('#liveToggle').onclick=()=>{S.liveOn=!S.liveOn;$('#liveToggle').className=`btn ${S.liveOn?'green':'ghost'}`;$('#liveToggle').innerHTML=S.liveOn?'<span class="pulse"></span> En vivo ON':'En vivo OFF';startLive()};$('#liveEvery').onchange=startLive;$('#saveCfg').onclick=saveCfg;$('#refreshAll').onclick=refreshEverything;$('#loadOddsNow').onclick=async()=>{try{await loadAutoOdds($('#date').value,true);renderGames();status(`${S.odds.size} líneas automáticas cargadas · ${esc(S.publicOddsStatus.source||'fuente configurada')}.`,'ok')}catch(e){status(`Error de líneas: ${esc(e.message)}`,'err')}};$('#settleBets').onclick=()=>settleAllUnified(false);$('#migrateV4').onclick=()=>migrateLegacyHistory(true);$('#settleLab').onclick=()=>settleAllUnified(false);$('#exportCsv').onclick=exportCsv;$('#exportJson').onclick=exportJson;$('#exportRescueTotal').onclick=exportRescateTotal;$('#exportLab').onclick=exportLab;$('#importJson').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);$('#clearBets').onclick=()=>{if(confirm('¿Borrar todo el historial de apuestas?')){saveBets([],{allowDelete:true});renderHistory()}};$('#clearLab').onclick=()=>{if(confirm('¿Borrar toda la calibración?')){saveLab([]);renderLab();renderTeams()}};$('#settleTeams').onclick=()=>settleAllUnified(false);$('#refreshTeams').onclick=renderTeams;$('#exportTeams').onclick=exportTeamsCsv;$('#shadowSettleNow').onclick=()=>{const r=teamShadowSettleFromOfficial();renderShadowLab();status('TEAM SHADOW · '+r.settled+' nuevos liquidados · '+r.pending+' pendientes.','ok')};$('#shadowRefresh').onclick=()=>{renderShadowIntegrity();renderShadowLab()};$('#shadowExport').onclick=exportTeamShadowCsv;
 /* V7.8.5A2 SAFE RESET HANDLER */
 
 $('#resetAll').onclick=async()=>{
