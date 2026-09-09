@@ -19803,7 +19803,8 @@ function refreshDisciplinePreview(evals){
 
 
 /* V7.8.2C PERSISTENT PREDICTION SNAPSHOTS */
-async function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value),stake=n($('#betStake').value),choice=selectedBetChoice(evals);if(!o.valid||stake<=0){alert('Captura un momio válido y stake mayor a cero.');return}const risk=betRiskSnapshot(stake);
+/* V7.8.6 BET SAVE HOTFIX V1 */
+function saveBetFromResult(g,evals,built){const o=parseOdds($('#betOdds').value),stake=n($('#betStake').value),choice=selectedBetChoice(evals);if(!o.valid||stake<=0){alert('Captura un momio válido y stake mayor a cero.');return}const risk=betRiskSnapshot(stake);
      const discipline=disciplineSnapshot(evals,choice);
      const e=choice.ev,p=choice.assessment,z=e[choice.side.toLowerCase()],row={id:`b_${Date.now()}_${rand()}`,gamePk:g.gamePk,date:$('#date').value,away:g.teams.away.team.name,home:g.teams.home.team.name,awayId:g.teams.away.team.id,homeId:g.teams.home.team.id,awayAbbr:g.teams.away.team.abbreviation||'',homeAbbr:g.teams.home.team.abbreviation||'',awayLineupConfirmed:!!built?.ctx?.away?.lineup?.confirmed,homeLineupConfirmed:!!built?.ctx?.home?.lineup?.confirmed,awayBullpenAutomatic:!!built?.ctx?.away?.bullpen?.automatic,homeBullpenAutomatic:!!built?.ctx?.home?.bullpen?.automatic,market:'TOTAL',label:'Total juego completo',line:e.line,lineSource:e.source,side:choice.side,odds:o.decimal,american:o.american,
      stake,
@@ -19837,7 +19838,7 @@ predictionSnapshot:predictionSnapshot(
   choice.side,
   built,
   g
-)};row.snapshotLocked=true;row.snapshotLockedAt=row.created||new Date().toISOString();const a=bets();a.push(row);saveBets(a);renderHistory();const durableOk=await mlbSafeCommit('bets',a);const note=$('#betSaveStatus');if(note){note.className=durableOk?'okbox':'danger';note.innerHTML=durableOk?`Guardada y confirmada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`:`La apuesta aparece en pantalla, pero <b>no recibió confirmación durable</b>. No cierres la app y exporta Data Vault.`;}status(durableOk?'Apuesta Full Game guardada · SQLite/almacenamiento confirmados.':'PERSISTENCIA ALERTA · apuesta sin confirmación durable.',durableOk?'ok':'err')}
+)};row.snapshotLocked=true;row.snapshotLockedAt=row.created||new Date().toISOString();const a=bets();a.push(row);saveBets(a);const readBack=bets();const savedNow=readBack.some(x=>String(x?.id)===String(row.id));renderHistory();const note=$('#betSaveStatus');if(note){note.className=savedNow?'okbox':'danger';note.innerHTML=savedNow?`Guardada: <b>${choice.side} ${e.line}</b> · decisión ${pct(p.p)} · push ${pct(e.push)} · momio ${oddsBoth(o.decimal)}.`:`ERROR: la apuesta no pasó la verificación inmediata de almacenamiento.`;}status(savedNow?'Apuesta Full Game registrada · Durable Guard verificando en segundo plano.':'ERROR · la apuesta no quedó registrada.',savedNow?'ok':'err');if(!savedNow){console.error('V7.8.6 BET SAVE HOTFIX V1','readback falló',row);}}
 window.deleteBet=id=>{if(!confirm('¿Eliminar esta apuesta del historial?'))return;saveBets(bets().filter(x=>String(x.id)!==String(id)));renderHistory()};
 function settleValue(row,a,h){const total=row.market==='AWAY_TT'?a:row.market==='HOME_TT'?h:a+h;if(row.market==='F5')return null;if(total===row.line)return'PUSH';const win=row.side==='OVER'?total>row.line:total<row.line;return win?'WIN':'LOSS'}
 
