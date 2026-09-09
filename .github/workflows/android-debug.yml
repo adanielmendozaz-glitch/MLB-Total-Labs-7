@@ -1,4 +1,4 @@
-name: Build MLB Totals Lab APK
+name: Build MLB Totals Lab V7.8.6 H1 Rescue APK
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - main
       - master
       - v786-history-vault-ui-b2c5i
+      - v786-history-rescue-h1
 
 jobs:
   build:
@@ -50,5 +51,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB-Totals-Lab-V7.8.6-debug
+          name: MLB-Totals-Lab-V7.8.6-H1-Rescue
           path: android/app/build/outputs/apk/debug/app-debug.apk

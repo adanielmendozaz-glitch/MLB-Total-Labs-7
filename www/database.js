@@ -2441,3 +2441,437 @@ const MLBDB = {
 };
 
 window.MLBDB = MLBDB;
+
+/* V7.8.6H1 HISTORY RESCUE OVERLAY
+ * Alcance deliberadamente limitado:
+ * - import/export de historial
+ * - TEAM SHADOW dentro del Data Vault
+ * - commit durable + verificacion SQLite
+ * No modifica motores, probabilidades, pesos, filtros ni picks.
+ */
+(function(){
+  'use strict';
+
+  const RESCUE_VERSION='V7.8.6H1';
+  const SHADOW_STORE_KEY='mlb_v786_team_shadow_lab';
+  const SHADOW_SQL_KEY='team_shadow_v1';
+
+  function rescueSleep(ms){
+    return new Promise(resolve=>setTimeout(resolve,ms));
+  }
+
+  function rescueCensusRows(data){
+    return Object.values(data?.days||{})
+      .reduce((sum,day)=>sum+(Array.isArray(day?.rows)?day.rows.length:0),0);
+  }
+
+  function rescueShadowState(){
+    try{
+      const raw=STORE.getItem(SHADOW_STORE_KEY);
+      const parsed=raw?JSON.parse(raw):null;
+      if(typeof teamShadowNormalizeState==='function'){
+        return teamShadowNormalizeState(parsed||{});
+      }
+      const now=new Date().toISOString();
+      return {
+        version:'V7.8.6_TEAM_SHADOW_1',
+        schema:1,
+        createdAt:parsed?.createdAt||now,
+        updatedAt:parsed?.updatedAt||now,
+        rows:Array.isArray(parsed?.rows)?parsed.rows:[]
+      };
+    }catch{
+      const now=new Date().toISOString();
+      return {version:'V7.8.6_TEAM_SHADOW_1',schema:1,createdAt:now,updatedAt:now,rows:[]};
+    }
+  }
+
+  function rescueCounts(){
+    const census=rankCensus();
+    const shadow=rescueShadowState();
+    const bank=bankCfg();
+    const drafts=rankDraftStore();
+    const mkts=markets();
+    return {
+      bets:bets().length,
+      lab:lab().length,
+      teamShadow:Array.isArray(shadow.rows)?shadow.rows.length:0,
+      censusDays:Object.keys(census?.days||{}).length,
+      censusRows:rescueCensusRows(census),
+      bankMovements:Array.isArray(bank?.movements)?bank.movements.length:0,
+      rankDraftDays:Object.keys(drafts||{}).length,
+      markets:mkts&&typeof mkts==='object'?Object.keys(mkts).length:0
+    };
+  }
+
+  async function rescueWaitForDatabase(timeout=12000){
+    const nativeCapable=!!window.Capacitor?.Plugins?.CapacitorSQLite;
+    if(!nativeCapable){
+      return {native:false,ready:false};
+    }
+    const start=Date.now();
+    while(!window.MLBDB?.ready && Date.now()-start<timeout){
+      await rescueSleep(100);
+    }
+    if(!window.MLBDB?.ready){
+      throw new Error('SQLite Data Vault no termino de iniciar. Cierra y abre la app e intenta importar de nuevo.');
+    }
+    return {native:true,ready:true};
+  }
+
+  function rescueBetKey(row={}){
+    if(row.id) return 'ID|'+String(row.id);
+    return [
+      row.gamePk??'',row.date??'',row.market??'',row.side??'',row.line??'',row.created??''
+    ].join('|');
+  }
+
+  function rescueMergeBets(incoming=[]){
+    const current=Array.isArray(bets())?bets():[];
+    const imported=(Array.isArray(incoming)?incoming:[]).map((raw,i)=>{
+      try{
+        const normalized=normalizeBetRow(raw,i,'SAFE IMPORT');
+        return {...raw,...normalized,id:String(raw?.id??normalized.id),created:raw?.created||normalized.created};
+      }catch{
+        return {...raw};
+      }
+    });
+
+    const map=new Map(current.map(r=>[rescueBetKey(r),r]));
+    let added=0,updated=0,conflicts=0;
+
+    for(const row of imported){
+      if(!row||typeof row!=='object') continue;
+      const key=rescueBetKey(row);
+      const old=map.get(key);
+      if(!old){
+        map.set(key,row);
+        added++;
+        continue;
+      }
+      const statusRank=r=>{
+        const s=String(r?.status||'').toUpperCase();
+        if(['WIN','LOSS','FINAL'].includes(s)) return 3;
+        if(['PUSH','VOID'].includes(s)) return 2;
+        if(s==='PENDING') return 1;
+        return 0;
+      };
+      const aStatus=String(old?.status||'').toUpperCase();
+      const bStatus=String(row?.status||'').toUpperCase();
+      const aSettled=['WIN','LOSS','PUSH','VOID'].includes(aStatus);
+      const bSettled=['WIN','LOSS','PUSH','VOID'].includes(bStatus);
+      if(aSettled&&bSettled&&aStatus!==bStatus&&!(aStatus==='PUSH'&&bStatus==='VOID')&&!(aStatus==='VOID'&&bStatus==='PUSH')){
+        conflicts++;
+        map.set(key,{...row,...old,id:old.id||row.id,created:old.created||row.created});
+        continue;
+      }
+      const oldRank=statusRank(old),newRank=statusRank(row);
+      const oldTime=Date.parse(old?.settled||old?.updated||old?.created||'')||0;
+      const newTime=Date.parse(row?.settled||row?.updated||row?.created||'')||0;
+      const oldComplete=Object.values(old||{}).filter(v=>v!==null&&v!==undefined&&v!=='').length;
+      const newComplete=Object.values(row||{}).filter(v=>v!==null&&v!==undefined&&v!=='').length;
+      const incomingWins=newRank>oldRank||(newRank===oldRank&&(newTime>oldTime||(newTime===oldTime&&newComplete>oldComplete)));
+      const winner=incomingWins?row:old;
+      const loser=incomingWins?old:row;
+      if(incomingWins) updated++;
+      map.set(key,{...loser,...winner,id:old.id||row.id,created:old.created||row.created});
+    }
+
+    const merged=[...map.values()].sort((a,b)=>{
+      const at=Date.parse(a?.created||a?.settled||'')||0;
+      const bt=Date.parse(b?.created||b?.settled||'')||0;
+      return at-bt;
+    });
+    saveBets(merged);
+    return {before:current.length,imported:imported.length,after:merged.length,added,updated,conflicts};
+  }
+
+  function rescueMergeShadow(incoming){
+    const current=rescueShadowState();
+    const imported=(incoming&&typeof incoming==='object')
+      ?(typeof teamShadowNormalizeState==='function'?teamShadowNormalizeState(incoming):incoming)
+      :{rows:[]};
+    const incomingRows=Array.isArray(imported?.rows)?imported.rows:[];
+    const currentRows=Array.isArray(current?.rows)?current.rows:[];
+    const currentKeys=new Set(currentRows.map(r=>
+      typeof teamShadowRowKey==='function'?teamShadowRowKey(r):String(r?.id||'')
+    ));
+    const mergedRows=typeof teamShadowMergeRows==='function'
+      ?teamShadowMergeRows(currentRows,incomingRows)
+      :[...currentRows,...incomingRows];
+    const now=new Date().toISOString();
+    const merged={
+      ...imported,
+      ...current,
+      version:current.version||imported.version||'V7.8.6_TEAM_SHADOW_1',
+      schema:1,
+      createdAt:current.createdAt||imported.createdAt||now,
+      updatedAt:now,
+      rows:mergedRows
+    };
+    STORE.setItem(SHADOW_STORE_KEY,JSON.stringify(merged));
+    let added=0;
+    for(const r of incomingRows){
+      const k=typeof teamShadowRowKey==='function'?teamShadowRowKey(r):String(r?.id||'');
+      if(!currentKeys.has(k)) added++;
+    }
+    return {before:currentRows.length,imported:incomingRows.length,after:mergedRows.length,added};
+  }
+
+  async function rescueDurableCommit(){
+    const dbState=await rescueWaitForDatabase();
+    if(!dbState.native){
+      return {native:false,verified:false,reason:'browser-local-only'};
+    }
+
+    const makeWanted=()=>{
+      const b=bets();
+      const l=lab();
+      const c=rankCensus();
+      const bk=bankCfg();
+      const sh=rescueShadowState();
+      return {
+        bets:JSON.stringify(b),
+        lab:JSON.stringify(l),
+        census:JSON.stringify(c),
+        bank:JSON.stringify(bk),
+        shadow:JSON.stringify(sh)
+      };
+    };
+
+    let lastMismatch=[];
+
+    /* Varias pasadas impiden que una escritura asincrona antigua termine despues
+       y vuelva a dejar SQLite con una foto anterior. */
+    for(let attempt=1;attempt<=3;attempt++){
+      const wanted=makeWanted();
+
+      await window.MLBDB.saveBetsSnapshot(JSON.parse(wanted.bets));
+      await window.MLBDB.saveLabSnapshot(JSON.parse(wanted.lab));
+      await window.MLBDB.saveCensusSnapshot(JSON.parse(wanted.census));
+      await window.MLBDB.saveBankSnapshot(JSON.parse(wanted.bank));
+      await window.MLBDB.setKV(SHADOW_SQL_KEY,wanted.shadow);
+
+      await rescueSleep(180);
+
+      const got={
+        bets:await window.MLBDB.getKV(window.MLBDB.betsSqlKey||'bets_v1'),
+        lab:await window.MLBDB.getKV(window.MLBDB.labSqlKey||'lab_v1'),
+        census:await window.MLBDB.getKV(window.MLBDB.censusSqlKey||'rank_census_v1'),
+        bank:await window.MLBDB.getKV(window.MLBDB.bankSqlKey||'bank_v1'),
+        shadow:await window.MLBDB.getKV(SHADOW_SQL_KEY)
+      };
+
+      lastMismatch=Object.keys(wanted).filter(k=>got[k]!==wanted[k]);
+      if(!lastMismatch.length){
+        return {native:true,verified:true,attempt};
+      }
+      await rescueSleep(220);
+    }
+
+    throw new Error('SQLite no confirmo el historial completo: '+lastMismatch.join(', '));
+  }
+
+  function rescueIncomingCounts(x={}){
+    const census=x?.rankCensus&&typeof x.rankCensus==='object'?x.rankCensus:null;
+    const shadow=x?.teamShadow&&typeof x.teamShadow==='object'?x.teamShadow:null;
+    return {
+      bets:Array.isArray(x?.bets)?x.bets.length:0,
+      lab:Array.isArray(x?.lab)?x.lab.length:0,
+      teamShadow:Array.isArray(shadow?.rows)?shadow.rows.length:0,
+      censusRows:census?rescueCensusRows(census):0
+    };
+  }
+
+  function rescueAssertImported(before,after,incoming){
+    const checks=[
+      ['bets',incoming.bets],
+      ['lab',incoming.lab],
+      ['teamShadow',incoming.teamShadow],
+      ['censusRows',incoming.censusRows]
+    ];
+    const failed=[];
+    for(const [key,min] of checks){
+      if(min>0 && Number(after[key]||0)<min){
+        failed.push(`${key} ${after[key]||0}/${min}`);
+      }
+      if(Number(after[key]||0)<Number(before[key]||0)){
+        failed.push(`${key} retrocedio ${before[key]}→${after[key]}`);
+      }
+    }
+    if(failed.length){
+      throw new Error('Verificacion de migracion incompleta: '+failed.join(' · '));
+    }
+  }
+
+  async function rescueExportJson(){
+    try{
+      await rescueDurableCommit();
+    }catch(e){
+      console.warn('History Rescue durable pre-export',e);
+    }
+
+    const betsData=bets();
+    const labData=lab();
+    const censusData=rankCensus();
+    const draftsData=rankDraftStore();
+    const bankData=bankCfg();
+    const marketsData=markets();
+    const cfgData=cfg();
+    const shadowData=rescueShadowState();
+    let vaultHealth=null;
+    try{ vaultHealth=await window.MLBDB?.vaultHealth?.(); }catch{}
+
+    const counts=rescueCounts();
+    const payload={
+      dataVault:{
+        schema:2,
+        appVersion:RESCUE_VERSION,
+        modelVersion:typeof MODEL_VERSION!=='undefined'?MODEL_VERSION:'UNKNOWN',
+        createdAt:new Date().toISOString(),
+        health:vaultHealth,
+        counts
+      },
+      bets:betsData,
+      lab:labData,
+      teamShadow:shadowData,
+      cfg:cfgData,
+      markets:marketsData,
+      rankCensus:censusData,
+      rankDrafts:draftsData,
+      bank:bankData
+    };
+
+    const stamp=localDay().replace(/-/g,'');
+    const ok=await download(
+      'mlb_v786_history_rescue_'+stamp+'.json',
+      JSON.stringify(payload,null,2),
+      'application/json'
+    );
+    if(ok!==false){
+      status(`Data Vault completo · ${counts.bets} apuestas · ${counts.lab} LAB · ${counts.censusRows} Censo · ${counts.teamShadow} Shadow.`,'ok');
+    }
+    return ok;
+  }
+
+  function rescueImportJson(file){
+    const reader=new FileReader();
+
+    reader.onload=async()=>{
+      try{
+        /* En Android no tocamos nada hasta que SQLite este listo. */
+        await rescueWaitForDatabase();
+
+        const parsed=JSON.parse(reader.result);
+        const x=(parsed?.payload&&typeof parsed.payload==='object')?parsed.payload:parsed;
+        const before=rescueCounts();
+        const incoming=Array.isArray(x)?{bets:x.length,lab:0,teamShadow:0,censusRows:0}:rescueIncomingCounts(x);
+
+        const preImport=await rollingBackupCreate('PRE_IMPORT',true);
+        if(!preImport) throw new Error('No se pudo crear PRE_IMPORT');
+
+        const report={
+          version:RESCUE_VERSION,
+          at:new Date().toISOString(),
+          preImportId:preImport.id,
+          bets:null,lab:null,teamShadow:null,census:null,markets:null,bank:null,rankDrafts:null,cfg:false,
+          conflicts:0,
+          durable:null,
+          before,
+          incoming,
+          after:null
+        };
+
+        if(Array.isArray(x)){
+          report.bets=rescueMergeBets(x);
+        }else{
+          if(Array.isArray(x?.bets)){
+            report.bets=rescueMergeBets(x.bets);
+            report.conflicts+=report.bets.conflicts||0;
+          }
+
+          if(Array.isArray(x?.lab)){
+            report.lab=safeImportMergeLab(x.lab);
+            report.conflicts+=report.lab.conflicts||0;
+          }
+
+          if(x?.teamShadow&&typeof x.teamShadow==='object'){
+            report.teamShadow=rescueMergeShadow(x.teamShadow);
+          }
+
+          if(x?.rankCensus&&typeof x.rankCensus==='object'){
+            report.census=safeImportMergeCensus(x.rankCensus);
+            report.conflicts+=report.census.conflicts||0;
+          }else if(x?.rankTracker&&typeof x.rankTracker==='object'){
+            saveLegacyRankArchive(x.rankTracker);
+            migrateRankingToCensus();
+          }
+
+          if(x?.markets&&typeof x.markets==='object') report.markets=safeImportMergeMarkets(x.markets);
+          if(x?.rankDrafts&&typeof x.rankDrafts==='object') report.rankDrafts=safeImportMergeRankDrafts(x.rankDrafts);
+          if(x?.bank&&typeof x.bank==='object') report.bank=safeImportMergeBank(x.bank);
+
+          if(x?.cfg&&typeof x.cfg==='object'){
+            const mergedCfg=safeImportFillMissing(cfg(),x.cfg);
+            STORE.setItem('mlb_v5_cfg',JSON.stringify(mergedCfg));
+            report.cfg=true;
+          }
+        }
+
+        loadCfg();
+        repairLabHistory();
+
+        /* Espera corta para vaciar escrituras lanzadas por las funciones heredadas,
+           luego el Rescue hace su propio commit canonico y lo lee de vuelta. */
+        await rescueSleep(350);
+        report.durable=await rescueDurableCommit();
+        report.after=rescueCounts();
+        rescueAssertImported(before,report.after,incoming);
+
+        window.MLBHistoryRescueReport=report;
+        S.safeImportReport=report;
+
+        renderHistory();
+        renderBank();
+        renderLab();
+        renderUnifiedSettlementStatus();
+        renderTeams();
+        renderCensus();
+        renderRanking();
+        renderRollingBackupDashboard();
+        try{ renderShadowIntegrity(); renderShadowLab(); }catch{}
+
+        const a=report.after;
+        status(
+          `Historial restaurado y verificado · ${a.bets} apuestas · ${a.lab} LAB · ${a.censusRows} Censo · ${a.teamShadow} Shadow · SQLite ${report.durable?.verified?'OK':'local'}.`,
+          report.conflicts?'err':'ok'
+        );
+
+      }catch(e){
+        console.error('History Rescue Import:',e);
+        alert('Importacion cancelada: '+(e?.message||e));
+      }finally{
+        try{ document.getElementById('importJson').value=''; }catch{}
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  window.importJson=rescueImportJson;
+  window.exportJson=rescueExportJson;
+  window.MLBHistoryRescue={version:RESCUE_VERSION,counts:rescueCounts,durableCommit:rescueDurableCommit};
+
+  const importInput=document.getElementById('importJson');
+  if(importInput){
+    importInput.onchange=e=>e.target.files?.[0]&&rescueImportJson(e.target.files[0]);
+  }
+
+  const exportButton=document.getElementById('exportJson');
+  if(exportButton){
+    exportButton.onclick=rescueExportJson;
+    exportButton.textContent='Backup Data Vault';
+  }
+
+  console.info(RESCUE_VERSION,'History Rescue activo');
+})();
