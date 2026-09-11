@@ -1,13 +1,10 @@
-name: Build MLB Totals Lab V7.8.6 H1 Rescue APK
+name: Build MLB Totals Lab V7.8.6 Calibration Shadow V1 APK
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - master
-      - v786-history-vault-ui-b2c5i
-      - v786-history-rescue-h1
+      - v786-calibration-shadow-v1
 
 jobs:
   build:
@@ -38,6 +35,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Calibration Shadow JS
+        run: node --check www/calibration-shadow-v1.js
+
+      - name: Inject Calibration Shadow V1 into build only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("www/index.html")
+          s = p.read_text(encoding="utf-8")
+          tag = '<script src="calibration-shadow-v1.js"></script>'
+          if tag not in s:
+              if "</body>" not in s:
+                  raise SystemExit("ERROR: </body> not found in www/index.html")
+              s = s.replace("</body>", tag + "\n</body>", 1)
+              p.write_text(s, encoding="utf-8")
+          print("Calibration Shadow injection OK")
+          PY
+
       - name: Capacitor Sync
         run: npx cap sync android
 
@@ -51,5 +67,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB-Totals-Lab-V7.8.6-H1-Rescue
+          name: MLB-Totals-Lab-V7.8.6-Calibration-Shadow-V1
           path: android/app/build/outputs/apk/debug/app-debug.apk

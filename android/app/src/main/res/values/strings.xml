@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">MLB Totals Lab Rescue H1</string>
-    <string name="title_activity_main">MLB Totals Lab Rescue H1</string>
-    <string name="package_name">com.totallabs.mlb.v786rescueh1</string>
-    <string name="custom_url_scheme">com.totallabs.mlb.v786rescueh1</string>
+    <string name="app_name">MLB Totals Lab Cal Shadow</string>
+    <string name="title_activity_main">MLB Totals Lab Cal Shadow</string>
+    <string name="package_name">com.totallabs.mlb.v786calshadow1</string>
+    <string name="custom_url_scheme">com.totallabs.mlb.v786calshadow1</string>
 </resources>

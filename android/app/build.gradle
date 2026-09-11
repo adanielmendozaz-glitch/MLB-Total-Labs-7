@@ -4,16 +4,14 @@ android {
     namespace = "com.totallabs.mlb"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.totallabs.mlb.v786rescueh1"
+        applicationId "com.totallabs.mlb.v786calshadow1"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7861
-        versionName "7.8.6-history-rescue-h1"
+        versionCode 7862
+        versionName "7.8.6-calibration-shadow-v1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
     buildTypes {

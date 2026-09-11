@@ -1,0 +1,67 @@
+{
+  "source": "mlb_v786_history_rescue_20260910.json",
+  "dataVault": {
+    "appVersion": "V7.8.6H1",
+    "modelVersion": "V7.0",
+    "bets": 64,
+    "lab": 538,
+    "teamShadow": 107,
+    "censusDays": 19,
+    "censusRows": 236,
+    "rankDraftDays": 19,
+    "markets": 228,
+    "sqliteHealth": "OK",
+    "differences": []
+  },
+  "retrospective": {
+    "settledCensusRows": 220,
+    "officialPlayable": {
+      "n": 51,
+      "w": 28,
+      "l": 23,
+      "p": 0,
+      "hit": 0.5490196078,
+      "roi1u": 0.0308739787,
+      "brier": 0.255349648
+    },
+    "decisionTraceFinalRows": 111,
+    "stablePlayable": {
+      "n": 16,
+      "w": 13,
+      "l": 3,
+      "p": 0,
+      "hit": 0.8125,
+      "roi1u": 0.5193075047,
+      "brier": 0.2074317406
+    },
+    "promotedToPlayable": {
+      "n": 11,
+      "w": 3,
+      "l": 8,
+      "p": 0,
+      "hit": 0.2727272727,
+      "roi1u": -0.4785259762,
+      "brier": 0.3110954845
+    },
+    "teamShadow": {
+      "total": 107,
+      "settled": 104,
+      "gatingChanged": 8,
+      "downgrades": 4,
+      "promotes": 3,
+      "blocks": 1,
+      "lossesAvoided": 1,
+      "winnersBlocked": 3,
+      "leanPromotedWins": 1,
+      "leanPromotedLosses": 2,
+      "leanPromotedPushes": 0
+    }
+  },
+  "decision": {
+    "productionModel": "FROZEN",
+    "stabilityGuard": "SHADOW_STRONG",
+    "teamShadowGating": "READ_ONLY",
+    "automaticRecalibration": false,
+    "note": "No change to engines, weights, thresholds or official picks. Collect out-of-sample evidence before promotion."
+  }
+}
