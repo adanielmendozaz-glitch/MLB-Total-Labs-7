@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.6_CALIBRATION_SHADOW_1';
+  const VERSION='V7.8.6_CALIBRATION_SHADOW_1_1';
   const NOTICE='EXPERIMENTAL · READ ONLY · No modifica motores, pesos, probabilidades ni picks oficiales.';
   const KEYS={
     census:'mlb_v60_rank_census',
@@ -222,15 +222,132 @@
       </div>
       <div class="csv1-callout"><b>Decisión:</b> Team Shadow sigue READ ONLY. No se usa como gate real hasta que aumente mucho la muestra de cambios y demuestre mejora neta repetible.</div>
 
+      <h3>Diagnóstico de persistencia de esta APK</h3>
+      <div id="csv1-vault"><div class="csv1-note">Leyendo SQLite…</div></div>
+
       <div class="csv1-foot">${esc(a.version)} · recalculado ${new Date(a.generatedAt).toLocaleString('es-MX')} · Basado únicamente en datos persistidos del LAB.</div>
     `;
+    setTimeout(()=>renderVaultDiagnostic().catch(()=>{}),0);
+  }
+
+  function coreLocalRaw(){
+    const map=[
+      ['bets','mlb_v5_bets','bets_v1'],
+      ['lab','mlb_v5_lab','lab_v1'],
+      ['census','mlb_v60_rank_census','rank_census_v1'],
+      ['bank','mlb_v71_bank','bank_v1'],
+      ['shadow','mlb_v786_team_shadow_lab','team_shadow_v1']
+    ];
+    return map.map(([name,localKey,sqlKey])=>({
+      name,localKey,sqlKey,raw:localStorage.getItem(localKey)
+    }));
+  }
+
+  async function vaultDiagnostic(){
+    const db=window.MLBDB;
+    const rows=coreLocalRaw();
+    const out={available:!!db,ready:db?.ready===true,rows:[],integrity:null,health:null};
+
+    for(const x of rows){
+      let nativeRaw=null;
+      try{
+        nativeRaw=(db&&typeof db.getKV==='function')?await db.getKV(x.sqlKey):null;
+      }catch{}
+      out.rows.push({
+        name:x.name,
+        local:x.raw===null?0:x.raw.length,
+        native:nativeRaw===null?0:String(nativeRaw).length,
+        equal:(x.raw===null&&nativeRaw===null)||String(x.raw??'')===String(nativeRaw??'')
+      });
+    }
+
+    try{
+      if(db&&typeof db.vaultIntegrityCheck==='function') out.integrity=await db.vaultIntegrityCheck();
+    }catch(e){out.integrity={ok:false,error:String(e?.message||e)};}
+
+    try{
+      if(db&&typeof db.vaultHealth==='function') out.health=await db.vaultHealth();
+    }catch(e){out.health={ok:false,error:String(e?.message||e)};}
+
+    return out;
+  }
+
+  async function repairTestVault(){
+    const db=window.MLBDB;
+    if(!db||db.ready!==true||typeof db.setKV!=='function'){
+      throw new Error('SQLite todavía no está listo.');
+    }
+
+    let written=0;
+    for(const x of coreLocalRaw()){
+      if(x.raw===null) continue;
+      await db.setKV(x.sqlKey,x.raw);
+      written++;
+    }
+
+    const diag=await vaultDiagnostic();
+
+    try{
+      if(diag.integrity) db.lastVaultIntegrity=diag.integrity;
+      if(diag.health?.ok===true && diag.integrity?.ok===true && typeof db.showStatus==='function'){
+        db.showStatus('SQLite OK · Data Vault protegido',true);
+      }
+    }catch{}
+
+    return {written,diag};
+  }
+
+  async function renderVaultDiagnostic(){
+    const box=$('#csv1-vault');
+    if(!box)return;
+
+    box.innerHTML='<div class="csv1-note">Leyendo SQLite…</div>';
+    const d=await vaultDiagnostic();
+    const mismatch=d.rows.filter(x=>!x.equal);
+    const integrityOk=d.integrity?.ok===true;
+    const healthOk=d.health?.ok===true;
+
+    box.innerHTML=`
+      <div class="csv1-grid3">
+        <div class="csv1-card ${d.ready?'good':'bad'}"><small>SQLite</small><b>${d.ready?'READY':'NO READY'}</b><div>Diagnóstico sin tocar picks</div></div>
+        <div class="csv1-card ${integrityOk?'good':'bad'}"><small>Fingerprint</small><b>${integrityOk?'OK':'DESYNC'}</b><div>${mismatch.length} store(s) distintos</div></div>
+        <div class="csv1-card ${healthOk?'good':'bad'}"><small>Vault Health</small><b>${healthOk?'OK':'REVISAR'}</b><div>Local ↔ SQLite</div></div>
+      </div>
+
+      <div class="csv1-tablewrap">
+        <table>
+          <thead><tr><th>Store</th><th>Local</th><th>SQLite</th><th>Igual</th></tr></thead>
+          <tbody>${d.rows.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${x.local}</td><td>${x.native}</td><td>${x.equal?'✓':'✕'}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+
+      ${mismatch.length
+        ? `<div class="csv1-callout" style="margin-top:10px"><b>Solo esta APK de prueba:</b> el import dejó LocalStorage y SQLite fuera de sincronía. El botón vuelve a escribir en SQLite exactamente los stores ya importados aquí. No cambia motores, probabilidades ni picks.</div>
+           <button type="button" class="btn small" id="csv1-repair-vault">Sincronizar Vault de esta app de prueba</button>`
+        : `<div class="csv1-callout" style="margin-top:10px"><b>Vault alineado.</b> No hace falta reparar nada.</div>`}
+    `;
+
+    const b=$('#csv1-repair-vault');
+    if(b)b.onclick=async()=>{
+      b.disabled=true;
+      b.textContent='Sincronizando…';
+      try{
+        const r=await repairTestVault();
+        await renderVaultDiagnostic();
+        alert(`Sincronía terminada. Stores escritos: ${r.written}`);
+      }catch(e){
+        alert('No se pudo sincronizar: '+String(e?.message||e));
+        b.disabled=false;
+        b.textContent='Sincronizar Vault de esta app de prueba';
+      }
+    };
   }
 
   function styles(){
     if($('#csv1-style'))return;
     const s=document.createElement('style');s.id='csv1-style';s.textContent=`
       #csv1-modal{position:fixed;inset:0;z-index:999980;background:#02070def;display:none;overflow:auto;padding:10px;color:#eef7ff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-      #csv1-modal.open{display:block}.csv1-shell{max-width:1180px;margin:0 auto 80px;background:#071522;border:1px solid #315372;border-radius:22px;box-shadow:0 30px 100px #000d;overflow:hidden}.csv1-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:#0d2136f5;border-bottom:1px solid #243f5d;backdrop-filter:blur(14px)}.csv1-head h2{margin:0;font-size:1.1rem}.csv1-close{border:0;background:#1d354d;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem}.csv1-content{padding:13px}.csv1-content h3{margin:18px 0 9px}.csv1-warning,.csv1-callout{padding:11px 13px;border-radius:13px;border-left:4px solid #ffd06a;background:#33270e88;color:#ffe6ad;font-size:.76rem;line-height:1.5;margin-bottom:12px}.csv1-callout{border-left-color:#60b5ff;background:#0b2842;color:#cae6ff}.csv1-grid4,.csv1-grid3,.csv1-grid2{display:grid;gap:9px;margin-bottom:10px}.csv1-grid4{grid-template-columns:repeat(4,1fr)}.csv1-grid3{grid-template-columns:repeat(3,1fr)}.csv1-grid2{grid-template-columns:repeat(2,1fr)}.csv1-card{border:1px solid #1d3955;background:#091928;border-radius:14px;padding:11px;line-height:1.45}.csv1-card.good{border-color:#2b7759}.csv1-card.bad{border-color:#753b46}.csv1-card small{display:block;color:#91a8bf;font-size:.62rem;text-transform:uppercase;font-weight:900}.csv1-card b{display:block;font-size:1.05rem;margin:4px 0}.csv1-tablewrap{overflow:auto;border:1px solid #1d3955;border-radius:14px}.csv1-tablewrap table{width:100%;border-collapse:collapse;font-size:.72rem}.csv1-tablewrap th,.csv1-tablewrap td{padding:9px 7px;border-bottom:1px solid #1c354f;text-align:right;white-space:nowrap}.csv1-tablewrap th:first-child,.csv1-tablewrap td:first-child{text-align:left;white-space:normal;min-width:190px}.csv1-tablewrap th{color:#a8bed3;font-size:.62rem;text-transform:uppercase}.csv1-note{font-size:.62rem;color:#91a8bf;margin-top:3px;line-height:1.35}.csv1-pill{display:inline-flex;padding:4px 7px;border-radius:999px;border:1px solid #315372;color:#b9d7ef;font-size:.58rem;font-weight:900}.csv1-pill.good{color:#9ff2c9;border-color:#2b7759}.csv1-pill.bad{color:#ffc4cb;border-color:#753b46}.csv1-foot{margin-top:16px;color:#7f98b0;font-size:.65rem;line-height:1.5}.csv1-tab{position:relative}.csv1-tab:after{content:'S';position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;background:#6b55e5;color:#fff;font-size:8px;font-weight:1000}
+      #csv1-modal.open{display:block}.csv1-shell{max-width:1180px;margin:0 auto 80px;background:#071522;border:1px solid #315372;border-radius:22px;box-shadow:0 30px 100px #000d;overflow:hidden}.csv1-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:#0d2136f5;border-bottom:1px solid #243f5d;backdrop-filter:blur(14px)}.csv1-head h2{margin:0;font-size:1.1rem}.csv1-close{border:0;background:#1d354d;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem}.csv1-content{padding:13px}.csv1-content h3{margin:18px 0 9px}.csv1-warning,.csv1-callout{padding:11px 13px;border-radius:13px;border-left:4px solid #ffd06a;background:#33270e88;color:#ffe6ad;font-size:.76rem;line-height:1.5;margin-bottom:12px}.csv1-callout{border-left-color:#60b5ff;background:#0b2842;color:#cae6ff}.csv1-grid4,.csv1-grid3,.csv1-grid2{display:grid;gap:9px;margin-bottom:10px}.csv1-grid4{grid-template-columns:repeat(4,1fr)}.csv1-grid3{grid-template-columns:repeat(3,1fr)}.csv1-grid2{grid-template-columns:repeat(2,1fr)}.csv1-card{border:1px solid #1d3955;background:#091928;border-radius:14px;padding:11px;line-height:1.45}.csv1-card.good{border-color:#2b7759}.csv1-card.bad{border-color:#753b46}.csv1-card small{display:block;color:#91a8bf;font-size:.62rem;text-transform:uppercase;font-weight:900}.csv1-card b{display:block;font-size:1.05rem;margin:4px 0}.csv1-tablewrap{overflow:auto;border:1px solid #1d3955;border-radius:14px}.csv1-tablewrap table{width:100%;border-collapse:collapse;font-size:.72rem}.csv1-tablewrap th,.csv1-tablewrap td{padding:9px 7px;border-bottom:1px solid #1c354f;text-align:right;white-space:nowrap}.csv1-tablewrap th:first-child,.csv1-tablewrap td:first-child{text-align:left;white-space:normal;min-width:190px}.csv1-tablewrap th{color:#a8bed3;font-size:.62rem;text-transform:uppercase}.csv1-note{font-size:.62rem;color:#91a8bf;margin-top:3px;line-height:1.35}.csv1-pill{display:inline-flex;padding:4px 7px;border-radius:999px;border:1px solid #315372;color:#b9d7ef;font-size:.58rem;font-weight:900}.csv1-pill.good{color:#9ff2c9;border-color:#2b7759}.csv1-pill.bad{color:#ffc4cb;border-color:#753b46}.csv1-foot{margin-top:16px;color:#7f98b0;font-size:.65rem;line-height:1.5}.csv1-launch{position:relative;white-space:nowrap}.csv1-launch:after{content:'S';display:inline-grid;place-items:center;width:14px;height:14px;margin-left:6px;border-radius:50%;background:#6b55e5;color:#fff;font-size:8px;font-weight:1000;vertical-align:middle}
       @media(max-width:760px){.csv1-grid4,.csv1-grid3{grid-template-columns:1fr 1fr}.csv1-content{padding:9px}.csv1-tablewrap th,.csv1-tablewrap td{padding:8px 6px}}
       @media(max-width:430px){.csv1-grid4,.csv1-grid3,.csv1-grid2{grid-template-columns:1fr}}
     `;document.head.appendChild(s);
@@ -243,9 +360,9 @@
     $('.csv1-close',modal).onclick=()=>modal.classList.remove('open');
     modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open');});
 
-    let btn=document.createElement('button');btn.type='button';btn.id='csv1-open';btn.className='tab csv1-tab';btn.textContent='Calibración';
-    const tabs=$('.tabs');
-    if(tabs){tabs.appendChild(btn);}else{btn.style.cssText='position:fixed;right:12px;top:12px;z-index:999970;padding:10px 12px;border-radius:12px;background:#193b60;color:#fff;border:1px solid #4f8ec9;font-weight:900';document.body.appendChild(btn);}
+    let btn=document.createElement('button');btn.type='button';btn.id='csv1-open';btn.className='btn small csv1-launch';btn.textContent='Calibración Shadow';
+    const toolbar=$('.toolbar');
+    if(toolbar){toolbar.appendChild(btn);}else{btn.style.cssText='position:fixed;right:12px;top:72px;z-index:999970;padding:9px 11px;border-radius:12px;background:#193b60;color:#fff;border:1px solid #4f8ec9;font-weight:900';document.body.appendChild(btn);}
     btn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();render();modal.classList.add('open');},true);
     window.MLBCalibrationShadowV1={version:VERSION,analyze,render,open:()=>{render();modal.classList.add('open');}};
   }
