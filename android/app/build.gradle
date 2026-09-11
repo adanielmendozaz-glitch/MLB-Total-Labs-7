@@ -3,18 +3,32 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.totallabs.mlb"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        calShadowDebug {
+            storeFile file('cal-shadow-debug.jks')
+            storePassword 'android'
+            keyAlias 'calshadow'
+            keyPassword 'android'
+        }
+    }
+
     defaultConfig {
         applicationId "com.totallabs.mlb.v786calshadow1"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7862
-        versionName "7.8.6-calibration-shadow-v1"
+        versionCode 7863
+        versionName "7.8.6-calibration-shadow-v1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.calShadowDebug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
