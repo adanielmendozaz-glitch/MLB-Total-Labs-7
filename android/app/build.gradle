@@ -17,8 +17,8 @@ android {
         applicationId "com.totallabs.mlb.v786calshadow1"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7863
-        versionName "7.8.6-calibration-shadow-v1.2"
+        versionCode 7864
+        versionName "7.8.6-calibration-shadow-v1.2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'

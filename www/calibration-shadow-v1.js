@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.6_CALIBRATION_SHADOW_1_2';
+  const VERSION='V7.8.6_CALIBRATION_SHADOW_1_2_1';
   const NOTICE='EXPERIMENTAL · READ ONLY · No modifica motores, pesos, probabilidades ni picks oficiales.';
   const KEYS={
     census:'mlb_v60_rank_census',
@@ -254,22 +254,60 @@
     if(!badge){
       badge=document.createElement('div');
       badge.className=`csv1-${kind}-stability`;
+
       if(kind==='rank'){
-        const target=host.querySelector('.meta')?.parentElement || host.children?.[1] || host;
-        target.appendChild(badge);
+        const target=host.querySelector('.meta')?.parentElement || host.children?.[1];
+        (target || host).appendChild(badge);
       }else{
-        const target=host.querySelector('.sc-analysis') || host.querySelector('.sc-schedule') || host;
-        target.insertAdjacentElement('afterend',badge);
+        /*
+         * HOTFIX 1.2.1
+         * Nunca insertar AFTEREND del propio scorecard.
+         * En vivo no siempre existe .sc-analysis/.sc-schedule;
+         * el fallback anterior usaba host + afterend y dejaba la
+         * etiqueta como hermana del juego. Cada refresco creaba otra.
+         */
+        const target=
+          host.querySelector('.sc-analysis') ||
+          host.querySelector('.sc-schedule') ||
+          host.querySelector('.sc-live-row') ||
+          host.querySelector('.sc-pitchers') ||
+          host.querySelector('.sc-teams');
+
+        if(target && target!==host){
+          target.insertAdjacentElement('afterend',badge);
+        }else{
+          host.appendChild(badge);
+        }
       }
     }
 
-    badge.className=`csv1-${kind}-stability ${cls.key}`;
-    badge.textContent=cls.short;
-    badge.title=cls.note;
-    badge.dataset.csv1GamePk=String(r?.gamePk??'');
+    const wantedClass=`csv1-${kind}-stability ${cls.key}`;
+    const wantedText=cls.short;
+    const wantedTitle=cls.note;
+    const wantedPk=String(r?.gamePk??'');
+
+    /*
+     * Idempotente: no reescribe textContent si nada cambió.
+     * Evita que nuestro propio badge dispare ciclos de MutationObserver.
+     */
+    if(badge.className!==wantedClass) badge.className=wantedClass;
+    if(badge.textContent!==wantedText) badge.textContent=wantedText;
+    if(badge.title!==wantedTitle) badge.title=wantedTitle;
+    if(badge.dataset.csv1GamePk!==wantedPk) badge.dataset.csv1GamePk=wantedPk;
+  }
+
+  function cleanupLeakedBadges(){
+    document.querySelectorAll('.csv1-game-stability').forEach(b=>{
+      if(!b.closest('.game.scorecard')) b.remove();
+    });
+
+    document.querySelectorAll('.csv1-rank-stability').forEach(b=>{
+      if(!b.closest('.rankrow')) b.remove();
+    });
   }
 
   function annotateVisibleJugables(){
+    cleanupLeakedBadges();
     const rows=currentPlayableRows();
 
     document.querySelectorAll('.rankrow').forEach(el=>{
@@ -602,11 +640,13 @@
 
     scheduleAnnotate();
 
-    const observer=new MutationObserver(mutations=>{
-      if(mutations.some(m=>m.addedNodes?.length||m.removedNodes?.length)) scheduleAnnotate();
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
-
+    /*
+     * HOTFIX 1.2.1
+     * Quitamos el observer global: los scorecards en vivo cambian DOM
+     * constantemente y el observer terminaba reaccionando también a
+     * nuestras propias etiquetas. El intervalo + eventos del usuario
+     * son suficientes y mucho más seguros.
+     */
     document.addEventListener('change',e=>{
       if(e.target?.id==='date') scheduleAnnotate();
     },true);
