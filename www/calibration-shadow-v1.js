@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.6_CALIBRATION_SHADOW_1_2_1';
+  const VERSION='V7.8.7_STABILITY_CALIBRATION_SHADOW_1';
   const NOTICE='EXPERIMENTAL · READ ONLY · No modifica motores, pesos, probabilidades ni picks oficiales.';
   const KEYS={
     census:'mlb_v60_rank_census',
@@ -72,6 +72,83 @@
       if(Number.isFinite(v)&&v>0) return v;
     }
     return null;
+  }
+
+  function latestProbability(r){
+    for(const k of ['lastProbability','p','decisionProbability','rawProbability']){
+      const v=+r?.[k];
+      if(Number.isFinite(v)) return v;
+    }
+    return null;
+  }
+
+  function latestEdge(r){
+    for(const k of ['lastEdge','edge']){
+      const v=+r?.[k];
+      if(Number.isFinite(v)) return v;
+    }
+    return null;
+  }
+
+  function stabilityScore(r){
+    if(!hasTrace(r)) return null;
+
+    const signalFlips=Math.max(0,Math.trunc(n(r?.signalFlipCount,0)));
+    const sideFlips=Math.max(0,Math.trunc(n(r?.sideFlipCount,0)));
+    const lineChanges=Math.max(0,Math.trunc(n(r?.lineChangeCount,0)));
+    const drift=Math.abs(n(r?.probabilityDrift,0));
+
+    const signalPts=signalFlips===0?35:signalFlips===1?20:5;
+    const sidePts=sideFlips===0?25:0;
+    const linePts=lineChanges===0?15:lineChanges===1?10:lineChanges===2?5:0;
+    const driftPts=drift<=.01?25:drift<=.02?20:drift<=.04?12:drift<=.06?5:0;
+    const score=Math.max(0,Math.min(100,signalPts+sidePts+linePts+driftPts));
+
+    let band='INESTABLE';
+    if(score>=90) band='MUY ESTABLE';
+    else if(score>=75) band='ESTABLE';
+    else if(score>=55) band='MIXTO';
+
+    return {score,band,signalFlips,sideFlips,lineChanges,drift,signalPts,sidePts,linePts,driftPts};
+  }
+
+  function isPassStableConsensus(r){
+    if(finalSignal(r)!=='PASS' || !hasTrace(r)) return false;
+
+    const dispersion=+r?.dispersion;
+    const consensus=String(r?.modelConsensus||'').toUpperCase();
+    const drift=Math.abs(n(r?.probabilityDrift,0));
+
+    return Number.isFinite(dispersion) &&
+      dispersion<=.10 &&
+      n(r?.signalFlipCount,0)===0 &&
+      n(r?.sideFlipCount,0)===0 &&
+      drift<.01 &&
+      ['FUERTE','ACEPTABLE'].includes(consensus);
+  }
+
+  function passStableRating(r){
+    const st=stabilityScore(r);
+    const side=String(r?.side||'').toUpperCase();
+    const score=Math.min(100,(st?.score??0)+(side==='OVER'?5:0));
+
+    let rating='B';
+    if(score>=95) rating='A+';
+    else if(score>=90) rating='A';
+    else if(score>=80) rating='B+';
+
+    return {rating,score,overBonus:side==='OVER'};
+  }
+
+  function isDispersion16Candidate(r){
+    const d=+r?.dispersion;
+    const p=latestProbability(r);
+    const e=latestEdge(r);
+    const gate=String(r?.gateFailed||'').toUpperCase();
+    return Number.isFinite(d) && d>.14 && d<=.16 &&
+      Number.isFinite(p) && p>=.56 &&
+      Number.isFinite(e) && e>=.035 &&
+      gate==='DISPERSION';
   }
 
 
@@ -163,13 +240,15 @@
     const side=String(r?.side||'—').toUpperCase();
     const line=Number.isFinite(+r?.line)?+r.line:'—';
     const rank=activeRank(r);
+    const st=stabilityScore(r);
+    const drift=st?`${(st.drift*100).toFixed(1)}%`:'—';
 
     return `<div class="csv1-live-row ${esc(cls?.key||'unknown')}">
       <div class="csv1-live-main">
         <b>${esc(id.away||'—')} @ ${esc(id.home||'—')} · ${esc(side)} ${esc(line)}</b>
-        <div class="csv1-note">Rank ${rank??'—'} · primera ${esc(first)} · actual ${esc(current)} · señal flips ${n(r?.signalFlipCount,0)} · lado flips ${n(r?.sideFlipCount,0)}</div>
+        <div class="csv1-note">Rank ${rank??'—'} · FIRST ${esc(first)} → CURRENT ${esc(current)} · Stability ${st?.score??'—'}/100 · signal flips ${n(r?.signalFlipCount,0)} · side flips ${n(r?.sideFlipCount,0)} · línea Δ ${n(r?.lineChangeCount,0)} · drift ${esc(drift)}</div>
       </div>
-      <span class="csv1-live-badge ${esc(cls?.key||'unknown')}">${esc(cls?.label||'JUGABLE')}</span>
+      <span class="csv1-live-badge ${esc(cls?.key||'unknown')}">${esc(cls?.label||'JUGABLE')} · S${st?.score??'—'}</span>
     </div>`;
   }
 
@@ -198,6 +277,45 @@
       <div class="csv1-live-list">${rows.map(liveRowHtml).join('')}</div>
       <div class="csv1-callout"><b>Lectura rápida:</b> verde = nació JUGABLE y sigue limpio; amarillo = fue promovido; rojo = tuvo ida/vuelta de señal o cambio de lado. Todo continúa siendo observacional.</div>
     `;
+  }
+
+  function currentPassStableRows(){
+    const date=selectedDate();
+    return censusRows()
+      .filter(r=>String(r.date||'')===date && isPassStableConsensus(r))
+      .sort((a,b)=>{
+        const sa=passStableRating(a).score,sb=passStableRating(b).score;
+        if(sa!==sb) return sb-sa;
+        const pa=latestProbability(a)??-1,pb=latestProbability(b)??-1;
+        return pb-pa;
+      });
+  }
+
+  function renderCurrentPassStable(){
+    const rows=currentPassStableRows();
+    const date=selectedDate();
+
+    if(!rows.length){
+      return `<div class="csv1-callout"><b>${esc(date||'Fecha actual')}:</b> no hay PASS-STABLE-CONSENSUS activos bajo la regla Shadow actual.</div>`;
+    }
+
+    return `<div class="csv1-live-list">${rows.map(r=>{
+      const id=rowIdentity(r);
+      const side=String(r?.side||'—').toUpperCase();
+      const line=Number.isFinite(+r?.line)?+r.line:'—';
+      const pr=latestProbability(r);
+      const d=Number.isFinite(+r?.dispersion)?+r.dispersion:null;
+      const rating=passStableRating(r);
+      const st=stabilityScore(r);
+      return `<div class="csv1-live-row passstable">
+        <div class="csv1-live-main">
+          <b>${esc(id.away||'—')} @ ${esc(id.home||'—')} · ${esc(side)} ${esc(line)}</b>
+          <div class="csv1-note">PASS Shadow · Stability ${st?.score??'—'}/100 · prob ${pct(pr)} · dispersión ${d===null?'—':pct(d)} · drift ${st?pct(st.drift):'—'} · consenso ${esc(r?.modelConsensus||'—')}${rating.overBonus?' · bonus observacional OVER':''}</div>
+        </div>
+        <span class="csv1-live-badge passstable">PASS-SC · ${esc(rating.rating)}</span>
+      </div>`;
+    }).join('')}</div>
+    <div class="csv1-callout"><b>PASS-STABLE-CONSENSUS:</b> dispersión ≤10%, 0 signal flips, 0 side flips, drift &lt;1% y consenso FUERTE/ACEPTABLE. Sigue siendo PASS oficial; no ordena apostar.</div>`;
   }
 
   function normText(v){
@@ -282,8 +400,13 @@
     }
 
     const wantedClass=`csv1-${kind}-stability ${cls.key}`;
-    const wantedText=cls.short;
-    const wantedTitle=cls.note;
+    const st=stabilityScore(r);
+    const first=String(r?.firstSignal||'—').toUpperCase();
+    const current=finalSignal(r)||'—';
+    const wantedText=kind==='rank'
+      ? `${cls.short} · S${st?.score??'—'} · ${first}→${current}`
+      : `${cls.short} · S${st?.score??'—'}`;
+    const wantedTitle=`${cls.note} Stability ${st?.score??'—'}/100 · ${first}→${current}`;
     const wantedPk=String(r?.gamePk??'');
 
     /*
@@ -391,6 +514,22 @@
     return out;
   }
 
+  function stabilityBandRows(rows){
+    const bands=[
+      {label:'90–100 · MUY ESTABLE',lo:90,hi:101},
+      {label:'75–89 · ESTABLE',lo:75,hi:90},
+      {label:'55–74 · MIXTO',lo:55,hi:75},
+      {label:'0–54 · INESTABLE',lo:0,hi:55}
+    ];
+    return bands.map(b=>{
+      const selected=rows.filter(r=>{
+        const s=stabilityScore(r)?.score;
+        return Number.isFinite(s) && s>=b.lo && s<b.hi;
+      });
+      return {label:b.label,stats:metric(selected)};
+    });
+  }
+
   function analyze(){
     const all=censusRows();
     const finals=all.filter(settled);
@@ -401,6 +540,11 @@
     const promoted=tracedPlayable.filter(isPromotedPlayable);
     const sideFlip=tracedPlayable.filter(r=>n(r.sideFlipCount,0)>0);
     const sigFlip=tracedPlayable.filter(r=>n(r.signalFlipCount,0)>0);
+    const passStable=traced.filter(r=>isPassStableConsensus(r));
+    const passStableOver=passStable.filter(r=>String(r?.side||'').toUpperCase()==='OVER');
+    const passStableUnder=passStable.filter(r=>String(r?.side||'').toUpperCase()==='UNDER');
+    const dispersion16=finals.filter(isDispersion16Candidate);
+    const scoreBands=stabilityBandRows(tracedPlayable);
 
     const policies=[
       policyRow('Baseline oficial',playable,'Reglas actuales del LAB.','MANTENER'),
@@ -410,7 +554,9 @@
       policyRow('Edge ≥ 6%',playable.filter(r=>n(r.edge,-99)>=.06),'Filtro observacional; no cambia señal oficial.','SHADOW'),
       policyRow('Edge ≥ 8%',playable.filter(r=>n(r.edge,-99)>=.08),'Prueba de umbral alto.','SHADOW'),
       policyRow('Rank activo ≤ 5',playable.filter(r=>{const x=activeRank(r);return x!==null&&x<=5;}),'Prioriza la parte alta del ranking.','SHADOW'),
-      policyRow('Stable + Rank≤5 + Edge≥5%',playable.filter(r=>isStablePlayable(r)&&activeRank(r)!==null&&activeRank(r)<=5&&n(r.edge,-99)>=.05),'Candidato combinado; exige muestra mayor antes de promover.','SHADOW')
+      policyRow('Stable + Rank≤5 + Edge≥5%',playable.filter(r=>isStablePlayable(r)&&activeRank(r)!==null&&activeRank(r)<=5&&n(r.edge,-99)>=.05),'Candidato combinado; exige muestra mayor antes de promover.','SHADOW'),
+      policyRow('PASS-STABLE-CONSENSUS',passStable,'PASS con dispersión ≤10%, sin flips, drift <1%; sigue siendo observación.','SHADOW FUERTE'),
+      policyRow('Dispersion .14→.16',dispersion16,'Sólo casos cuyo único gate fallido fue DISPERSION y quedarían dentro de .16.','SHADOW')
     ];
 
     const sides=['OVER','UNDER'].map(side=>({side,stats:metric(playable.filter(r=>String(r.side).toUpperCase()===side))}));
@@ -427,6 +573,8 @@
       version:VERSION,notice:NOTICE,
       counts:{census:all.length,finals:finals.length,trace:traced.length,playable:playable.length,tracedPlayable:tracedPlayable.length},
       baseline,stable:traceStable,promoted:tracePromoted,sideFlip:metric(sideFlip),sigFlip:metric(sigFlip),
+      passStable:metric(passStable),passStableOver:metric(passStableOver),passStableUnder:metric(passStableUnder),
+      dispersion16:metric(dispersion16),scoreBands,
       stabilityVerdict,policies,sides,probBuckets,shadow,
       generatedAt:new Date().toISOString()
     };
@@ -456,6 +604,9 @@
       <h3>JUGABLES actuales · identificación automática</h3>
       ${renderLiveJugables()}
 
+      <h3>PASS-STABLE-CONSENSUS · actuales</h3>
+      ${renderCurrentPassStable()}
+
       <h3>Patrón prioritario: estabilidad de señal</h3>
       <div class="csv1-grid3">
         ${statCard('JUGABLE estable',a.stable,'good')}
@@ -463,6 +614,24 @@
         ${statCard('Baseline oficial',a.baseline,'')}
       </div>
       <div class="csv1-callout"><b>Regla de laboratorio:</b> Stability Guard queda en Shadow. No bloquea apuestas todavía. Para promoverlo debe sostener ventaja fuera de muestra con más decisiones nuevas.</div>
+
+      <h3>Stability Score · desempeño histórico JUGABLE</h3>
+      <div class="csv1-tablewrap"><table><thead><tr><th>Banda</th><th>N</th><th>W-L-P</th><th>Hit</th><th>ROI 1u</th><th>Brier</th><th>DD</th></tr></thead><tbody>${a.scoreBands.map(b=>`<tr><td>${esc(b.label)}</td><td>${b.stats.n}</td><td>${b.stats.w}-${b.stats.l}-${b.stats.p}</td><td>${pct(b.stats.hit)}</td><td>${roi(b.stats.roi)}</td><td>${f2(b.stats.brier)}</td><td>${Number.isFinite(b.stats.maxDD)?b.stats.maxDD.toFixed(2):'—'}u</td></tr>`).join('')}</tbody></table></div>
+      <div class="csv1-callout"><b>Score 0–100:</b> 35 pts continuidad de señal + 25 pts continuidad de lado + 15 pts estabilidad de línea + 25 pts drift de probabilidad. Es diagnóstico Shadow; no cambia la probabilidad del Core.</div>
+
+      <h3>PASS-STABLE-CONSENSUS · histórico</h3>
+      <div class="csv1-grid3">
+        ${statCard('PASS-SC total',a.passStable,'good')}
+        ${statCard('PASS-SC OVER',a.passStableOver,'good')}
+        ${statCard('PASS-SC UNDER',a.passStableUnder,'')}
+      </div>
+      <div class="csv1-callout"><b>OVER bonus:</b> sólo eleva el rating observacional del PASS-SC. No convierte un PASS en JUGABLE ni modifica ningún motor.</div>
+
+      <h3>Prueba Shadow · dispersión .14 → .16</h3>
+      <div class="csv1-grid2">
+        ${statCard('Candidatos .14–.16',a.dispersion16,'')}
+        <div class="csv1-card"><small>Producción</small><b>.14 intacto</b><div>prob .56 · edge .035</div><div>La simulación .16 no altera el gate real.</div></div>
+      </div>
 
       <h3>Políticas candidatas</h3>
       <div class="csv1-tablewrap"><table><thead><tr><th>Política</th><th>Estado</th><th>N</th><th>W-L-P</th><th>Hit</th><th>ROI 1u</th><th>Brier</th><th>DD</th></tr></thead><tbody>${tableRows(a.policies)}</tbody></table></div>
@@ -610,7 +779,7 @@
       #csv1-modal.open{display:block}.csv1-shell{max-width:1180px;margin:0 auto 80px;background:#071522;border:1px solid #315372;border-radius:22px;box-shadow:0 30px 100px #000d;overflow:hidden}.csv1-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:#0d2136f5;border-bottom:1px solid #243f5d;backdrop-filter:blur(14px)}.csv1-head h2{margin:0;font-size:1.1rem}.csv1-close{border:0;background:#1d354d;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem}.csv1-content{padding:13px}.csv1-content h3{margin:18px 0 9px}.csv1-warning,.csv1-callout{padding:11px 13px;border-radius:13px;border-left:4px solid #ffd06a;background:#33270e88;color:#ffe6ad;font-size:.76rem;line-height:1.5;margin-bottom:12px}.csv1-callout{border-left-color:#60b5ff;background:#0b2842;color:#cae6ff}.csv1-grid4,.csv1-grid3,.csv1-grid2{display:grid;gap:9px;margin-bottom:10px}.csv1-grid4{grid-template-columns:repeat(4,1fr)}.csv1-grid3{grid-template-columns:repeat(3,1fr)}.csv1-grid2{grid-template-columns:repeat(2,1fr)}.csv1-card{border:1px solid #1d3955;background:#091928;border-radius:14px;padding:11px;line-height:1.45}.csv1-card.good{border-color:#2b7759}.csv1-card.bad{border-color:#753b46}.csv1-card small{display:block;color:#91a8bf;font-size:.62rem;text-transform:uppercase;font-weight:900}.csv1-card b{display:block;font-size:1.05rem;margin:4px 0}.csv1-tablewrap{overflow:auto;border:1px solid #1d3955;border-radius:14px}.csv1-tablewrap table{width:100%;border-collapse:collapse;font-size:.72rem}.csv1-tablewrap th,.csv1-tablewrap td{padding:9px 7px;border-bottom:1px solid #1c354f;text-align:right;white-space:nowrap}.csv1-tablewrap th:first-child,.csv1-tablewrap td:first-child{text-align:left;white-space:normal;min-width:190px}.csv1-tablewrap th{color:#a8bed3;font-size:.62rem;text-transform:uppercase}.csv1-note{font-size:.62rem;color:#91a8bf;margin-top:3px;line-height:1.35}.csv1-pill{display:inline-flex;padding:4px 7px;border-radius:999px;border:1px solid #315372;color:#b9d7ef;font-size:.58rem;font-weight:900}.csv1-pill.good{color:#9ff2c9;border-color:#2b7759}.csv1-pill.bad{color:#ffc4cb;border-color:#753b46}.csv1-foot{margin-top:16px;color:#7f98b0;font-size:.65rem;line-height:1.5}.csv1-launch{position:relative;white-space:nowrap}.csv1-launch:after{content:'S';display:inline-grid;place-items:center;width:14px;height:14px;margin-left:6px;border-radius:50%;background:#6b55e5;color:#fff;font-size:8px;font-weight:1000;vertical-align:middle}
 
       .csv1-live-summary{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 9px}.csv1-live-summary span{border:1px solid #315372;background:#091928;border-radius:999px;padding:6px 9px;font-size:.66rem;color:#bfd2e4}.csv1-live-summary .stable{border-color:#2b7759;color:#9ff2c9}.csv1-live-summary .promoted{border-color:#876f30;color:#ffe19a}.csv1-live-summary .unstable{border-color:#753b46;color:#ffc4cb}
-      .csv1-live-list{display:grid;gap:8px;margin-bottom:10px}.csv1-live-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #25445f;background:#071522;border-radius:13px;padding:10px}.csv1-live-row.stable{border-color:#2b7759}.csv1-live-row.promoted{border-color:#876f30}.csv1-live-row.unstable{border-color:#753b46}.csv1-live-main{min-width:0}.csv1-live-main b{font-size:.8rem}.csv1-live-badge,.csv1-rank-stability,.csv1-game-stability{display:inline-flex;align-items:center;justify-content:center;border:1px solid #466780;background:#10283d;color:#d7e6f2;border-radius:999px;padding:5px 8px;font-size:.58rem;font-weight:1000;letter-spacing:.03em;white-space:nowrap}.csv1-live-badge.stable,.csv1-rank-stability.stable,.csv1-game-stability.stable{border-color:#2b7759;background:#103326;color:#9ff2c9}.csv1-live-badge.promoted,.csv1-rank-stability.promoted,.csv1-game-stability.promoted{border-color:#876f30;background:#30270f;color:#ffe19a}.csv1-live-badge.unstable,.csv1-rank-stability.unstable,.csv1-game-stability.unstable{border-color:#753b46;background:#35151d;color:#ffc4cb}.csv1-live-badge.unknown,.csv1-rank-stability.unknown,.csv1-game-stability.unknown{border-color:#466780;color:#c7d8e7}.csv1-rank-stability{margin-top:6px}.csv1-game-stability{margin:0 8px 8px;width:max-content;max-width:calc(100% - 16px)}
+      .csv1-live-list{display:grid;gap:8px;margin-bottom:10px}.csv1-live-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #25445f;background:#071522;border-radius:13px;padding:10px}.csv1-live-row.stable{border-color:#2b7759}.csv1-live-row.promoted{border-color:#876f30}.csv1-live-row.unstable{border-color:#753b46}.csv1-live-row.passstable{border-color:#5e4f94}.csv1-live-main{min-width:0}.csv1-live-main b{font-size:.8rem}.csv1-live-badge,.csv1-rank-stability,.csv1-game-stability{display:inline-flex;align-items:center;justify-content:center;border:1px solid #466780;background:#10283d;color:#d7e6f2;border-radius:999px;padding:5px 8px;font-size:.58rem;font-weight:1000;letter-spacing:.03em;white-space:nowrap}.csv1-live-badge.stable,.csv1-rank-stability.stable,.csv1-game-stability.stable{border-color:#2b7759;background:#103326;color:#9ff2c9}.csv1-live-badge.promoted,.csv1-rank-stability.promoted,.csv1-game-stability.promoted{border-color:#876f30;background:#30270f;color:#ffe19a}.csv1-live-badge.unstable,.csv1-rank-stability.unstable,.csv1-game-stability.unstable{border-color:#753b46;background:#35151d;color:#ffc4cb}.csv1-live-badge.unknown,.csv1-rank-stability.unknown,.csv1-game-stability.unknown{border-color:#466780;color:#c7d8e7}.csv1-live-badge.passstable{border-color:#6b55e5;background:#241b49;color:#ddd6ff}.csv1-rank-stability{margin-top:6px}.csv1-game-stability{margin:0 8px 8px;width:max-content;max-width:calc(100% - 16px)}
 
       @media(max-width:760px){.csv1-grid4,.csv1-grid3{grid-template-columns:1fr 1fr}.csv1-content{padding:9px}.csv1-tablewrap th,.csv1-tablewrap td{padding:8px 6px}}
       @media(max-width:430px){.csv1-grid4,.csv1-grid3,.csv1-grid2{grid-template-columns:1fr}}
@@ -620,7 +789,7 @@
   function mount(){
     if($('#csv1-modal'))return;
     styles();
-    const modal=document.createElement('div');modal.id='csv1-modal';modal.innerHTML=`<div class="csv1-shell"><div class="csv1-head"><div><h2>Calibration Shadow V1</h2><div style="font-size:.65rem;color:#91a8bf">Auditoría dinámica · sin tocar motores</div></div><button class="csv1-close" aria-label="Cerrar">✕</button></div><div class="csv1-content" id="csv1-body"></div></div>`;document.body.appendChild(modal);
+    const modal=document.createElement('div');modal.id='csv1-modal';modal.innerHTML=`<div class="csv1-shell"><div class="csv1-head"><div><h2>V7.8.7 Stability Calibration Shadow</h2><div style="font-size:.65rem;color:#91a8bf">Auditoría dinámica · sin tocar motores</div></div><button class="csv1-close" aria-label="Cerrar">✕</button></div><div class="csv1-content" id="csv1-body"></div></div>`;document.body.appendChild(modal);
     $('.csv1-close',modal).onclick=()=>modal.classList.remove('open');
     modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open');});
 
@@ -633,7 +802,10 @@
       analyze,
       render,
       classify:stabilityClass,
+      stabilityScore,
+      isPassStableConsensus,
       currentPlayableRows,
+      currentPassStableRows,
       annotate:annotateVisibleJugables,
       open:()=>{render();modal.classList.add('open');}
     };
