@@ -1,4 +1,4 @@
-name: Build MLB Totals Lab V7.8.6 Calibration Shadow V1 APK
+name: Build MLB Totals Lab V7.8.7 Stability Calibration Shadow APK
 
 on:
   workflow_dispatch:
@@ -15,16 +15,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install Node
         uses: actions/setup-node@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Validate Calibration Shadow JS
         run: node --check www/calibration-shadow-v1.js
 
-      - name: Inject Calibration Shadow V1 into build only
+      - name: Inject Calibration Shadow into build only
         shell: bash
         run: |
           python - <<'PY'
@@ -67,5 +67,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB-Totals-Lab-V7.8.6-Calibration-Shadow-V1
+          name: MLB-Totals-Lab-V7.8.7-Stability-Calibration-Shadow
           path: android/app/build/outputs/apk/debug/app-debug.apk
