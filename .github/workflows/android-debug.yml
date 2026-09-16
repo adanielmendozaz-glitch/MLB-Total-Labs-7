@@ -1,4 +1,4 @@
-name: Build MLB Totals Lab V7.8.7 Stability Calibration Shadow APK
+name: Build MLB Totals Lab V7.8.7.1 Dispersion Live Shadow APK
 
 on:
   workflow_dispatch:
@@ -37,23 +37,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate Calibration Shadow JS
-        run: node --check www/calibration-shadow-v1.js
+      - name: Validate Shadow JS
+        run: |
+          node --check www/calibration-shadow-v1.js
+          node --check www/dispersion-shadow-live.js
 
-      - name: Inject Calibration Shadow into build only
+      - name: Inject Shadow modules into build only
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path("www/index.html")
           s = p.read_text(encoding="utf-8")
-          tag = '<script src="calibration-shadow-v1.js"></script>'
-          if tag not in s:
-              if "</body>" not in s:
-                  raise SystemExit("ERROR: </body> not found in www/index.html")
-              s = s.replace("</body>", tag + "\n</body>", 1)
-              p.write_text(s, encoding="utf-8")
-          print("Calibration Shadow injection OK")
+          tags = [
+              '<script src="calibration-shadow-v1.js"></script>',
+              '<script src="dispersion-shadow-live.js"></script>',
+          ]
+          if "</body>" not in s:
+              raise SystemExit("ERROR: </body> not found in www/index.html")
+          for tag in tags:
+              if tag not in s:
+                  s = s.replace("</body>", tag + "\n</body>", 1)
+          p.write_text(s, encoding="utf-8")
+          print("Shadow module injection OK")
           PY
 
       - name: Capacitor Sync
@@ -69,5 +75,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB-Totals-Lab-V7.8.7-Stability-Calibration-Shadow
+          name: MLB-Totals-Lab-V7.8.7.1-Dispersion-Live-Shadow
           path: android/app/build/outputs/apk/debug/app-debug.apk
