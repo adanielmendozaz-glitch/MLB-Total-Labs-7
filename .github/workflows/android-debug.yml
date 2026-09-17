@@ -1,10 +1,10 @@
-name: Build MLB Totals Lab V7.8.7.1 Dispersion Live Shadow APK
+name: Build MLB Totals Lab V7.8.7.2 Pattern Shadow APK
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - v786-calibration-shadow-v1
+      - v7872-pattern-shadow-v1
 
 jobs:
   build:
@@ -41,6 +41,7 @@ jobs:
         run: |
           node --check www/calibration-shadow-v1.js
           node --check www/dispersion-shadow-live.js
+          node --check www/pattern-shadow-live.js
 
       - name: Inject Shadow modules into build only
         shell: bash
@@ -52,6 +53,7 @@ jobs:
           tags = [
               '<script src="calibration-shadow-v1.js"></script>',
               '<script src="dispersion-shadow-live.js"></script>',
+              '<script src="pattern-shadow-live.js"></script>',
           ]
           if "</body>" not in s:
               raise SystemExit("ERROR: </body> not found in www/index.html")
@@ -75,5 +77,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MLB-Totals-Lab-V7.8.7.1-Dispersion-Live-Shadow
+          name: MLB-Totals-Lab-V7.8.7.2-Pattern-Shadow
           path: android/app/build/outputs/apk/debug/app-debug.apk
