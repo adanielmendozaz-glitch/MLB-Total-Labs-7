@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.7.1_DISPERSION_LIVE_SHADOW';
+  const VERSION='V7.8.7.5_DISPERSION_LIVE_UNTIL_FINAL';
   const CENSUS_KEY='mlb_v60_rank_census';
 
   const $=(s,r=document)=>r.querySelector(s);
@@ -65,9 +65,9 @@
     };
   }
 
-  function isPregame(r){
+  function isActiveUntilFinal(r){
     const s=String(r?.status||'').toUpperCase();
-    return !['FINAL','LIVE','IN_PROGRESS','IN PROGRESS','GAME_OVER','COMPLETED'].includes(s);
+    return !['FINAL','PUSH','WIN','LOSS','GAME_OVER','COMPLETED','CANCELLED','POSTPONED'].includes(s);
   }
 
   function isDispersion16Candidate(r){
@@ -84,7 +84,7 @@
   function currentCandidates(){
     const date=selectedDate();
     return censusRows()
-      .filter(r=>String(r.date||'')===date && isPregame(r) && isDispersion16Candidate(r))
+      .filter(r=>String(r.date||'')===date && isActiveUntilFinal(r) && isDispersion16Candidate(r))
       .sort((a,b)=>{
         const da=n(a?.dispersion,99),db=n(b?.dispersion,99);
         if(da!==db)return da-db;
@@ -128,7 +128,7 @@
       ${rows.length
         ? `<div class="d16-summary"><b>${rows.length}</b> candidato${rows.length===1?'':'s'} Shadow</div>
            <div class="d16-list">${rows.map(candidateHtml).join('')}</div>`
-        : `<div class="d16-callout"><b>${esc(date||'Fecha actual')}:</b> no hay candidatos .14→.16 activos ahora mismo.</div>`}
+        : `<div class="d16-callout"><b>${esc(date||'Fecha actual')}:</b> no hay candidatos .14→.16 no-finalizados ahora mismo.</div>`}
       <div class="d16-callout"><b>Regla:</b> sólo aparece si prob ≥56%, edge ≥3.5%, dispersión &gt;14% y ≤16%, y el único gate fallido es DISPERSION. Producción sigue intacta en .14.</div>
     `;
   }

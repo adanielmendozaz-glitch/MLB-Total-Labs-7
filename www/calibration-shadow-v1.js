@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.7_STABILITY_CALIBRATION_SHADOW_1';
+  const VERSION='V7.8.7.5_SHADOW_UI_INTEGRITY';
   const NOTICE='EXPERIMENTAL · READ ONLY · No modifica motores, pesos, probabilidades ni picks oficiales.';
   const KEYS={
     census:'mlb_v60_rank_census',
@@ -40,8 +40,14 @@
     return out;
   }
 
+  function terminalStatus(r){
+    const s=String(r?.status||'').toUpperCase();
+    return ['FINAL','PUSH','WIN','LOSS','GAME_OVER','COMPLETED','CANCELLED','POSTPONED'].includes(s);
+  }
+
   function settled(r){
-    return String(r?.status||'').toUpperCase()==='FINAL' &&
+    const s=String(r?.status||'').toUpperCase();
+    return ['FINAL','PUSH','WIN','LOSS','GAME_OVER','COMPLETED'].includes(s) &&
       Number.isFinite(+r?.actual) && Number.isFinite(+r?.line) &&
       ['OVER','UNDER'].includes(String(r?.side||'').toUpperCase());
   }
@@ -140,6 +146,41 @@
     return {rating,score,overBonus:side==='OVER'};
   }
 
+  function passDirectionalProfile(r){
+    const m=r?.modelProbabilities&&typeof r.modelProbabilities==='object'
+      ? r.modelProbabilities : {};
+    const vals=['struct','nb','pln','com']
+      .map(k=>Number(m?.[k]))
+      .filter(Number.isFinite);
+    const above=vals.filter(v=>v>.50).length;
+    const raw=Number(r?.rawProbability);
+    const rawOk=Number.isFinite(raw) && raw>=.50;
+
+    if(vals.length===4 && above===4 && rawOk){
+      return {key:'directional',label:'DIRECTIONAL 4/4',above,total:4,raw};
+    }
+    if(vals.length===4 && above===0 && !rawOk){
+      return {key:'calibration',label:'CALIBRATION-DRIVEN 0/4',above,total:4,raw};
+    }
+    return {
+      key:'mixed',
+      label:`MIXED ${above}/${vals.length||4}`,
+      above,total:vals.length,raw
+    };
+  }
+
+  function passStableDisplay(r){
+    const base=passStableRating(r);
+    const dir=passDirectionalProfile(r);
+    if(dir.key==='directional'){
+      return {text:`PASS-SC · ${base.rating}`,className:'passstable',dir};
+    }
+    if(dir.key==='calibration'){
+      return {text:'PASS-SC · CALIBRATION',className:'calibration',dir};
+    }
+    return {text:`PASS-SC · ${dir.label}`,className:'mixedpass',dir};
+  }
+
   function isDispersion16Candidate(r){
     const d=+r?.dispersion;
     const p=latestProbability(r);
@@ -222,7 +263,7 @@
   function currentPlayableRows(){
     const date=selectedDate();
     return censusRows()
-      .filter(r=>String(r.date||'')===date && isCurrentPlayable(r))
+      .filter(r=>String(r.date||'')===date && !terminalStatus(r) && isCurrentPlayable(r))
       .sort((a,b)=>{
         const ra=activeRank(a),rb=activeRank(b);
         if(ra!==null && rb!==null) return ra-rb;
@@ -257,7 +298,7 @@
     const date=selectedDate();
 
     if(!rows.length){
-      return `<div class="csv1-callout"><b>${esc(date||'Fecha actual')}:</b> no hay JUGABLES oficiales guardados en el Censo para clasificar ahora mismo.</div>`;
+      return `<div class="csv1-callout"><b>${esc(date||'Fecha actual')}:</b> no hay JUGABLES oficiales no-finalizados para clasificar ahora mismo.</div>`;
     }
 
     const counts={stable:0,promoted:0,unstable:0,unknown:0};
@@ -282,7 +323,7 @@
   function currentPassStableRows(){
     const date=selectedDate();
     return censusRows()
-      .filter(r=>String(r.date||'')===date && isPassStableConsensus(r))
+      .filter(r=>String(r.date||'')===date && !terminalStatus(r) && isPassStableConsensus(r))
       .sort((a,b)=>{
         const sa=passStableRating(a).score,sb=passStableRating(b).score;
         if(sa!==sb) return sb-sa;
@@ -296,7 +337,7 @@
     const date=selectedDate();
 
     if(!rows.length){
-      return `<div class="csv1-callout"><b>${esc(date||'Fecha actual')}:</b> no hay PASS-STABLE-CONSENSUS activos bajo la regla Shadow actual.</div>`;
+      return `<div class="csv1-callout"><b>${esc(date||'Fecha actual')}:</b> no hay PASS-STABLE-CONSENSUS no-finalizados bajo la regla Shadow actual.</div>`;
     }
 
     return `<div class="csv1-live-list">${rows.map(r=>{
@@ -306,16 +347,17 @@
       const pr=latestProbability(r);
       const d=Number.isFinite(+r?.dispersion)?+r.dispersion:null;
       const rating=passStableRating(r);
+      const display=passStableDisplay(r);
       const st=stabilityScore(r);
       return `<div class="csv1-live-row passstable">
         <div class="csv1-live-main">
           <b>${esc(id.away||'—')} @ ${esc(id.home||'—')} · ${esc(side)} ${esc(line)}</b>
-          <div class="csv1-note">PASS Shadow · Stability ${st?.score??'—'}/100 · prob ${pct(pr)} · dispersión ${d===null?'—':pct(d)} · drift ${st?pct(st.drift):'—'} · consenso ${esc(r?.modelConsensus||'—')}${rating.overBonus?' · bonus observacional OVER':''}</div>
+          <div class="csv1-note">PASS Shadow · Stability ${st?.score??'—'}/100 · prob ${pct(pr)} · dispersión ${d===null?'—':pct(d)} · drift ${st?pct(st.drift):'—'} · consenso ${esc(r?.modelConsensus||'—')} · dirección ${esc(display.dir.label)}${rating.overBonus?' · bonus observacional OVER':''}</div>
         </div>
-        <span class="csv1-live-badge passstable">PASS-SC · ${esc(rating.rating)}</span>
+        <span class="csv1-live-badge ${esc(display.className)}">${esc(display.text)}</span>
       </div>`;
     }).join('')}</div>
-    <div class="csv1-callout"><b>PASS-STABLE-CONSENSUS:</b> dispersión ≤10%, 0 signal flips, 0 side flips, drift &lt;1% y consenso FUERTE/ACEPTABLE. Sigue siendo PASS oficial; no ordena apostar.</div>`;
+    <div class="csv1-callout"><b>PASS-STABLE-CONSENSUS:</b> dispersión ≤10%, 0 signal flips, 0 side flips, drift &lt;1% y consenso FUERTE/ACEPTABLE. El badge A+/A/B+ sólo se conserva cuando RAW≥50% y los 4/4 motores apoyan el lado elegido; MIXED y CALIBRATION-DRIVEN quedan señalados explícitamente. Sigue siendo PASS oficial; no ordena apostar.</div>`;
   }
 
   function normText(v){
@@ -804,6 +846,7 @@
       classify:stabilityClass,
       stabilityScore,
       isPassStableConsensus,
+      passDirectionalProfile,
       currentPlayableRows,
       currentPassStableRows,
       annotate:annotateVisibleJugables,
