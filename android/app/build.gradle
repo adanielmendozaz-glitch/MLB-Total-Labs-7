@@ -17,8 +17,8 @@ android {
         applicationId "com.totallabs.mlb.v786calshadow1"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7873
-        versionName "7.8.7.3-pattern-integrity"
+        versionCode 7874
+        versionName "7.8.7.4-pattern-live-visible"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'

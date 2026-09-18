@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
 
-  const VERSION='V7.8.7.3_PATTERN_INTEGRITY';
+  const VERSION='V7.8.7.4_PATTERN_LIVE_VISIBLE';
   const CENSUS_KEY='mlb_v60_rank_census';
   const LEDGER_KEY='mlb_v7872_pattern_shadow'; // keep key to migrate/preserve V7.8.7.2 evidence
   const CENSUS_MIRROR_KEY='patternShadowV7873';
@@ -338,17 +338,81 @@
     return{ok:passed===tests.length,passed,total:tests.length,tests,ranAt:nowIso()};
   }
 
-  function currentRows(allRows){
+  function snapshotAsRow(snap={},status='LOCKED'){
+    return{
+      date:String(snap?.date||''),
+      gamePk:Number(snap?.gamePk)||0,
+      gameDate:String(snap?.gameDate||''),
+      awayAbbr:String(snap?.away||''),
+      homeAbbr:String(snap?.home||''),
+      side:String(snap?.side||''),
+      line:num(snap?.line),
+      p:num(snap?.p),
+      lastProbability:num(snap?.p),
+      edge:num(snap?.edge),
+      lastEdge:num(snap?.edge),
+      dispersion:num(snap?.dispersion),
+      rawProbability:num(snap?.raw),
+      modelProbabilities:snap?.models||null,
+      probabilityDrift:num(snap?.probabilityDrift),
+      signalFlipCount:num(snap?.signalFlipCount),
+      sideFlipCount:num(snap?.sideFlipCount),
+      lineChangeCount:num(snap?.lineChangeCount),
+      status
+    };
+  }
+
+  function visibleCandidates(allRows,state){
     const date=selectedDate();
-    return allRows.filter(r=>String(r.date||'')===date&&isPregame(r)&&labelsFor(r).length).sort((a,b)=>{
-      const la=labelsFor(a),lb=labelsFor(b),priority=x=>x.includes('A')?0:x.includes('A2')?1:x.includes('B')?2:3;
-      const pa=priority(la),pb=priority(lb);return pa!==pb?pa-pb:(latestProbability(b)||0)-(latestProbability(a)||0);
+    const out=[];
+    const seen=new Set();
+
+    for(const r of allRows){
+      if(String(r?.date||'')!==date||!isPregame(r)||!labelsFor(r).length)continue;
+      const key=gameKey(r);
+      out.push({key,row:r,stage:'PREGAME',locked:false});
+      seen.add(key);
+    }
+
+    for(const x of state.rows){
+      if(String(x?.date||'')!==date||x.status==='FINAL'||seen.has(x.key))continue;
+      const patterns=effectivePatterns(x);
+      if(!patterns.length)continue;
+      const snap=x.close||x.first;
+      if(!snap)continue;
+      const rt=runtimeState({gamePk:x.gamePk});
+      const stage=rt.final?'FINALIZANDO':
+        rt.live?'EN VIVO · CLOSE BLOQUEADO':
+        x.closeLockedAt?'INICIADO · CLOSE BLOQUEADO':'PREGAME · CLOSE';
+      out.push({key:x.key,row:snapshotAsRow(snap,'LOCKED'),stage,locked:true,patterns:[...patterns]});
+      seen.add(x.key);
+    }
+
+    const priority=e=>{
+      const labs=e.patterns?.length?e.patterns:labelsFor(e.row);
+      return labs.includes('A')?0:labs.includes('A2')?1:labs.includes('B')?2:3;
+    };
+
+    return out.sort((a,b)=>{
+      const pa=priority(a),pb=priority(b);
+      if(pa!==pb)return pa-pb;
+      return (latestProbability(b.row)||0)-(latestProbability(a.row)||0);
     });
   }
 
-  function candidateHtml(r){
-    const id=rowIdentity(r),f=features(r),labels=labelsFor(r),label=primaryLabel(labels);
-    return `<div class="ps-row ps-${esc(labels[0]||'C').toLowerCase()}"><div class="ps-main"><b>${esc(id.away||'—')} @ ${esc(id.home||'—')} · ${esc(f.side)} ${esc(r?.line??'—')}</b><div class="ps-note">${esc(label)} · P ${pct(f.p)} · edge ${pct(f.edge)} · disp ${pct(f.d)} · RAW ${pct(f.raw)} · min modelo ${pct(f.minModel)}</div></div><span class="ps-pill">${esc(label)}</span></div>`;
+  function candidateHtml(entry){
+    const r=entry.row,id=rowIdentity(r),f=features(r);
+    const labels=entry.patterns?.length?entry.patterns:labelsFor(r);
+    const label=primaryLabel(labels);
+    const stage=entry.stage||'PREGAME';
+    return `<div class="ps-row ps-${esc(labels[0]||'C').toLowerCase()}">
+      <div class="ps-main">
+        <b>${esc(id.away||'—')} @ ${esc(id.home||'—')} · ${esc(f.side)} ${esc(r?.line??'—')}</b>
+        <div class="ps-stage ${entry.locked?'locked':''}">${esc(stage)}</div>
+        <div class="ps-note">${esc(label)} · P ${pct(f.p)} · edge ${pct(f.edge)} · disp ${pct(f.d)} · RAW ${pct(f.raw)} · min modelo ${pct(f.minModel)}</div>
+      </div>
+      <span class="ps-pill">${esc(label)}</span>
+    </div>`;
   }
 
   function statChip(label,s){return `<span><b>${label}</b> ${s.w}-${s.l}-${s.p}${s.pending?` · ${s.pending} pend.`:''}</span>`;}
@@ -357,15 +421,15 @@
     const body=$('#csv1-body');if(!body)return;
     let section=$('#pattern-shadow-section');
     if(!section){section=document.createElement('section');section.id='pattern-shadow-section';const d16=$('#d16-current-section');if(d16?.parentElement===body)d16.insertAdjacentElement('afterend',section);else body.prepend(section);}
-    const rows=currentRows(allRows),A=statsFor(state,'A'),A2=statsFor(state,'A2'),B=statsFor(state,'B'),C=statsFor(state,'C');
+    const rows=visibleCandidates(allRows,state),A=statsFor(state,'A'),A2=statsFor(state,'A2'),B=statsFor(state,'B'),C=statsFor(state,'C');
     const dropped=state.rows.filter(x=>x.firstPatterns?.length&&!effectivePatterns(x).length).length;
     section.innerHTML=`<h3>Pattern Auditor · prospectivo</h3>
       <div class="ps-baseline"><b>Baseline congelado:</b> A .14–.16 = 4-0 · A2 Sibling = 1-0 (SEA–LAA). Desde ${esc(CUTOVER_DATE)} no se reajustan reglas por resultados.</div>
       <div class="ps-integrity ${integrity.ok?'ok':'bad'}"><b>Pattern Integrity ${integrity.ok?'PASS':'FAIL'} ${integrity.passed}/${integrity.total}</b> · CLOSE snapshot activo · bloqueo al iniciar · PUSH terminal · espejo Censo/Data Vault.</div>
       <div class="ps-stats">${statChip('A',A)}${statChip('A2',A2)}${statChip('B',B)}${statChip('C',C)}</div>
       ${dropped?`<div class="ps-audit-note">${dropped} candidato(s) aparecieron durante el día pero ya no cumplían al CLOSE; no cuentan en W-L-P.</div>`:''}
-      ${rows.length?`<div class="ps-list">${rows.map(candidateHtml).join('')}</div>`:`<div class="ps-empty">No hay coincidencias Pattern Shadow pregame para ${esc(selectedDate()||'la fecha seleccionada')}.</div>`}
-      <div class="ps-rules"><b>Reglas congeladas:</b> A = OVER, P≥58%, edge≥8.5%, disp &gt;14% y ≤16%, 4/4 motores &gt;50%, min≥53%, RAW&gt;P y estabilidad estricta. A2 = igual, pero disp 8–12%. B = OVER + 4/4 &gt;50% + RAW&gt;P + estabilidad estricta. C = OVER con P≥50% pero RAW&lt;50% o al menos un motor ≤50%. <b>B es familia amplia e incluye A/A2.</b> El récord usa exclusivamente la última fotografía pregame (CLOSE). <b>No altera Core, ranking, gates ni picks.</b></div>`;
+      ${rows.length?`<div class="ps-list">${rows.map(candidateHtml).join('')}</div>`:`<div class="ps-empty">No hay coincidencias Pattern Shadow activas para ${esc(selectedDate()||'la fecha seleccionada')}.</div>`}
+      <div class="ps-rules"><b>Reglas congeladas:</b> A = OVER, P≥58%, edge≥8.5%, disp &gt;14% y ≤16%, 4/4 motores &gt;50%, min≥53%, RAW&gt;P y estabilidad estricta. A2 = igual, pero disp 8–12%. B = OVER + 4/4 &gt;50% + RAW&gt;P + estabilidad estricta. C = OVER con P≥50% pero RAW&lt;50% o al menos un motor ≤50%. <b>B es familia amplia e incluye A/A2.</b> El récord usa exclusivamente la última fotografía pregame (CLOSE). <b>Visualmente el candidato permanece durante el juego y desaparece sólo al quedar FINAL.</b> No altera Core, ranking, gates ni picks.</div>`;
   }
 
   function normText(v){return String(v??'').toUpperCase().replace(/\s+/g,' ').trim();}
@@ -385,8 +449,9 @@
     badge.textContent=label;const f=features(r);badge.title=`${label} · P ${pct(f.p)} · edge ${pct(f.edge)} · disp ${pct(f.d)} · RAW ${pct(f.raw)} · min ${pct(f.minModel)}`;
   }
 
-  function annotate(allRows){
-    const rows=currentRows(allRows);
+  function annotate(allRows,state){
+    const entries=visibleCandidates(allRows,state);
+    const rows=entries.map(e=>e.row);
     document.querySelectorAll('.rankrow').forEach(el=>upsertBadge(el,findRowForElement(el,rows),'rank'));
     document.querySelectorAll('.game.scorecard').forEach(el=>upsertBadge(el,findRowForElement(el,rows),'game'));
   }
@@ -399,7 +464,7 @@
       .ps-stats{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.ps-stats span{border:1px solid rgba(148,163,184,.35);border-radius:999px;padding:7px 10px;background:rgba(15,23,42,.55);font-size:12px}
       .ps-list{display:grid;gap:10px}.ps-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border:1px solid rgba(34,197,94,.45);border-radius:15px;background:rgba(34,197,94,.07)}
       .ps-a{border-color:rgba(168,85,247,.65);background:rgba(88,28,135,.14)}.ps-a2{border-color:rgba(34,197,94,.65);background:rgba(20,83,45,.16)}.ps-b{border-color:rgba(56,189,248,.55);background:rgba(12,74,110,.14)}.ps-c{border-color:rgba(251,191,36,.55);background:rgba(120,53,15,.12)}
-      .ps-main{min-width:0}.ps-main b{display:block}.ps-note{opacity:.78;font-size:12px;line-height:1.4;margin-top:4px}.ps-pill,.ps-rank-badge,.ps-game-badge{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(56,189,248,.55);background:rgba(12,74,110,.32);color:#dbeafe;border-radius:999px;font-weight:900;font-size:10px;line-height:1.2;padding:6px 9px}.ps-rank-badge{margin-top:5px;width:max-content}.ps-game-badge{margin:7px 12px 9px;width:max-content;max-width:calc(100% - 24px)}
+      .ps-main{min-width:0}.ps-main b{display:block}.ps-stage{display:inline-flex;margin-top:5px;padding:3px 7px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-size:10px;font-weight:900;opacity:.9}.ps-stage.locked{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.08)}.ps-note{opacity:.78;font-size:12px;line-height:1.4;margin-top:4px}.ps-pill,.ps-rank-badge,.ps-game-badge{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(56,189,248,.55);background:rgba(12,74,110,.32);color:#dbeafe;border-radius:999px;font-weight:900;font-size:10px;line-height:1.2;padding:6px 9px}.ps-rank-badge{margin-top:5px;width:max-content}.ps-game-badge{margin:7px 12px 9px;width:max-content;max-width:calc(100% - 24px)}
       @media(max-width:650px){.ps-row{align-items:flex-start;flex-direction:column}.ps-pill{align-self:flex-start}}`;
     document.head.appendChild(s);
   }
@@ -407,7 +472,7 @@
   function refresh(){
     try{
       styles();const allRows=censusRows(),state=updateLedger(allRows),integrity=integrityReport();
-      renderSection(allRows,state,integrity);annotate(allRows);
+      renderSection(allRows,state,integrity);annotate(allRows,state);
       window.__MLB_PATTERN_SHADOW__={version:VERSION,cutoverDate:CUTOVER_DATE,state};
       window.__MLB_PATTERN_INTEGRITY__=integrity;
     }catch(e){console.warn('Pattern Integrity refresh',e);}
